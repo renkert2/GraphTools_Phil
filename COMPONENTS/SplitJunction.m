@@ -1,5 +1,5 @@
-classdef HeatLoad < Component_Super
-    % HeatLoad is a class the defines a heat load model
+classdef SplitJunction < Component_Super
+    % SplitJunction is a class the defines a fluid split or junction model
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Author: Christopher T. Aksland
@@ -12,18 +12,21 @@ classdef HeatLoad < Component_Super
     properties
         
         % Block Name
-        Name char ='Heat Load'
+        Name char ='Split Junction'
         % Working Fluid
         fluid char = 'JP8'
         % Initial Fluid temperature [C]
         T_init(1,1) double {mustBeNumeric} = 25;
         % Fluid Specific Heat [J/kg]
         cp_f (1,1) double {mustBeNumeric} = 2000;
-        
+        % Number of inflows 
+        n_in(1,1) double {mustBeInterger} = 1;
+        % Number of outflows 
+        n_out(1,1) double {mustBeInterger} = 1;
     end
     
     methods
-        function obj = HeatLoad(varargin)
+        function obj = SplitJunction(varargin)
             
             % populate properties
             obj = my_inputparser(obj,varargin{:});

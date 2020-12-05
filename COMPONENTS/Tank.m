@@ -27,7 +27,7 @@ classdef Tank < Component_Super
     methods
         function obj = Tank(varargin)
             
-            % populate ta
+            % populate properties
             obj = my_inputparser(obj,varargin{:});
             
         end

@@ -1,5 +1,5 @@
-classdef HeatLoad < Component_Super
-    % HeatLoad is a class the defines a heat load model
+classdef HeatExchanger < Component_Super
+    % HeatExchanger is a class the defines a heat exchanger model
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Author: Christopher T. Aksland
@@ -12,13 +12,21 @@ classdef HeatLoad < Component_Super
     properties
         
         % Block Name
-        Name char ='Heat Load'
-        % Working Fluid
-        fluid char = 'JP8'
-        % Initial Fluid temperature [C]
-        T_init(1,1) double {mustBeNumeric} = 25;
-        % Fluid Specific Heat [J/kg]
-        cp_f (1,1) double {mustBeNumeric} = 2000;
+        Name char ='Heat Exchanger'
+        % Side 1 working Fluid
+        fluid1 char = 'JP8'
+        % Side 2 working Fluid
+        fluid2 char = 'water'
+        % Initial Side 1 Fluid temperature [C]
+        T1_init(1,1) double {mustBeNumeric} = 25;
+        % Initial Side 2 Fluid temperature [C]
+        T2_init(1,1) double {mustBeNumeric} = 25;
+        % Side 1 fluid Specific Heat [J/kg]
+        cp_f1 (1,1) double {mustBeNumeric} = 2000;
+        % Side 2 fluid Specific Heat [J/kg]
+        cp_f2 (1,1) double {mustBeNumeric} = 2000;
+        % Heat Transfer Coefficient [W/K]
+        HTC (1,1) double {mustBeNumeric} = 10;
         
     end
     
