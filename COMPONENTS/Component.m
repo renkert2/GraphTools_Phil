@@ -1,4 +1,4 @@
-classdef GraphComponent_Super < matlab.mixin.Heterogeneous
+classdef Component < matlab.mixin.Heterogeneous
     %GRAPHCOMPONENT_SUPER Super class to be inherited by Components (i.e.
     %Battery, Motor, Heat Exchanger, etc...
     %   Detailed explanation goes here
