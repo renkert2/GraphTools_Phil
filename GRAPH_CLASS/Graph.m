@@ -19,8 +19,8 @@ classdef Graph < matlab.mixin.Copyable
     
     
     properties
-        Vertices Graph_Vertex
-        Edges Graph_Edge
+        Vertices GraphVertex_Super
+        Edges GraphEdge_Super
         E % Graph Edge Matrix
     end
     
