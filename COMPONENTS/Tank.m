@@ -1,4 +1,4 @@
-classdef Tank < Component_Super
+classdef Tank < Component
     % Tank is a class the defines a tank model
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -25,17 +25,32 @@ classdef Tank < Component_Super
     end
     
     methods
-        function obj = Tank(varargin)
-            
-            % populate properties
-            obj = my_inputparser(obj,varargin{:});
-            
+        function obj = Tank(varargin)          
+            obj@Component(varargin{:}); % calls the superclass constructor           
         end
-        
-        function obj = GraphModel(obj)
-            %METHOD1 Summary of this method goes here
-            %   Detailed explanation goes here
-            outputArg = obj.Property1 + inputArg;
+    end
+    
+    methods (Access = protected)
+        function g = DefineGraph(obj)
+            E = [3 1; ...
+                 1 4; ...
+                 1 5; ...
+                 5 2];
+                            
+             Vertex(1) = GraphVertex_Internal('Description','Liquid Temp','Type',1,'Capacitance',10);
+             Vertex(2) = GraphVertex_Internal('Description','Mass','Type',1,'Capacitance',1);
+             Vertex(3) = GraphVertex_External('Description','Inlet');
+             Vertex(4) = GraphVertex_External('Description','Outlet');
+             Vertex(5) = GraphVertex_External('Description','Sink');
+             
+             Edge(1) = GraphEdge_Internal('PowerFlow','c*u*xt','Input',1,'Port',1);
+             Edge(2) = GraphEdge_Internal('PowerFlow','c*u*xt','Input',2,'Port',2);
+             Edge(3) = GraphEdge_Internal('PowerFlow','c*(u1-u2)*xt','Input',[1 2]);
+             Edge(4) = GraphEdge_Internal('PowerFlow','(u1-u2)','Input',[1 2]);
+             Edge(5) = GraphEdge_External();
+             
+            g = Graph(E,Vertex,Edge);
+            
         end
     end
 end

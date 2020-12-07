@@ -7,6 +7,20 @@ classdef GraphModel
     end
     
     methods
+        function obj = GraphModel(varargin)
+            if nargin == 1
+                obj.Graph = varargin{1};
+            end
+        end
+        
+        function plot(obj)
+            % basic digraph plotting.
+%             figure
+            G = digraph(obj.Graph.E(:,1),obj.Graph.E(:,2));
+            h = plot(G);
+            labeledge(h,obj.Graph.E(:,1)',obj.Graph.E(:,2)',1:size(obj.Graph.E,1));
+        end
+        
         function Modify(obj)
         
         end
@@ -14,7 +28,13 @@ classdef GraphModel
         function Simulate(obj)
             
         end
+        
+        function init(obj)
+            % placeholder
+        end
     end
+    
+    
     
     methods(Static)
         function g_sys = Combine(G, ConnectV, ConnectE) % Create a new GraphModel Object

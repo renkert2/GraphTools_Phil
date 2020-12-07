@@ -19,8 +19,8 @@ classdef Graph < matlab.mixin.Copyable
     
     
     properties
-        Vertices Graph_Vertex
-        Edges Graph_Edge
+        Vertices GraphVertex
+        Edges GraphEdge
         E % Graph Edge Matrix
     end
     
@@ -37,7 +37,7 @@ classdef Graph < matlab.mixin.Copyable
         % Number of inputs
         Nu
         
-        % Number of extternal vertices
+        % Number of external vertices
         Nev
         
         % Number of external edges
@@ -46,12 +46,35 @@ classdef Graph < matlab.mixin.Copyable
     end
     
     methods
-        function plot(obj)
-            % basic digraph plotting.
-            figure
-            G = digraph(obj.E(:,1),obj.E(:,2));
-            h = plot(G);
-            labeledge(h,obj.E(:,1)',obj.E(:,2)',1:size(obj.E,1));               
+        
+        function obj = Graph(varargin) % constructor method
+            % this function can be initialized with an edge matrix.
+            % Immediately calculate the incidence matrix
+           if nargin > 0
+               obj.E = varargin{1};
+               obj.Vertices = varargin{2};
+               obj.Edges = varargin{3};
+               
+               % need to distinguish between external and intenal vertices
+               % somehow... if we want a separate object for each one...
+%                obj.Nv  = ;
+%                obj.Ne  = ;
+%                obj.Nu  = ;
+%                obj.Nev = ;
+%                obj.Nee = ;
+               
+               obj.M = zeros(max(max(obj.E)),size(obj.E,1));
+               for i = 1:size(obj.E,1)
+                   obj.M(obj.E(i,1),i) =  1; % tails
+                   obj.M(obj.E(i,2),i) = -1; % heads
+               end
+           end
+               
+        end
+     
+        
+        function init(obj) 
+            % placeholder
         end
     end
 end
