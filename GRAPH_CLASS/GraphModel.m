@@ -1,9 +1,9 @@
-classdef GraphModel
+classdef GraphModel < matlab.mixin.Copyable
     %GRAPHMODEL Contains all of the operations useful for working with the
     %graph models.  Most of the code will go here.  
     %   Detailed explanation goes here
     properties
-        Graph Graph
+        Graph Graph = Graph.empty()
     end
     
     methods

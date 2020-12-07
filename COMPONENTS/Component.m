@@ -4,7 +4,7 @@ classdef Component < matlab.mixin.Heterogeneous & handle
     %   Detailed explanation goes here
     
     properties %(SetAccess = protected)
-        Model GraphModel
+        Model GraphModel = GraphModel.empty()
     end
     
     methods

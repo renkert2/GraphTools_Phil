@@ -3,7 +3,7 @@ classdef GraphVertex_Internal < GraphVertex
     %   Detailed explanation goes here  
     properties
         Type % Vertex Type: 1 - Energy Flow, 2 - State Flow
-        Capacitance %Type_Capacitance
+        Capacitance Type_Capacitance = Type_Capacitance.empty();
     end
     
     methods
