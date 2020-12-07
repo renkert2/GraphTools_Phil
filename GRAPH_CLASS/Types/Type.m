@@ -1,5 +1,5 @@
-classdef Type_Super < matlab.mixin.Copyable
-    %TYPE_SUPER Summary of this class goes here
+classdef Type < matlab.mixin.Copyable
+    %TYPE Summary of this class goes here
     %   Detailed explanation goes here
     
     properties % User can set one of these two properties, the corresponding property is updated automatically

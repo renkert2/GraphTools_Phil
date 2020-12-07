@@ -1,4 +1,4 @@
-classdef Type_PowerFlow < Type_Super
+classdef Type_PowerFlow < Type
     %Type for edge powerflow
     %   Detailed explanation goes here
 
