@@ -1,4 +1,4 @@
-classdef HeatExchanger < Component_Super
+classdef HeatExchanger < Component
     % HeatExchanger is a class the defines a heat exchanger model
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -31,18 +31,34 @@ classdef HeatExchanger < Component_Super
     end
     
     methods
-        function obj = HeatLoad(varargin)
-            
-            % populate properties
-            obj = my_inputparser(obj,varargin{:});
-            
+        function obj = HeatExchanger(varargin)          
+            obj@Component(varargin{:}); % calls the superclass constructor           
         end
-        
-        function obj = GraphModel(obj)
-            %METHOD1 Summary of this method goes here
-            %   Detailed explanation goes here
-            outputArg = obj.Property1 + inputArg;
+    end
+    
+    methods (Access = protected)
+        function g = DefineGraph(obj)
+            E = [3 1; ...
+                 1 5; ...
+                 4 2; ...
+                 2 6; ...
+                 1 2];
+             
+             Vertex(1) = GraphVertex_Internal('Description','Temp S1','Type',1,'Capacitance',10);
+             Vertex(2) = GraphVertex_Internal('Description','Temp S2','Type',1,'Capacitance',10);
+             Vertex(3) = GraphVertex_External('Description','Inlet S1');
+             Vertex(4) = GraphVertex_External('Description','Inlet S2');
+             Vertex(5) = GraphVertex_External('Description','Outlet S1');
+             Vertex(6) = GraphVertex_External('Description','Outlet S2');
+             
+             Edge(1) = GraphEdge_Internal('PowerFlow','c*u*xt','Input',1,'Port',1);
+             Edge(2) = GraphEdge_Internal('PowerFlow','c*u*xt','Input',1,'Port',2);
+             Edge(3) = GraphEdge_Internal('PowerFlow','c*u*xt','Input',2,'Port',3);
+             Edge(4) = GraphEdge_Internal('PowerFlow','c*u*xt','Input',2,'Port',4);
+             Edge(5) = GraphEdge_Internal('PowerFlow','c*(xt-xh)');
+             
+            g = Graph(E,Vertex,Edge);
+            
         end
     end
 end
-
