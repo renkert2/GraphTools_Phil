@@ -1,23 +1,26 @@
-classdef Type_Super
+classdef Type_Super < matlab.mixin.Copyable
     %TYPE_SUPER Summary of this class goes here
     %   Detailed explanation goes here
     
-    properties
-        Property1
+    properties % User can set one of these two properties, the corresponding property is updated automatically
+        Val_Char char = char.empty
+        Val_Sym sym = sym.empty
+    end
+    
+    properties (SetAccess = protected)
+        Val_Func function_handle % Value calculation function 
+        Jac_Func function_handle % Jacobian calculation function
+        
+        Jac_Sym sym % Symbolic Jacobian
     end
     
     methods
-        function obj = Type_Super(inputArg1,inputArg2)
-            %TYPE_SUPER Construct an instance of this class
-            %   Detailed explanation goes here
-            obj.Property1 = inputArg1 + inputArg2;
+        function val = calcVal(obj)
         end
         
-        function outputArg = method1(obj,inputArg)
-            %METHOD1 Summary of this method goes here
-            %   Detailed explanation goes here
-            outputArg = obj.Property1 + inputArg;
+        function jac = calcJac(obj)
         end
+        
     end
 end
 
