@@ -24,7 +24,7 @@ classdef Type < matlab.mixin.Copyable
         end
         
         function set.Val_Char(obj, val)
-            obj.Val_Char
+            obj.Val_Char = val;
         end
         
         function set.Val_Sym(obj, val)

@@ -19,8 +19,8 @@ classdef Graph < matlab.mixin.Copyable
     
     
     properties
-        Vertices GraphVertex = GraphVertex.empty()
-        Edges GraphEdge = GraphEdge.empty()
+        Vertices (:,1) GraphVertex = GraphVertex.empty()
+        Edges (:,1) GraphEdge = GraphEdge.empty()
         E % Graph Edge Matrix
     end
     

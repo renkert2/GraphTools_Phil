@@ -33,13 +33,19 @@ classdef HeatLoad < Component
             E = [2 1; ...
                  1 3];
              
-             Vertex(1) = GraphVertex_Internal('Description','Load Temp','Type',1,'Capacitance',10);
+             Vertex(1) = GraphVertex_Internal('Description','Load Temp','Type',1,'Capacitance',Type_Capacitance("10"));
              Vertex(2) = GraphVertex_External('Description','Inlet');
              Vertex(3) = GraphVertex_External('Description','Outlet');
+%              Vertex(1) = GraphVertex_Internal('Description','Load Temp','Type',1,'Capacitance',10);
+%              Vertex(2) = GraphVertex_External('Description','Inlet');
+%              Vertex(3) = GraphVertex_External('Description','Outlet');
              
-             Edge(1) = GraphEdge_Internal('PowerFlow','c*u*xt','Input',1,'Port',1);
-             Edge(2) = GraphEdge_Internal('PowerFlow','c*u*xt','Input',1,'Port',2);
+             Edge(1) = GraphEdge_Internal('PowerFlow',Type_PowerFlow('Val_Char',"c*u*xt"),'Input',1,'Port',1);
+             Edge(2) = GraphEdge_Internal('PowerFlow',Type_PowerFlow('Val_Char',"c*u*xt"),'Input',1,'Port',2);
              Edge(3) = GraphEdge_External();
+%              Edge(1) = GraphEdge_Internal('PowerFlow','c*u*xt','Input',1,'Port',1);
+%              Edge(2) = GraphEdge_Internal('PowerFlow','c*u*xt','Input',1,'Port',2);
+%              Edge(3) = GraphEdge_External();
 
              g = Graph(E,Vertex,Edge);
             

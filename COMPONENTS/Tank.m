@@ -37,17 +37,27 @@ classdef Tank < Component
                  1 5; ...
                  5 2];
                             
-             Vertex(1) = GraphVertex_Internal('Description','Liquid Temp','Type',1,'Capacitance',10);
-             Vertex(2) = GraphVertex_Internal('Description','Mass','Type',1,'Capacitance',1);
+             Vertex(1) = GraphVertex_Internal('Description','Liquid Temp','Type',1,'Capacitance',Type_Capacitance("10"));
+             Vertex(2) = GraphVertex_Internal('Description','Mass','Type',1,'Capacitance',Type_Capacitance("1"));
              Vertex(3) = GraphVertex_External('Description','Inlet');
              Vertex(4) = GraphVertex_External('Description','Outlet');
              Vertex(5) = GraphVertex_External('Description','Sink');
+%              Vertex(1) = GraphVertex_Internal('Description','Liquid Temp','Type',1,'Capacitance',10);
+%              Vertex(2) = GraphVertex_Internal('Description','Mass','Type',1,'Capacitance',1);
+%              Vertex(3) = GraphVertex_External('Description','Inlet');
+%              Vertex(4) = GraphVertex_External('Description','Outlet');
+%              Vertex(5) = GraphVertex_External('Description','Sink');
              
-             Edge(1) = GraphEdge_Internal('PowerFlow','c*u*xt','Input',1,'Port',1);
-             Edge(2) = GraphEdge_Internal('PowerFlow','c*u*xt','Input',2,'Port',2);
-             Edge(3) = GraphEdge_Internal('PowerFlow','c*(u1-u2)*xt','Input',[1 2]);
-             Edge(4) = GraphEdge_Internal('PowerFlow','(u1-u2)','Input',[1 2]);
+             Edge(1) = GraphEdge_Internal('PowerFlow',Type_PowerFlow('Val_Char',"c*u*xt"),'Input',1,'Port',1);
+             Edge(2) = GraphEdge_Internal('PowerFlow',Type_PowerFlow('Val_Char',"c*u*xt"),'Input',2,'Port',2);
+             Edge(3) = GraphEdge_Internal('PowerFlow',Type_PowerFlow('Val_Char',"c*(u1-u2)*xt"),'Input',[1 2]);
+             Edge(4) = GraphEdge_Internal('PowerFlow',Type_PowerFlow('Val_Char',"(u1-u2)"),'Input',[1 2]);
              Edge(5) = GraphEdge_External();
+%              Edge(1) = GraphEdge_Internal('PowerFlow','c*u*xt','Input',1,'Port',1);
+%              Edge(2) = GraphEdge_Internal('PowerFlow','c*u*xt','Input',2,'Port',2);
+%              Edge(3) = GraphEdge_Internal('PowerFlow','c*(u1-u2)*xt','Input',[1 2]);
+%              Edge(4) = GraphEdge_Internal('PowerFlow','(u1-u2)','Input',[1 2]);
+%              Edge(5) = GraphEdge_External();
              
             g = Graph(E,Vertex,Edge);
             

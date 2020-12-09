@@ -10,7 +10,7 @@ classdef Type_Capacitance < Type
         function init(obj)
             syms x c g dg_dx
             obj.vars = [x c g dg_dx];
-            init@Type(obj);
+%             init@Type(obj);
         end
     end
 end
