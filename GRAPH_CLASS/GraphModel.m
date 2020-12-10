@@ -4,6 +4,9 @@ classdef GraphModel < matlab.mixin.Copyable
     %   Detailed explanation goes here
     properties
         Graph Graph = Graph.empty()
+        
+        % D matrix
+        
     end
     
     methods

@@ -8,6 +8,9 @@ classdef Type_PowerFlow < Type
         end
         
         function init(obj)
+            % use symvar(obj.Val_Sym) to get most of these
+            % at this point, maybe have error checking that power flows
+            % were defined in terms of valid variables xt, xh, u1, ..., uN
             syms x_t x_h u
             syms c g 
             syms dg_dxt dg_dxh dg_du

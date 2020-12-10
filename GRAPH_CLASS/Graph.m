@@ -55,13 +55,11 @@ classdef Graph < matlab.mixin.Copyable
                obj.Vertices = varargin{2};
                obj.Edges = varargin{3};
                
-               % need to distinguish between external and intenal vertices
-               % somehow... if we want a separate object for each one...
-%                obj.Nv  = ;
-%                obj.Ne  = ;
+               obj.Nv  = sum(arrayfun(@(x) isa(x,'GraphVertex_Internal'),obj.Vertices));
+               obj.Ne  = sum(arrayfun(@(x) isa(x,'GraphEdge_Internal'),obj.Edges));
 %                obj.Nu  = ;
-%                obj.Nev = ;
-%                obj.Nee = ;
+               obj.Nev = sum(arrayfun(@(x) isa(x,'GraphVertex_External'),obj.Vertices));
+               obj.Nee = sum(arrayfun(@(x) isa(x,'GraphEdge_External'),obj.Edges));
                
                obj.M = zeros(max(max(obj.E)),size(obj.E,1));
                for i = 1:size(obj.E,1)

@@ -38,7 +38,7 @@ classdef SplitJunction < Component
                                 [ones(obj.n_out,1),(obj.n_in+2:obj.n_in+obj.n_out+1)']];
              
             % Capacitance Types
-            C(1) = Type_Capacitance("10");  
+            C(1) = Type_Capacitance('Val_Char',"10");  
                
             % Power Flow Types
             P(1) = Type_PowerFlow('Val_Char',"c*u*xt");

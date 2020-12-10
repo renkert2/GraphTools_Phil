@@ -35,7 +35,7 @@ classdef HeatLoad < Component
                  1 3];
             
             % Capacitance Types
-            C(1) = Type_Capacitance("10");
+            C(1) = Type_Capacitance('Val_Char',"10");
             
             % Power Flow Types
             P(1) = Type_PowerFlow('Val_Char',"c*u*xt");

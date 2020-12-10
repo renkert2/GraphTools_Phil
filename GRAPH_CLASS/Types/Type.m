@@ -1,9 +1,11 @@
 classdef Type < matlab.mixin.Copyable
     %TYPE Summary of this class goes here
     %   Detailed explanation goes here
+    % we may want to define this as a handle class too so multiple edges or
+    % vertices can reference the same powerflow type.
     
     properties % User can set Val_Char or Val_Sym, the corresponding properties are updated automatically
-        Val_Char string = string.empty()
+        Val_Char string = string.empty() % Should this be Called Val_Str... Actually, maybe we should name things better for input parsing...?
         Val_Sym sym = sym.empty()
     end
     
@@ -23,12 +25,29 @@ classdef Type < matlab.mixin.Copyable
             end
         end
         
-        function set.Val_Char(obj, val)
+        % set the string value and update the symbolic definition
+        function set.Val_Char(obj, val) 
             obj.Val_Char = val;
+            obj = updateVal(obj);
         end
         
+        % set the symbolic value and update the string definition
         function set.Val_Sym(obj, val)
+            obj.Val_Sym = val;
+            obj = updateVal(obj);
         end
+        
+        % update the type value property that was not defined
+        function obj = updateVal(obj)
+            if isempty(obj.Val_Sym)
+                obj.Val_Sym = str2sym(obj.Val_Char);
+            end
+            if isempty(obj.Val_Char)
+                obj.Val_Char ='Val_Char', string(obj.Val_Sym);
+            end
+        end
+        
+        
         
         function val = calcVal(obj, vars_) % Calculates type value with symbolic 'vars' substituted with numeric 'vars_'
         end
