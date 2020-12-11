@@ -56,8 +56,9 @@ classdef Graph < matlab.mixin.Copyable
                obj.Edges = varargin{3};
                
                obj.Nv  = sum(arrayfun(@(x) isa(x,'GraphVertex_Internal'),obj.Vertices));
-               obj.Ne  = sum(arrayfun(@(x) isa(x,'GraphEdge_Internal'),obj.Edges));
-%                obj.Nu  = ;
+               idx_E_Internal = arrayfun(@(x) isa(x,'GraphEdge_Internal'),obj.Edges);
+               obj.Ne  = sum(idx_E_Internal);
+               obj.Nu  = max([obj.Edges(idx_E_Internal).Input]);
                obj.Nev = sum(arrayfun(@(x) isa(x,'GraphVertex_External'),obj.Vertices));
                obj.Nee = sum(arrayfun(@(x) isa(x,'GraphEdge_External'),obj.Edges));
                

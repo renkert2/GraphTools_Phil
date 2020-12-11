@@ -1,8 +1,7 @@
 classdef Type < matlab.mixin.Copyable
     %TYPE Summary of this class goes here
     %   Detailed explanation goes here
-    % we may want to define this as a handle class too so multiple edges or
-    % vertices can reference the same powerflow type.
+   
     
     properties % User can set Val_Char or Val_Sym, the corresponding properties are updated automatically
         Val_Char string = string.empty() % Should this be Called Val_Str... Actually, maybe we should name things better for input parsing...?
