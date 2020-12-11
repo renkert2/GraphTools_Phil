@@ -24,3 +24,5 @@ for i = 1:length(Comps)
     plot(Comps(i).Model)
     title(Comps(i).Name)
 end
+
+% test
