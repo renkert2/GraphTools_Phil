@@ -38,23 +38,23 @@ classdef SplitJunction < Component
                                 [ones(obj.n_out,1),(obj.n_in+2:obj.n_in+obj.n_out+1)']];
              
             % Capacitance Types
-            C(1) = Type_Capacitance('Val_Char',"10");  
+            C(1) = Type_Capacitance('Val_Char',"1");  
                
             % Power Flow Types
-            P(1) = Type_PowerFlow('Val_Char',"c*u*xt");
+            P(1) = Type_PowerFlow('Val_Char',"u1*xt");
             
             % define vertices
-            Vertex(1) = GraphVertex_Internal('Description','Junction Temp','Type',1,'Capacitance',C(1));
+            Vertex(1) = GraphVertex_Internal('Description','Junction Temp','Type',1,'Capacitance',C(1),'Capacitance',C(1));
             for i = 1:obj.n_in
-                Vertex(i+1) = GraphVertex_External('Description',['Inlet' num2str(i)]);
+                Vertex(i+1) = GraphVertex_External('Description',['Inlet' num2str(i)],'Capacitance',C(1));
             end      
             for i = obj.n_in+1:obj.n_in+obj.n_out
-                Vertex(i+1) = GraphVertex_External('Description',['Outlet' num2str(i-obj.n_in)]);
+                Vertex(i+1) = GraphVertex_External('Description',['Outlet' num2str(i-obj.n_in)],'Capacitance',C(1));
             end 
             
             % define edges
             for i = 1:obj.n_in+obj.n_out
-                Edge(i) = GraphEdge_Internal('PowerFlow',P(1),'Input',i,'Port',i);
+                Edge(i) = GraphEdge_Internal('PowerFlow',P(1),'Input',i,'Port',i,'Coefficient',obj.cp_f);
             end
                         
             g = Graph(E,Vertex,Edge);

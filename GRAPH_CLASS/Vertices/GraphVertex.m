@@ -5,6 +5,10 @@ classdef GraphVertex < matlab.mixin.Heterogeneous & matlab.mixin.Copyable
     %   arrays of all the child classes.  
     properties
         Description string = string.empty()
+        Type = 1 % Vertex Type: 1 - Energy Flow, 2 - State Flow
+        Capacitance Type_Capacitance = Type_Capacitance.empty();
+        Coefficient = 0
+        Initial = 0
     end
     
     methods

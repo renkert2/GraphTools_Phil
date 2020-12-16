@@ -5,6 +5,7 @@ classdef GraphEdge_Internal < GraphEdge
         PowerFlow Type_PowerFlow = Type_PowerFlow.empty()
         Input
         Port
+        Coefficient = 0
     end
     
     methods

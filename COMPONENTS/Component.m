@@ -24,6 +24,7 @@ classdef Component < matlab.mixin.Heterogeneous & handle
         function ConstructGraph(obj)
             g = DefineGraph(obj);
             g.init();
+%             obj.Model = GraphModel(g);
             obj.Model = g;
         end
         

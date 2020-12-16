@@ -35,20 +35,20 @@ classdef HeatLoad < Component
                  1 3];
             
             % Capacitance Types
-            C(1) = Type_Capacitance('Val_Char',"10");
+            C(1) = Type_Capacitance('Val_Char',"1");
             
             % Power Flow Types
-            P(1) = Type_PowerFlow('Val_Char',"c*u*xt");
+            P(1) = Type_PowerFlow('Val_Char',"u1*xt");
             
             % Define Vertices
             Vertex(1) = GraphVertex_Internal('Description','Load Temp','Type',1,'Capacitance',C(1));
-            Vertex(2) = GraphVertex_External('Description','Inlet');
-            Vertex(3) = GraphVertex_External('Description','Outlet');
+            Vertex(2) = GraphVertex_External('Description','Inlet','Capacitance',C(1));
+            Vertex(3) = GraphVertex_External('Description','Outlet','Capacitance',C(1));
              
             % Define Edges
-            Edge(1) = GraphEdge_Internal('PowerFlow',P(1),'Input',1,'Port',1);
-            Edge(2) = GraphEdge_Internal('PowerFlow',P(1),'Input',1,'Port',2);
-            Edge(3) = GraphEdge_External();
+            Edge(1) = GraphEdge_Internal('PowerFlow',P(1),'Input',1,'Port',1,'Coefficient',obj.cp_f);
+            Edge(2) = GraphEdge_Internal('PowerFlow',P(1),'Input',1,'Port',2,'Coefficient',obj.cp_f);
+            Edge(3) = GraphEdge_External('V_ind',1);
 
 
              g = Graph(E,Vertex,Edge);

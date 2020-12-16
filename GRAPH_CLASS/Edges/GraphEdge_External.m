@@ -1,6 +1,11 @@
 classdef GraphEdge_External < GraphEdge
     %GRAPHEDGE_External Summary of this class goes here
     %   Detailed explanation goes here
+    
+    properties
+       V_ind {mustBeInteger} % affected vertex 
+        
+    end
 
     
     

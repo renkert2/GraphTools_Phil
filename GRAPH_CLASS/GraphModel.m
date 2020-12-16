@@ -5,6 +5,13 @@ classdef GraphModel < matlab.mixin.Copyable
     properties
         Graph Graph = Graph.empty()
         
+        C_coeff % capacitance coefficient matrix
+        CType Type_Capacitance = Type_Capacitance.empty()
+        P_coeff % capacitance coefficient matrix
+        PType Type_PowerFlow = Type_PowerFlow.empty()
+        x_init % capacitance coefficient matrix
+        DynType % capacitance coefficient matrix
+        D % capacitance coefficient matrix
         % D matrix
         
     end
@@ -22,6 +29,19 @@ classdef GraphModel < matlab.mixin.Copyable
             G = digraph(obj.Graph.E(:,1),obj.Graph.E(:,2));
             h = plot(G);
             labeledge(h,obj.Graph.E(:,1)',obj.Graph.E(:,2)',1:size(obj.Graph.E,1));
+        end
+        
+        function ReorderStates(obj,idxNew)
+            obj.Graph.M = obj.Graph.M(idxNew,:); %this will require an update to obj.Graph.E
+            obj.C_coeff = obj.C_coeff(idxNew,:);
+            obj.x_init  = obj.x_init(idxNew);
+            obj.DynType = obj.DynType(idxNew);
+            %             obj.D       = obj.D(idxNew);
+            
+            E = obj.Graph.E;
+            E(:,1) = (1:size(obj.Graph.M,1))*(obj.Graph.M == 1); % set edge matrix tails
+            E(:,2) = (1:size(obj.Graph.M,1))*(obj.Graph.M == -1); % set edge matrix heads
+            obj.Graph.E = E;
         end
         
         function Modify(obj)

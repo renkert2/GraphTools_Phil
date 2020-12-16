@@ -24,7 +24,7 @@ classdef HeatExchanger < Component
         % Side 1 fluid Specific Heat [J/kg]
         cp_f1 (1,1) double {mustBeNumeric} = 2000;
         % Side 2 fluid Specific Heat [J/kg]
-        cp_f2 (1,1) double {mustBeNumeric} = 2000;
+        cp_f2 (1,1) double {mustBeNumeric} = 1000;
         % Heat Transfer Coefficient [W/K]
         HTC (1,1) double {mustBeNumeric} = 10;
         
@@ -46,26 +46,27 @@ classdef HeatExchanger < Component
                  1 2];
              
             % Capacitance Types
-            C(1) = Type_Capacitance('Val_Char',"10");
+            C(1) = Type_Capacitance('Val_Char',"1");
              
             % Power Flow Types
-            P(1) = Type_PowerFlow('Val_Char',"c*u*xt");
-            P(2) = Type_PowerFlow('Val_Char',"c*(xt-xh)");
+            P(1) = Type_PowerFlow('Val_Char',"u1*xt");
+            P(2) = Type_PowerFlow('Val_Char',"xt");
+            P(3) = Type_PowerFlow('Val_Char',"xh");
             
             % Define Vertices
-            Vertex(1) = GraphVertex_Internal('Description','Temp S1','Type',1,'Capacitance',C(1));
-            Vertex(2) = GraphVertex_Internal('Description','Temp S2','Type',1,'Capacitance',C(1));
-            Vertex(3) = GraphVertex_External('Description','Inlet S1');
-            Vertex(4) = GraphVertex_External('Description','Inlet S2');
-            Vertex(5) = GraphVertex_External('Description','Outlet S1');
-            Vertex(6) = GraphVertex_External('Description','Outlet S2');
+            Vertex(1) = GraphVertex_Internal('Description','Temp S1','Type',1,'Capacitance',C(1),'Coefficient',10,'Initial',25);
+            Vertex(2) = GraphVertex_Internal('Description','Temp S2','Type',1,'Capacitance',C(1),'Coefficient',10,'Initial',25);
+            Vertex(3) = GraphVertex_External('Description','Inlet S1','Capacitance',C(1));
+            Vertex(4) = GraphVertex_External('Description','Inlet S2','Capacitance',C(1));
+            Vertex(5) = GraphVertex_External('Description','Outlet S1','Capacitance',C(1));
+            Vertex(6) = GraphVertex_External('Description','Outlet S2','Capacitance',C(1));
             
             % Define Edges
-            Edge(1) = GraphEdge_Internal('PowerFlow',P(1),'Input',1,'Port',1);
-            Edge(2) = GraphEdge_Internal('PowerFlow',P(1),'Input',1,'Port',2);
-            Edge(3) = GraphEdge_Internal('PowerFlow',P(1),'Input',2,'Port',3);
-            Edge(4) = GraphEdge_Internal('PowerFlow',P(1),'Input',2,'Port',4);
-            Edge(5) = GraphEdge_Internal('PowerFlow',P(2));
+            Edge(1) = GraphEdge_Internal('PowerFlow',P(1),'Input',1,'Port',1,'Coefficient',obj.cp_f1);
+            Edge(2) = GraphEdge_Internal('PowerFlow',P(1),'Input',1,'Port',2,'Coefficient',obj.cp_f1);
+            Edge(3) = GraphEdge_Internal('PowerFlow',P(1),'Input',2,'Port',3,'Coefficient',obj.cp_f2);
+            Edge(4) = GraphEdge_Internal('PowerFlow',P(1),'Input',2,'Port',4,'Coefficient',obj.cp_f2);
+            Edge(5) = GraphEdge_Internal('PowerFlow',[P(2); P(3)],'Coefficient',[obj.HTC -obj.HTC]);
             
             g = Graph(E,Vertex,Edge);
             

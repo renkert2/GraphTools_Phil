@@ -22,12 +22,13 @@ classdef Graph < matlab.mixin.Copyable
         Vertices (:,1) GraphVertex = GraphVertex.empty()
         Edges (:,1) GraphEdge = GraphEdge.empty()
         E % Graph Edge Matrix
+        
+        % Incidence Matrix
+        M 
     end
     
     properties (SetAccess = private)
-        % Incidence Matrix
-        M 
-        
+    
         % Number of vertices
         Nv
         
@@ -42,6 +43,12 @@ classdef Graph < matlab.mixin.Copyable
         
         % Number of external edges
         Nee
+      
+    end
+    
+    properties (Dependent)
+        % total number of vertices
+        v_tot
       
     end
     
@@ -62,15 +69,23 @@ classdef Graph < matlab.mixin.Copyable
                obj.Nev = sum(arrayfun(@(x) isa(x,'GraphVertex_External'),obj.Vertices));
                obj.Nee = sum(arrayfun(@(x) isa(x,'GraphEdge_External'),obj.Edges));
                
-               obj.M = zeros(max(max(obj.E)),size(obj.E,1));
-               for i = 1:size(obj.E,1)
-                   obj.M(obj.E(i,1),i) =  1; % tails
-                   obj.M(obj.E(i,2),i) = -1; % heads
-               end
+               
            end
                
         end
      
+        function obj = set.E(obj,val)
+            obj.E = val;
+            obj.M = zeros(max(max(obj.E)),size(obj.E,1));
+               for i = 1:size(obj.E,1)
+                   obj.M(obj.E(i,1),i) =  1; % tails
+                   obj.M(obj.E(i,2),i) = -1; % heads
+               end
+        end
+        
+        function obj = get.v_tot(obj)
+            obj.v_tot = obj.Nv + obj.Nev;
+        end
         
         function init(obj) 
             % placeholder

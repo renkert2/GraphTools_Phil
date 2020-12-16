@@ -25,4 +25,10 @@ for i = 1:length(Comps)
     title(Comps(i).Name)
 end
 
+Graphs = [Comps(:).Model];
+
+%%
+Sys = GenSysGraph(Graphs,ConnectV,ConnectE);
+figure
+plot(Sys)
 % test 2
