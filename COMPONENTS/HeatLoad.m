@@ -35,10 +35,10 @@ classdef HeatLoad < Component
                  1 3];
             
             % Capacitance Types
-            C(1) = Type_Capacitance('Val_Char',"1");
+            C(1) = Type_Capacitance("1");
             
             % Power Flow Types
-            P(1) = Type_PowerFlow('Val_Char',"u1*xt");
+            P(1) = Type_PowerFlow("u1*xt");
             
             % Define Vertices
             Vertex(1) = GraphVertex_Internal('Description','Load Temp','Type',1,'Capacitance',C(1));

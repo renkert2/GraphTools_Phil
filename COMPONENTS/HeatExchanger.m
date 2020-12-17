@@ -46,12 +46,12 @@ classdef HeatExchanger < Component
                  1 2];
              
             % Capacitance Types
-            C(1) = Type_Capacitance('Val_Char',"1");
+            C(1) = Type_Capacitance("1");
              
             % Power Flow Types
-            P(1) = Type_PowerFlow('Val_Char',"u1*xt");
-            P(2) = Type_PowerFlow('Val_Char',"xt");
-            P(3) = Type_PowerFlow('Val_Char',"xh");
+            P(1) = Type_PowerFlow("u1*xt");
+            P(2) = Type_PowerFlow("xt");
+            P(3) = Type_PowerFlow("xh");
             
             % Define Vertices
             Vertex(1) = GraphVertex_Internal('Description','Temp S1','Type',1,'Capacitance',C(1),'Coefficient',10,'Initial',25);

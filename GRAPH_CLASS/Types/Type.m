@@ -3,7 +3,7 @@ classdef Type < matlab.mixin.Copyable
     %   Detailed explanation goes here
    
     
-    properties % User can set Val_Char or Val_Sym, the corresponding properties are updated automatically
+    properties  % User can set Val_Char or Val_Sym, the corresponding properties are updated automatically
         Val_Char string = string.empty() % Should this be Called Val_Str... Actually, maybe we should name things better for input parsing...?
         Val_Sym sym = sym.empty()
     end
@@ -18,9 +18,17 @@ classdef Type < matlab.mixin.Copyable
     end
     
     methods
-        function obj = Type(varargin)
-            if nargin > 1
-                obj = my_inputparser(obj,varargin{:});
+        function obj = Type(type)
+            if nargin == 1
+                if isa(type,'string') || isa(type,'char')
+                    obj.Val_Char = type;
+                elseif isa(type,'sym')
+                    obj.Val_Sym = type;
+                else
+                    error('Type object must be defined as a string or sym variable.')
+                end
+            else
+                error('Type object must be defined at object creation. Pass the object expression as a string or symbolic expression.')
             end
         end
         

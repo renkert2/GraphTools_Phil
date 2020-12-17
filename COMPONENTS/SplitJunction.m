@@ -38,10 +38,10 @@ classdef SplitJunction < Component
                                 [ones(obj.n_out,1),(obj.n_in+2:obj.n_in+obj.n_out+1)']];
              
             % Capacitance Types
-            C(1) = Type_Capacitance('Val_Char',"1");  
+            C(1) = Type_Capacitance("1");  
                
             % Power Flow Types
-            P(1) = Type_PowerFlow('Val_Char',"u1*xt");
+            P(1) = Type_PowerFlow("u1*xt");
             
             % define vertices
             Vertex(1) = GraphVertex_Internal('Description','Junction Temp','Type',1,'Capacitance',C(1),'Capacitance',C(1));

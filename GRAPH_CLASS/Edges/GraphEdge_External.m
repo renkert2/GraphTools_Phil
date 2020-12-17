@@ -3,7 +3,7 @@ classdef GraphEdge_External < GraphEdge
     %   Detailed explanation goes here
     
     properties
-       V_ind {mustBeInteger} % affected vertex 
+       V_ind {mustBeInteger} = 0 % affected vertex 
         
     end
 

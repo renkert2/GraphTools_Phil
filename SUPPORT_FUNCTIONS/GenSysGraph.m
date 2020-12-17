@@ -23,33 +23,75 @@
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     %% Initialize the System Graph
-    Sys = GraphModel();
+    
+    
+    %% generate component to system maps
+    gComp = vertcat(Comp.Graph);
+    [V,V_mod,E,E_mod]= Comp2SysMaps(gComp,ConnectV,ConnectE);   
     
     %% Resolve/Merge Component Graph Informations
-    [C_coeff,Sys.CType,P_coeff,Sys.PType] = ResolveComponents(Comp);
+%     [C_coeff,Sys.CType,P_coeff,Sys.PType] = ResolveComponents(Comp);
     
     %% Generate Component to Global Maps
-   gComp = vertcat(Comp.Graph);
-   VAll  = vertcat(gComp.Vertices);
-   EAll  = vertcat(gComp.Edges);
-    [V,E,E_mod]= Comp2SysMaps(gComp,ConnectV,ConnectE);   
-
-    Sys.C_coeff = V*C_coeff;
-    M = V*blkdiag(gComp.M)*E;
-    Emat(:,1) = (1:size(M,1))*(M == 1); % set edge matrix tails
-    Emat(:,2) = (1:size(M,1))*(M == -1); % set edge matrix heads
-    Sys.x_init = V*vertcat(VAll.Initial);
-    Sys.DynType = V*vertcat(VAll.Type)./vecnorm(V,1,2);
-    Sys.P_coeff = E_mod'*P_coeff;
-    Sys.Graph = Graph();
-    Sys.Graph.E = Emat;
-     
-    idx_d = (1:size(Sys.C_coeff,1))'.*any(Sys.C_coeff ~= 0,2); 
-    idx_d(idx_d==0) = [];
-    idx_a = (1:size(Sys.C_coeff,1))'.*~any(Sys.C_coeff ~= 0,2);
-    idx_a(idx_a==0) = [];
-    Sys.ReorderStates([idx_d;idx_a]);
     
+    VAll  = vertcat(gComp.Vertices);
+    EAll_int  = vertcat(gComp.InternalEdges);
+    EAll_ext  = vertcat(gComp.ExternalEdges);
+    
+    Vidx = V_mod*(1:length(VAll))';
+    Eidx = E_mod'*(1:length(EAll_int))';
+
+    INP = MakeInputMap(gComp,E);
+    
+    M = V*blkdiag(gComp.M)*E;
+%     Emat(:,1) = (1:size(M,1))*(M == 1); % set edge matrix tails
+%     Emat(:,2) = (1:size(M,1))*(M == -1); % set edge matrix heads
+    
+    Vsys = VAll(Vidx);
+    Esys = [EAll_int(Eidx);EAll_ext];
+    for i = 1:length(INP)
+        Esys(i).Input = INP{i};
+    end
+    
+    %%%%%%%%%% Code to update D matrix %%%%%%%%
+    for i = 1:length(gComp)
+        Dcomp(i).D = zeros(gComp(i).v_tot,gComp(i).v_tot);
+        try
+            EE = gComp(i).ExternalEdges.V_ind;
+            for j = 1:length(EE)
+                Dcomp(i).D(EE(j),j) = 1; 
+            end
+        end             
+    end
+    D = V*blkdiag(Dcomp.D)*V'; %
+    D(:,~any(D,1)) = [];
+    Didx = (1:1:size(D,1))*D;
+    for i = 1:length(Didx)
+        EAll_ext(i).V_ind = Didx(i);
+    end
+    %%%%%%%%%% Code to update D matrix %%%%%%%%
+    
+    
+    g = Graph(M,Vsys,Esys);
+%     g = Graph(Emat,Vsys,Esys);
+    Sys = GraphModel(g);
+    
+%     Sys.C_coeff = V*C_coeff;
+%     ;
+%     Emat(:,1) = (1:size(M,1))*(M == 1); % set edge matrix tails
+%     Emat(:,2) = (1:size(M,1))*(M == -1); % set edge matrix heads
+%     Sys.x_init = V*vertcat(VAll.Initial);
+%     Sys.DynType = V*vertcat(VAll.Type)./vecnorm(V,1,2);
+%     Sys.P_coeff = E_mod'*P_coeff;
+%     Sys.Graph = Graph();
+%     Sys.Graph.E = Emat;
+%      
+%     idx_d = (1:size(Sys.C_coeff,1))'.*any(Sys.C_coeff ~= 0,2); 
+%     idx_d(idx_d==0) = [];
+%     idx_a = (1:size(Sys.C_coeff,1))'.*~any(Sys.C_coeff ~= 0,2);
+%     idx_a(idx_a==0) = [];
+%     Sys.ReorderStates([idx_d;idx_a]);
+%     
     a = 1;
     
             
@@ -319,7 +361,6 @@ function [Sys] = MakeModifiedGraph(Sys)
 
 end
 
-
 function [C_coeff,CType,P_coeff,PType] = ResolveComponents(Comp)
     % ResolveComponents is a function that resolves differences in the
     % definitions of component graphs. Theses differences include
@@ -441,7 +482,100 @@ function [Coeff,TypeSys] = MakeCoeffMatrix (All,TypeAll,numType)
     
 end
 
-function [V_op,E_op,E_op_mod] = Comp2SysMaps(Comp,ConnectV,ConnectE)
+function [INP] = MakeInputMap(gComp,E)
+
+    EAll = vertcat(gComp.Edges);
+    EAll_int  = EAll(arrayfun(@(x) isa(x,'GraphEdge_Internal'),EAll));
+    numU = max(arrayfun(@(x) length(x.Input),EAll_int));
+
+    Dummy.B.B1 = []; % this will be a structure that stores B matrix information
+    
+    for k = 1:length(gComp)
+        for j = 1:numU
+            Dummy.B(k).(['B',num2str(j)]) = zeros(gComp(k).Ne,gComp(k).Ne);
+            for i = 1:length(gComp(k).Edges)
+                try
+                    Dummy.B(k).(['B',num2str(j)])(i,gComp(k).Edges(i).Input(j)) = 1;
+                end
+            end
+        end
+    end
+    
+    %%%%%%%%%%%%%%% START CALCULATE B_Comp to B_Sys %%%%%%%%%%%%
+    B_Comp = [Dummy.B];
+
+    EB   = cell(numel(fieldnames(Dummy(1).B)),1);
+    uInt = cell(numel(fieldnames(Dummy(1).B)),1);
+    for i = 1:numel(fieldnames(Dummy(1).B))
+        BDiag = blkdiag(B_Comp.(['B',num2str(i)]));
+        EB{i} = spones(E)'*BDiag;
+        uIntIdx = EB{i}.*(1:size(BDiag,2)); % relate comp input index to sys edges
+        uIntIdx(~(sum(EB{i},2) > 1),:) = []; % remove non coupled edges/inputs
+        v = nonzeros(uIntIdx'); % indicies of zero elements to remove
+        uInt{i} = reshape(v,2,size(uIntIdx,1))'; % remove zero elements form the matrix
+    end
+    
+    uConnect = vertcat(uInt{:});
+    uConnect = [uConnect zeros(size(uConnect,1),1)];
+    ind = 1;
+    for i = 1:size(uConnect,1)
+        
+        if uConnect(i,3) == 0
+            uConnect(i,3) = ind;
+            ind = ind + 1;   
+            go = 1;
+        
+        
+        srch = uConnect(i,[1 2]);
+        while go <= length(srch)
+            locs = [(uConnect(:,[1,2])==srch(go) & uConnect(:,3) == 0)];
+            if sum(locs,'All') > 0
+                uConnect(or(locs(:,1),locs(:,2)),3) = uConnect(i,3);
+                locs(~or(locs(:,1),locs(:,2)),:) = 1;
+                srch = [srch reshape(uConnect(~locs),1,[])];
+            end
+            go = go + 1;
+        end
+        end   
+             
+        
+    end
+    
+    Uc = zeros(size(BDiag,1),ind-1);
+    for i = 1:ind-1
+        Uc(reshape(uConnect((uConnect(:,3) == i),1:2),1,[]),i) = 1;
+    end
+    
+    Ucbar = zeros(size(BDiag,1),size(BDiag,1)-sum(sum(Uc)));
+    idx_cbar = ((sum(Uc,2) ~= 1)).*(1:size(BDiag,1))';
+    idx_cbar(idx_cbar == 0) = [];
+    Ucbar(sub2ind(size(Ucbar),idx_cbar',1:numel(idx_cbar))) = 1;
+    
+    U = [Ucbar, Uc];
+    
+    B = cell(numel(fieldnames(Dummy(1).B)),1);
+    for i = 1:numel(fieldnames(Dummy(1).B))
+        B{i} =  EB{i}*U;
+    end
+    
+    B_stacked = vertcat(B{:});
+    uEmpty = ~any(B_stacked,1);
+    
+    for i = 1:numel(fieldnames(Dummy(1).B))
+        BNew = full(spones(B{i}(:,~uEmpty)));
+        inp(i).U = BNew*(1:size(BNew,2))';
+    end
+    
+    INP = mat2cell(horzcat(inp.U),ones(1,size(BNew,1)),[numU]);
+    for i = 1:length(INP)
+        INP{i}(INP{i} == 0) = [];
+    end
+    
+    
+
+end
+
+function [V_op,V_op_mod,E_op,E_op_mod] = Comp2SysMaps(Comp,ConnectV,ConnectE)
 
     e_tot = 0;
     v_tot = 0;
@@ -458,7 +592,7 @@ function [V_op,E_op,E_op_mod] = Comp2SysMaps(Comp,ConnectV,ConnectE)
         e_tot = e_tot + Comp(i).Ne;
     end
     
-    
+VAll = vertcat(Comp.Vertices);    
 chi = (1:1:v_tot)';
 Xi = (1:1:e_tot)';
 
@@ -497,9 +631,20 @@ for i = 1:length(delta_ubar)
     V_sbar_c(delta_ubar{i},i) = ones(length(delta_ubar{i}),1);
 end
 
+V_sbar_c_mod = zeros(v_tot,length(delta_ubar));
+for i = 1:length(delta_ubar)
+    idx_int = arrayfun(@(x) isa(x,'GraphVertex_Internal'),VAll(delta_ubar{i}));
+    V_sbar_c_mod(delta_ubar{i}(idx_int),i) = 1;
+end
+
 V_s_c = zeros(v_tot,length(delta_lbar));
 for i = 1:length(delta_lbar)
     V_s_c(delta_lbar{i},i) = ones(length(delta_lbar{i}),1);
+end
+
+V_s_c_mod = zeros(v_tot,length(delta_lbar));
+for i = 1:length(delta_lbar)
+    V_s_c_mod(delta_lbar{i}(1),i) = 1;
 end
 
 ind = my_setdiff(chi_lbar,chi_hat);
@@ -524,6 +669,7 @@ for i = 1:length(sigma_mod)
     E_c_mod(sigma_mod{i},i) = 1;
 end
 V_op = [V_sbar_cbar V_sbar_c V_s_c V_s_cbar]';
+V_op_mod = [V_sbar_cbar V_sbar_c_mod V_s_c_mod V_s_cbar]';
 E_op = [E_cbar E_c];
 E_op_mod = [E_cbar E_c_mod];
 
