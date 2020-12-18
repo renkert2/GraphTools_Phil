@@ -22,7 +22,7 @@ classdef Type_PowerFlow < Type
             % check to see if T_var is a subset of variable options
             if sum(ismember(T_var_red,Options)) == length(T_var_red)
                 obj.vars = T_var_all;
-                params = [{sym('xt') sym('xh') sym('u',[1 length(T_var_red)])}]; %[xt xh u]
+                params = [{sym('xt') sym('xh') sym('u',[1 max(length(T_var_red),2)])}]; %[xt xh u] % max function necessary to make sure the the input parameter can be variable size
                 obj.Val_Func = matlabFunction(obj.Val_Sym,'Vars',params);
                 obj.Jac_Sym  = jacobian(obj.Val_Sym,[sym('xt') sym('xh') sym('u',[1 length(T_var_red)])]);
                 obj.Jac_Func = matlabFunction(obj.Jac_Sym,'Vars',params);

@@ -41,7 +41,7 @@ classdef Type < matlab.mixin.Copyable
         % set the symbolic value and update the string definition
         function set.Val_Sym(obj, val)
             obj.Val_Sym = val;
-            obj = updateVal(obj);
+            updateVal(obj);
         end
         
         % update the type value property that was not defined
@@ -50,7 +50,7 @@ classdef Type < matlab.mixin.Copyable
                 obj.Val_Sym = str2sym(obj.Val_Char);
             end
             if isempty(obj.Val_Char)
-                obj.Val_Char ='Val_Char', string(obj.Val_Sym);
+                obj.Val_Char = string(obj.Val_Sym);
             end
         end
         

@@ -16,9 +16,11 @@ classdef Graph < matlab.mixin.Copyable
     % potential improvements:
     % Consider added Matlab "digraph" or adjcancy matrix as a propertey.
     % consider adding dynamic and algebric index get functions
-    % Consider defining the graph with an incidence matrix too
     % note that M and E are technically dependent on Vertices and Edges...
+    % at some point, we'll need to account for internal and external
+    % objects being passed in arbitrary order
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
     
     
     properties
@@ -28,7 +30,7 @@ classdef Graph < matlab.mixin.Copyable
         Edges (:,1) GraphEdge = GraphEdge.empty() 
     end
     
-    properties (SetAccess = immutable)
+    properties %(SetAccess = immutable)
         % Graph Edge Matrix
         E (:,2) double %{mustBeInteger,mustBePositive}; requires default value for Validation Functions
         % Incidence Matrix
@@ -57,6 +59,12 @@ classdef Graph < matlab.mixin.Copyable
     properties (Dependent)
         % total number of vertices
         v_tot (1,1) double %{mustBeInteger,mustBeNonnegative}
+        
+        % Tails
+        Tails (1,1) double 
+        
+        % Heads
+        Heads (1,1) double 
     end
     
     properties (Dependent) % make this hidden at some point
@@ -111,6 +119,14 @@ classdef Graph < matlab.mixin.Copyable
             
         function x = get.v_tot(obj)
             x = obj.Nv + obj.Nev;
+        end
+        
+        function x = get.Tails(obj)
+            x = double(obj.M'== 1);
+        end
+        
+        function x = get.Heads(obj)
+            x = double(obj.M'== -1);
         end
         
         function x = get.InternalVertices(obj)

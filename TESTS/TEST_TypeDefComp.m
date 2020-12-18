@@ -2,15 +2,15 @@ clear all
 close all
 
 N = 20;
-method = 1;
+method = 2;
 
 %% Method of defining few power flows with coeffs
 for j = 1:10
 if method == 1
     tic
-    T(1) = Type_PowerFlow('Val_Char',"xt*xh*u1");
-    T(2) = Type_PowerFlow('Val_Char',"xt^2*u1");
-    T(3) = Type_PowerFlow('Val_Char',"xt-xh");
+    T(1) = Type_PowerFlow("xt*xh*u1");
+    T(2) = Type_PowerFlow("xt^2*u1");
+    T(3) = Type_PowerFlow("xt-xh");
     
     for i = 1:N
         idx = max(mod(i,4),1);
@@ -31,11 +31,11 @@ elseif method == 2
         idx = max(mod(i,4),1);
         switch idx
             case 1
-                E2(i) = GraphEdge_Internal('PowerFlow',Type_PowerFlow('Val_Char',"1*xt*xh*u1"));
+                E2(i) = GraphEdge_Internal('PowerFlow',Type_PowerFlow("1*xt*xh*u1"));
             case 2
-                E2(i) = GraphEdge_Internal('PowerFlow',Type_PowerFlow('Val_Char',"2*xt^2*u1"));
+                E2(i) = GraphEdge_Internal('PowerFlow',Type_PowerFlow("2*xt^2*u1"));
             case 3
-                E2(i) = GraphEdge_Internal('PowerFlow',Type_PowerFlow('Val_Char',"3*(xt-xh)"));
+                E2(i) = GraphEdge_Internal('PowerFlow',Type_PowerFlow("3*(xt-xh)"));
         end
         
     end

@@ -48,7 +48,7 @@
 %     Emat(:,2) = (1:size(M,1))*(M == -1); % set edge matrix heads
     
     Vsys = VAll(Vidx);
-    Esys = [EAll_int(Eidx);EAll_ext];
+    Esys = [EAll_int(Eidx);EAll_ext]; % Ecomp -> Esys
     for i = 1:length(INP)
         Esys(i).Input = INP{i};
     end

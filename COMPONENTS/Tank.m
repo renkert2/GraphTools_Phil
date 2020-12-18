@@ -40,15 +40,20 @@ classdef Tank < Component
                  5 2];
             % Capacitance Types
             C(1) = Type_Capacitance("1"); 
-            C(2) = Type_Capacitance("x"); 
+%             C(2) = Type_Capacitance("x"); 
              
             % Power Flow Types
             P(1) = Type_PowerFlow("u1*xt");
             P(2) = Type_PowerFlow("(u1-u2)*xt");
             P(3) = Type_PowerFlow("(u1-u2)");
             
+            
+%             u(1) =mass in
+%             u(2) = mass out;
+            
+            
             % define vertices
-            Vertex(1) = GraphVertex_Internal('Description','Liquid Temp','Type',1,'Capacitance',[C(1); C(2)],'Coefficient',[1000; 100],'Initial',25);
+            Vertex(1) = GraphVertex_Internal('Description','Liquid Temp','Type',1,'Capacitance',C(1),'Coefficient',[1000],'Initial',25);
             Vertex(2) = GraphVertex_Internal('Description','Tank Mass','Type',1,'Capacitance',C(1),'Coefficient',1,'Initial',100);
             Vertex(3) = GraphVertex_External('Description','Inlet','Capacitance',C(1));
             Vertex(4) = GraphVertex_External('Description','Outlet','Capacitance',C(1));
