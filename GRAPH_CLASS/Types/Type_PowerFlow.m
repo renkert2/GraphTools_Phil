@@ -4,7 +4,6 @@ classdef Type_PowerFlow < Type
     methods
         function obj = Type_PowerFlow(varargin)
             obj = obj@Type(varargin{:});
-            obj.init()
         end
         
         function init(obj)
@@ -14,7 +13,7 @@ classdef Type_PowerFlow < Type
             T_var_red = T_var_all;
             
             % get list of number of feasible inputs (Options) and defined
-            % inputs (T_var_red). inputs are special here because an 
+            % inputs (T_var_red). inputs are special here because an
             % arbitrary number of inputs can be used
             T_var_red(ismember(T_var_red,[sym('xh');sym('xt')])) = []; % remove head and tail states from the list of options
             Options = sym('u',[length(T_var_red) 1]); % total number of allowable inputs
@@ -29,10 +28,16 @@ classdef Type_PowerFlow < Type
             else
                 error('Invalid powerflow definition. Define power flows in term of tail state xt, head state xh, and inputs u1, u2, ... uN')
             end
-            
-%             init@Type(obj);
+        end
+    end
+    
+    methods (Access = protected)
+        function SetSubclass(obj)
+            obj.error_msg = "Invalid PowerFlow Definition: Define power flows in term of tail state xt, head state xh, and inputs u1, u2, ... uN";
+            syms x
+            obj.vars = [x];
         end
     end
 end
-    
+
 

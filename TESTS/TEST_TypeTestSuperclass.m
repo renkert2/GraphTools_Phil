@@ -12,3 +12,4 @@ t_cap.Val_Str = "x^3";
 
 t_cap.Val_Sym = x^5;
 
+
