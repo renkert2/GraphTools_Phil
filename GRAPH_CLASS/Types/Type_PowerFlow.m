@@ -2,42 +2,52 @@ classdef Type_PowerFlow < Type
     %Type used to store power flow information
     
     methods
-        function obj = Type_PowerFlow(varargin)
-            obj = obj@Type(varargin{:});
+        function obj = Type_PowerFlow(type)
+            [vars, params] = calcVars(type);
+            obj = obj@Type(vars, params, type);
         end
         
-        function init(obj)
+        function updateInputs(obj, type)
+            [vars, params] = calcVars(type);
             
-            % list of all symbolic variables
-            T_var_all = symvar(obj.Val_Sym).';
-            T_var_red = T_var_all;
-            
-            % get list of number of feasible inputs (Options) and defined
-            % inputs (T_var_red). inputs are special here because an
-            % arbitrary number of inputs can be used
-            T_var_red(ismember(T_var_red,[sym('xh');sym('xt')])) = []; % remove head and tail states from the list of options
-            Options = sym('u',[length(T_var_red) 1]); % total number of allowable inputs
-            
-            % check to see if T_var is a subset of variable options
-            if sum(ismember(T_var_red,Options)) == length(T_var_red)
-                obj.vars = T_var_all;
-                params = [{sym('xt') sym('xh') sym('u',[1 max(length(T_var_red),2)])}]; %[xt xh u] % max function necessary to make sure the the input parameter can be variable size
-                obj.Val_Func = matlabFunction(obj.Val_Sym,'Vars',params);
-                obj.Jac_Sym  = jacobian(obj.Val_Sym,[sym('xt') sym('xh') sym('u',[1 length(T_var_red)])]);
-                obj.Jac_Func = matlabFunction(obj.Jac_Sym,'Vars',params);
-            else
-                error('Invalid powerflow definition. Define power flows in term of tail state xt, head state xh, and inputs u1, u2, ... uN')
-            end
+            obj.vars = vars;
+            obj.params = params;
+        end
+        
+        function init(obj, type)
+            obj.updateInputs(type)
+            init@Type(obj, type);
         end
     end
-    
-    methods (Access = protected)
-        function SetSubclass(obj)
-            obj.error_msg = "Invalid PowerFlow Definition: Define power flows in term of tail state xt, head state xh, and inputs u1, u2, ... uN";
-            syms x
-            obj.vars = [x];
-        end
-    end
+            
 end
 
+
+function num_inputs = parseInputVars(type)
+if isa(type, 'sym') || isa(type, 'char')
+    type = string(type);
+end
+
+assert(isa(type, 'string'), "PowerFlow Type must be of type string, char, or sym");
+
+patt = '(?<=u)\d+';
+
+input_list = double(regexp(type, patt, 'match'));
+
+num_inputs = max(input_list);
+end
+
+function [vars, params] = calcVars(type)
+state_vars = [sym('xt'), sym('xh')];
+num_inputs = parseInputVars(type);
+if num_inputs > 0
+    input_vars = sym('u', [1 num_inputs]);
+    vars = [state_vars, input_vars];
+    params = {state_vars(1), state_vars(2), input_vars};
+else
+    vars = [state_vars];
+    params = {state_vars(1), state_vars(2)};
+end
+
+end
 
