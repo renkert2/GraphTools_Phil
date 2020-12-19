@@ -26,7 +26,7 @@
     
     
     %% generate component to system maps
-    gComp = vertcat(Comp.Graph);
+    gComp = Comp';
     [V,V_mod,E,E_mod]= Comp2SysMaps(gComp,ConnectV,ConnectE);   
     
     %% Resolve/Merge Component Graph Informations
@@ -72,9 +72,9 @@
     %%%%%%%%%% Code to update D matrix %%%%%%%%
     
     
-    g = Graph(M,Vsys,Esys);
+    Sys = Graph(M,Vsys,Esys);
 %     g = Graph(Emat,Vsys,Esys);
-    Sys = GraphModel(g);
+%     Sys = GraphModel(g);
     
 %     Sys.C_coeff = V*C_coeff;
 %     ;

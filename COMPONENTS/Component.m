@@ -4,7 +4,7 @@ classdef Component < matlab.mixin.Heterogeneous & handle
     %   Detailed explanation goes here
     
     properties %(SetAccess = protected)
-        Model GraphModel = GraphModel.empty()
+        graph Graph = Graph.empty()
     end
     
     methods
@@ -25,11 +25,11 @@ classdef Component < matlab.mixin.Heterogeneous & handle
             g = DefineGraph(obj);
             g.init();
 %             obj.Model = GraphModel(g);
-            obj.Model = g;
+            obj.graph = g;
         end
         
         function g = DefineGraph(p)
-            g = GraphModel(); % Function to be defined by child classes
+            g = Graph(); % Function to be defined by child classes
         end
     end
     

@@ -37,15 +37,15 @@ function [Sys] = SymbolicSolver(Sys)
 
 
 %% Define symbolic variables
-idx_x_d = (sum(abs(Sys.C_coeff(1:Sys.Graph.Nv)),2) ~= 0);
-idx_x_a = (sum(abs(Sys.C_coeff(1:Sys.Graph.Nv)),2) == 0);
-idx_x_e = Sys.Graph.Nv+1:Sys.Graph.Nv+Sys.Graph.Nev;
+idx_x_d = (sum(abs(Sys.C_coeff(1:Sys.graph.Nv)),2) ~= 0);
+idx_x_a = (sum(abs(Sys.C_coeff(1:Sys.graph.Nv)),2) == 0);
+idx_x_e = Sys.graph.Nv+1:Sys.graph.Nv+Sys.graph.Nev;
 
 x_d     = sym('x_d%d'    ,[sum(idx_x_d)        1]); % dynamic states
 x_a     = sym('x_a%d'    ,[sum(idx_x_a)        1]); % algebraic states
 x_e     = sym('x_t%d'    ,[length(idx_x_e)     1]); % external states
-P_e     = sym('P_e%d'    ,[Sys.Graph.Nee             1]); % external edge flows
-u       = sym('u%d'      ,[Sys.Graph.Nu              1]); % inputs
+P_e     = sym('P_e%d'    ,[Sys.graph.Nee             1]); % external edge flows
+u       = sym('u%d'      ,[Sys.graph.Nu              1]); % inputs
 
 %% Get state vector filled up with symbolic varialbes
 x_full(idx_x_d,1) = x_d;
@@ -58,7 +58,7 @@ P = CalcP(Sys,x_full,u); % calculates power flows
 C = CalcC(Sys,x_full); % calcualtes capacitance
 
 %% Solve for the algebraic equations
-eqnA(1:sum(idx_x_a),1) = -Sys.Graph.M(idx_x_a,:)*P + Sys.D(idx_x_a,:)*P_e == 0; % system of algebraic equations
+eqnA(1:sum(idx_x_a),1) = -Sys.graph.M(idx_x_a,:)*P + Sys.D(idx_x_a,:)*P_e == 0; % system of algebraic equations
 
 N1 = 1;
 
@@ -71,7 +71,7 @@ x_a_solution = linsolve(A,B); % find solution to the algebraic system
 t2(i) = toc;
 %% Solve for the dynamic equations
 % x_full(idx_x_a,1) = x_a_solution;
-eqnD(1:sum(idx_x_d),1) = diag(C(idx_x_d))^-1*(-Sys.Graph.M(idx_x_d,:)*P + Sys.D(idx_x_d,:)*P_e); % system of dynamic equations (
+eqnD(1:sum(idx_x_d),1) = diag(C(idx_x_d))^-1*(-Sys.graph.M(idx_x_d,:)*P + Sys.D(idx_x_d,:)*P_e); % system of dynamic equations (
 tic
 x_d_solution = subs(eqnD,x_a,x_a_solution); % plug in the algebraic system solution into the dynamic system equations
 t3(i) = toc;
@@ -90,10 +90,10 @@ y = [x_full(idx_x_d);x_a_solution]; %y = [x_d; x_a(x_d,x_e,u,P_e)]
 x_d1     = sym('x_d%d'    ,[sum(idx_x_d)        1]); % dynamic states
 x_a1     = sym('x_a%d'    ,[sum(idx_x_a)        1]); % dynamic states
 x_e1     = sym('x_t%d'    ,[length(idx_x_e)     1]); % external states
-P_e1     = sym('P_e%d'    ,[Sys.Graph.Nee             1]); % external edge flows
-u1       = sym('u%d'      ,[Sys.Graph.Nu              1]); % inputs
+P_e1     = sym('P_e%d'    ,[Sys.graph.Nee             1]); % external edge flows
+u1       = sym('u%d'      ,[Sys.graph.Nu              1]); % inputs
 
-N2 = 10;
+N2 = 1;
 for i = 1:N2
     tic
     solveAB = matlabFunction(A,B,'Vars',[{[x_d1] [x_e1], [u1], [P_e1]}]);
@@ -108,12 +108,12 @@ for i = 1:N2
     t6(i) = toc;
 end
 
-mean(t1)
-mean(t2)
-mean(t3)
-mean(t4)
-mean(t5)
-mean(t6)
+mean(t1);
+mean(t2);
+mean(t3);
+mean(t4);
+mean(t5);
+mean(t6);
 % % use to save the algebraic solution in the graph structure
 % Sys.solveAlg = matlabFunction(x_a_solution,'Vars',[{[x_d1] [x_e1], [u1], [P_e1]}]); % algrebraic state solution
 % Sys.solveDyn = matlabFunction(x_d_solution,'Vars',[{[x_d1] [x_e1], [u1], [P_e1]}]); % dynamic state derivative solution
@@ -147,8 +147,8 @@ function [P] = CalcP(Sys,x0,u0)
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % P   = zeros(size(Sys.P_coeff_mod));
-xt = Sys.Graph.Tails*x0; %tail states
-xh = Sys.Graph.Heads*x0; %head states
+xt = Sys.graph.Tails*x0; %tail states
+xh = Sys.graph.Heads*x0; %head states
 Nu = numel(fieldnames(Sys.B)); % max number of inputs incident per edge
 u = cell(1,Nu); % initialize edge input data.
 for i = 1:Nu
@@ -212,7 +212,7 @@ c = sum(c,2); % sum across capacitance coefficients
 % end
 % val = sum(val,2); % sum across capacitance coefficients
 
-C = c(1:Sys.Graph.Nv); % solve for the capacitance of each vertex
+C = c(1:Sys.graph.Nv); % solve for the capacitance of each vertex
 % C = (val(1:Sys.Nv).*c(1:Sys.Nv)); % solve for the capacitance of each vertex
 
 end

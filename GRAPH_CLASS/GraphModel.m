@@ -1,9 +1,9 @@
-classdef GraphModel < matlab.mixin.Copyable
+classdef GraphModel < Model
     %GRAPHMODEL Contains all of the operations useful for working with the
     %graph models.  Most of the code will go here.  
     %   Detailed explanation goes here
     properties
-        Graph Graph = Graph.empty()
+        graph Graph = Graph.empty()
         
         C_coeff % capacitance coefficient matrix
         CType Type_Capacitance = Type_Capacitance.empty()
@@ -19,39 +19,9 @@ classdef GraphModel < matlab.mixin.Copyable
     methods
         function obj = GraphModel(varargin)
             if nargin == 1
-                obj.Graph = varargin{1};
+                obj.graph = varargin{1};
+                MakeMatrices(obj);
             end
-        end
-        
-        function plot(obj,varargin)
-            % basic digraph plotting.
-%             figure
-            E = obj.Graph.E; % edge matrix
-            try
-                Edge_ext = vertcat(obj.Graph.ExternalEdges.V_ind);
-                Edge_ext(Edge_ext == 0) = [];
-                Eext = [[obj.Graph.v_tot+1:1:obj.Graph.v_tot+length(Edge_ext)]' Edge_ext];
-                E = [E; Eext]; % augment E matrix with external edges
-                skipPlotExt = 0;
-            catch
-                skipPlotExt = 1;
-            end
-            G = digraph(E(:,1),E(:,2));
-            h = plot(G,varargin{:});
-            labeledge(h,E(:,1)',E(:,2)',[1:obj.Graph.Ne, 1:obj.Graph.Nee]);
-            highlight(h,[obj.Graph.Nv+1:1:obj.Graph.v_tot],'NodeColor','w')
-            xLoc = h.XData(obj.Graph.Nv+1:1:obj.Graph.v_tot);
-            yLoc = h.YData(obj.Graph.Nv+1:1:obj.Graph.v_tot);
-            hold on; scatter(xLoc,yLoc,5*h.MarkerSize,'MarkerEdgeColor',h.NodeColor(1,:)); hold off;
-            if ~skipPlotExt
-                highlight(h,reshape(Eext',1,[]),'LineStyle','--')
-                highlight(h,[obj.Graph.v_tot+1:1:obj.Graph.v_tot+length(Edge_ext)],'NodeLabelColor','w')
-                highlight(h,[obj.Graph.v_tot+1:1:obj.Graph.v_tot+length(Edge_ext)],'NodeColor','w')
-                xLoc = [ h.XData(Eext(:,1))];
-                yLoc = [ h.YData(Eext(:,1))];
-            end
-            hold on; scatter(xLoc,yLoc,5*h.MarkerSize,'MarkerEdgeColor',h.EdgeColor(1,:)); hold off;
-
         end
         
 %         function ReorderStates(obj,idxNew)
@@ -69,22 +39,22 @@ classdef GraphModel < matlab.mixin.Copyable
 
         function MakeMatrices(obj)
             % make vertex matrices
-            obj.x_init  = vertcat(obj.Graph.Vertices.Initial); 
-            obj.DynType = vertcat(obj.Graph.Vertices.Type); 
+            obj.x_init  = vertcat(obj.graph.Vertices.Initial); 
+            obj.DynType = vertcat(obj.graph.Vertices.Type); 
             
             % D matrix
-            Dmat = zeros(obj.Graph.v_tot,obj.Graph.Nee);
-            Eext = obj.Graph.ExternalEdges;
+            Dmat = zeros(obj.graph.v_tot,obj.graph.Nee);
+            Eext = obj.graph.ExternalEdges;
             for i  = 1:length(Eext)
                 Dmat(Eext(i).V_ind,i) = 1;
             end
             obj.D = Dmat;
             
             % B matrix
-            Eint = obj.Graph.InternalEdges;
+            Eint = obj.graph.InternalEdges;
             numU = max(arrayfun(@(x) length(x.Input),Eint));
             for j = 1:numU
-               obj.B.(['B',num2str(j)]) = zeros(obj.Graph.Ne,obj.Graph.Nu);
+               obj.B.(['B',num2str(j)]) = zeros(obj.graph.Ne,obj.graph.Nu);
                for i = 1:length(Eint)
                    try
                        obj.B.(['B',num2str(j)])(i,Eint(i).Input(j)) = 1;
@@ -93,9 +63,9 @@ classdef GraphModel < matlab.mixin.Copyable
             end
             
             % C matrix
-            CTypeAll = vertcat(obj.Graph.Vertices(:).Capacitance);
-            numCType = arrayfun(@(x) length(x.Capacitance),obj.Graph.Vertices);
-            [obj.C_coeff,obj.CType] = MakeCoeffMatrix(obj.Graph.Vertices,CTypeAll,numCType);
+            CTypeAll = vertcat(obj.graph.Vertices(:).Capacitance);
+            numCType = arrayfun(@(x) length(x.Capacitance),obj.graph.Vertices);
+            [obj.C_coeff,obj.CType] = MakeCoeffMatrix(obj.graph.Vertices,CTypeAll,numCType);
 
             % P matrix
             PTypeAll = vertcat(Eint(:).PowerFlow); % list of all capacitance types

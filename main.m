@@ -21,33 +21,32 @@ Comps = [HX1; load1; SJ1; SJ2; tank1; tank2];
 figure
 for i = 1:length(Comps)
     subplot(3,2,i)
-    plot(Comps(i).Model)
+    plot(Comps(i).graph)
     title(Comps(i).Name)
 end
 
-Graphs = [Comps(:).Model];
+Graphs = [Comps(:).graph];
 
 %%
 Sys = GenSysGraph(Graphs,ConnectV,ConnectE);
 figure
 plot(Sys,'NodeColor','r','EdgeColor','b')
-Sys.MakeMatrices()
+SysGraph = GraphModel(Sys);
 % test 2
 
 %% Make a larger graph
 N = 1;
-MLupper = repmat({Sys.Graph.M(1:Sys.Graph.Nv,:)}, 1, N);
-MLlower = repmat({Sys.Graph.M(Sys.Graph.Nv+1:end,:)}, 1, N);
-VL = repmat(Sys.Graph.Vertices,N,1);
-EL = repmat(Sys.Graph.Edges,N,1);
+MLupper = repmat({Sys.M(1:Sys.Nv,:)}, 1, N);
+MLlower = repmat({Sys.M(Sys.Nv+1:end,:)}, 1, N);
+VL = repmat(Sys.Vertices,N,1);
+EL = repmat(Sys.Edges,N,1);
 
 VL = [VL(arrayfun(@(x) isa(x,'GraphVertex_Internal'),VL));VL(arrayfun(@(x) isa(x,'GraphVertex_External'),VL))];
 EL = [EL(arrayfun(@(x) isa(x,'GraphEdge_Internal'),EL));EL(arrayfun(@(x) isa(x,'GraphEdge_External'),EL))];
 
 GraphL = Graph([blkdiag(MLupper{:});blkdiag(MLlower{:})],VL,EL);
 SysL = GraphModel(GraphL);
-SysL.MakeMatrices()
-figure; plot(SysL,'NodeColor','r','EdgeColor','b')
+figure; plot(SysL.graph,'NodeColor','r','EdgeColor','b')
 
 %%
 SymbolicSolver(SysL);

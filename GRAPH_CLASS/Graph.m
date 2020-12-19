@@ -129,7 +129,7 @@ classdef Graph < matlab.mixin.Copyable
             x = double(obj.M'== -1);
         end
         
-        function x = get.InternalVertices(obj)
+        function x = get.InternalVertices(obj) % these should be functions of the vertex and edge objects
             x = obj.Vertices(arrayfun(@(x) isa(x,'GraphVertex_Internal'),obj.Vertices));
         end     
         function x = get.InternalEdges(obj)
@@ -145,6 +145,39 @@ classdef Graph < matlab.mixin.Copyable
         function init(obj) 
             % placeholder
         end
+        
+        
+        function plot(obj,varargin)
+            % basic digraph plotting.
+%             figure
+            E = obj.E; % edge matrix
+            try
+                Edge_ext = vertcat(obj.ExternalEdges.V_ind);
+                Edge_ext(Edge_ext == 0) = [];
+                Eext = [[obj.v_tot+1:1:obj.v_tot+length(Edge_ext)]' Edge_ext];
+                E = [E; Eext]; % augment E matrix with external edges
+                skipPlotExt = 0;
+            catch
+                skipPlotExt = 1;
+            end
+            G = digraph(E(:,1),E(:,2));
+            h = plot(G,varargin{:});
+            labeledge(h,E(:,1)',E(:,2)',[1:obj.Ne, 1:obj.Nee]);
+            highlight(h,[obj.Nv+1:1:obj.v_tot],'NodeColor','w')
+            xLoc = h.XData(obj.Nv+1:1:obj.v_tot);
+            yLoc = h.YData(obj.Nv+1:1:obj.v_tot);
+            hold on; scatter(xLoc,yLoc,5*h.MarkerSize,'MarkerEdgeColor',h.NodeColor(1,:)); hold off;
+            if ~skipPlotExt
+                highlight(h,reshape(Eext',1,[]),'LineStyle','--')
+                highlight(h,[obj.v_tot+1:1:obj.v_tot+length(Edge_ext)],'NodeLabelColor','w')
+                highlight(h,[obj.v_tot+1:1:obj.v_tot+length(Edge_ext)],'NodeColor','w')
+                xLoc = [ h.XData(Eext(:,1))];
+                yLoc = [ h.YData(Eext(:,1))];
+            end
+            hold on; scatter(xLoc,yLoc,5*h.MarkerSize,'MarkerEdgeColor',h.EdgeColor(1,:)); hold off;
+
+        end
+        
     end
 end
 
