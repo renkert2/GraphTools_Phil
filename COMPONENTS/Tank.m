@@ -64,7 +64,7 @@ classdef Tank < Component
             Edge(2) = GraphEdge_Internal('PowerFlow',P(1),'Input',2,'Port',2,'Coefficient',obj.cp_f);
             Edge(3) = GraphEdge_Internal('PowerFlow',P(2),'Input',[1 2],'Coefficient',obj.cp_f);
             Edge(4) = GraphEdge_Internal('PowerFlow',P(3),'Input',[1 2],'Coefficient',1);
-            Edge(5) = GraphEdge_External('V_ind',1);
+            Edge(5) = GraphEdge_External('AffectedVertex',Vertex(1));
              
             g = Graph(E,Vertex,Edge);
             

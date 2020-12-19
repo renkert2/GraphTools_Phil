@@ -152,9 +152,9 @@ classdef Graph < matlab.mixin.Copyable
 %             figure
             E = obj.E; % edge matrix
             try
-                Edge_ext = vertcat(obj.ExternalEdges.V_ind);
-                Edge_ext(Edge_ext == 0) = [];
-                Eext = [[obj.v_tot+1:1:obj.v_tot+length(Edge_ext)]' Edge_ext];
+                Edge_ext = vertcat(obj.ExternalEdges.AffectedVertex);
+                E_idx = arrayfun(@(x) find(x==obj.InternalVertices),Edge_ext);
+                Eext = [[obj.v_tot+1:1:obj.v_tot+length(E_idx)]' E_idx];
                 E = [E; Eext]; % augment E matrix with external edges
                 skipPlotExt = 0;
             catch
@@ -169,8 +169,8 @@ classdef Graph < matlab.mixin.Copyable
             hold on; scatter(xLoc,yLoc,5*h.MarkerSize,'MarkerEdgeColor',h.NodeColor(1,:)); hold off;
             if ~skipPlotExt
                 highlight(h,reshape(Eext',1,[]),'LineStyle','--')
-                highlight(h,[obj.v_tot+1:1:obj.v_tot+length(Edge_ext)],'NodeLabelColor','w')
-                highlight(h,[obj.v_tot+1:1:obj.v_tot+length(Edge_ext)],'NodeColor','w')
+                highlight(h,[obj.v_tot+1:1:obj.v_tot+length(E_idx)],'NodeLabelColor','w')
+                highlight(h,[obj.v_tot+1:1:obj.v_tot+length(E_idx)],'NodeColor','w')
                 xLoc = [ h.XData(Eext(:,1))];
                 yLoc = [ h.YData(Eext(:,1))];
             end

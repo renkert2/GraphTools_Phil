@@ -51,26 +51,7 @@
     Esys = [EAll_int(Eidx);EAll_ext]; % Ecomp -> Esys
     for i = 1:length(INP)
         Esys(i).Input = INP{i};
-    end
-    
-    %%%%%%%%%% Code to update D matrix %%%%%%%%
-    for i = 1:length(gComp)
-        Dcomp(i).D = zeros(gComp(i).v_tot,gComp(i).v_tot);
-        try
-            EE = gComp(i).ExternalEdges.V_ind;
-            for j = 1:length(EE)
-                Dcomp(i).D(EE(j),j) = 1; 
-            end
-        end             
-    end
-    D = V*blkdiag(Dcomp.D)*V'; %
-    D(:,~any(D,1)) = [];
-    Didx = (1:1:size(D,1))*D;
-    for i = 1:length(Didx)
-        EAll_ext(i).V_ind = Didx(i);
-    end
-    %%%%%%%%%% Code to update D matrix %%%%%%%%
-    
+    end  
     
     Sys = Graph(M,Vsys,Esys);
 %     g = Graph(Emat,Vsys,Esys);

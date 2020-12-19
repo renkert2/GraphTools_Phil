@@ -70,9 +70,9 @@ tic
 x_a_solution = linsolve(A,B); % find solution to the algebraic system
 t2(i) = toc;
 %% Solve for the dynamic equations
-% x_full(idx_x_a,1) = x_a_solution;
-eqnD(1:sum(idx_x_d),1) = diag(C(idx_x_d))^-1*(-Sys.graph.M(idx_x_d,:)*P + Sys.D(idx_x_d,:)*P_e); % system of dynamic equations (
 tic
+
+eqnD(1:sum(idx_x_d),1) = diag(C(idx_x_d))^-1*(-Sys.graph.M(idx_x_d,:)*P + Sys.D(idx_x_d,:)*P_e); % system of dynamic equations (
 x_d_solution = subs(eqnD,x_a,x_a_solution); % plug in the algebraic system solution into the dynamic system equations
 t3(i) = toc;
 end
@@ -108,9 +108,9 @@ for i = 1:N2
     t6(i) = toc;
 end
 
-mean(t1);
-mean(t2);
-mean(t3);
+mean(t1)
+mean(t2)
+mean(t3)
 mean(t4);
 mean(t5);
 mean(t6);

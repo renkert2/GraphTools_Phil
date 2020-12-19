@@ -48,8 +48,7 @@ classdef HeatLoad < Component
             % Define Edges
             Edge(1) = GraphEdge_Internal('PowerFlow',P(1),'Input',1,'Port',1,'Coefficient',obj.cp_f);
             Edge(2) = GraphEdge_Internal('PowerFlow',P(1),'Input',1,'Port',2,'Coefficient',obj.cp_f);
-            Edge(3) = GraphEdge_External('V_ind',1);
-
+            Edge(3) = GraphEdge_External('AffectedVertex',Vertex(1));
 
              g = Graph(E,Vertex,Edge);
             

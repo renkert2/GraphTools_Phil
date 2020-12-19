@@ -20,7 +20,7 @@ classdef GraphModel < Model
         function obj = GraphModel(varargin)
             if nargin == 1
                 obj.graph = varargin{1};
-                MakeMatrices(obj);
+                init(obj);
             end
         end
         
@@ -37,16 +37,16 @@ classdef GraphModel < Model
 %             obj.Graph.E = E;
 %         end
 
-        function MakeMatrices(obj)
+        function init(obj)
             % make vertex matrices
             obj.x_init  = vertcat(obj.graph.Vertices.Initial); 
             obj.DynType = vertcat(obj.graph.Vertices.Type); 
             
             % D matrix
             Dmat = zeros(obj.graph.v_tot,obj.graph.Nee);
-            Eext = obj.graph.ExternalEdges;
-            for i  = 1:length(Eext)
-                Dmat(Eext(i).V_ind,i) = 1;
+            E_idx = arrayfun(@(x) find(x==obj.graph.InternalVertices),vertcat(obj.graph.ExternalEdges.AffectedVertex));            
+            for i  = 1:length(E_idx)
+                Dmat(E_idx(i),i) = 1;
             end
             obj.D = Dmat;
             
@@ -72,6 +72,10 @@ classdef GraphModel < Model
             numPType = arrayfun(@(x) length(x.PowerFlow),Eint); % find number of capacitance types per vertex
             [obj.P_coeff,obj.PType] = MakeCoeffMatrix(Eint,PTypeAll,numPType);
             
+            
+            
+            
+            
         end
         
         function Modify(obj)
@@ -82,9 +86,26 @@ classdef GraphModel < Model
             
         end
         
-        function init(obj)
-            % placeholder
+        
+        function SolveGraph(obj) % this function will only work for symbolic expressions at the moment
+        
+            P = CalcP(Sys,x_full,u); % calculates power flows
+            C = CalcC(Sys,x_full); % calcualtes capacitance
+            
+            eqnA(1:sum(idx_x_a),1) = -Sys.graph.M(idx_x_a,:)*P + Sys.D(idx_x_a,:)*P_e == 0; % system of algebraic equations
+            
+            [A,Bu] = equationsToMatrix(eqnA,x_a); % convert eqnA to the form Ax=B
+            x_a_solution = linsolve(A,Bu); % find solution to the algebraic system
+            
+            eqnD(1:sum(idx_x_d),1) = diag(C(idx_x_d))^-1*(-Sys.graph.M(idx_x_d,:)*P + Sys.D(idx_x_d,:)*P_e); % system of dynamic equations (
+            x_d_solution = subs(eqnD,x_a,x_a_solution); % plug in the algebraic system solution into the dynamic system equations
+           
+            obj.f = x_d_solution;
+            obj.g = [x_full(idx_x_d);x_a_solution]; %y = [x_d; x_a(x_d,x_e,u,P_e)]
+
+            
         end
+        
     end
     
     

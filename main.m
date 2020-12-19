@@ -35,21 +35,21 @@ SysGraph = GraphModel(Sys);
 % test 2
 
 %% Make a larger graph
-N = 1;
-MLupper = repmat({Sys.M(1:Sys.Nv,:)}, 1, N);
-MLlower = repmat({Sys.M(Sys.Nv+1:end,:)}, 1, N);
-VL = repmat(Sys.Vertices,N,1);
-EL = repmat(Sys.Edges,N,1);
-
-VL = [VL(arrayfun(@(x) isa(x,'GraphVertex_Internal'),VL));VL(arrayfun(@(x) isa(x,'GraphVertex_External'),VL))];
-EL = [EL(arrayfun(@(x) isa(x,'GraphEdge_Internal'),EL));EL(arrayfun(@(x) isa(x,'GraphEdge_External'),EL))];
-
-GraphL = Graph([blkdiag(MLupper{:});blkdiag(MLlower{:})],VL,EL);
-SysL = GraphModel(GraphL);
-figure; plot(SysL.graph,'NodeColor','r','EdgeColor','b')
-
-%%
-SymbolicSolver(SysL);
+% N = 10;
+% MLupper = repmat({Sys.M(1:Sys.Nv,:)}, 1, N);
+% MLlower = repmat({Sys.M(Sys.Nv+1:end,:)}, 1, N);
+% VL = repmat(Sys.Vertices,N,1);
+% EL = repmat(Sys.Edges,N,1);
+% 
+% VL = [VL(arrayfun(@(x) isa(x,'GraphVertex_Internal'),VL));VL(arrayfun(@(x) isa(x,'GraphVertex_External'),VL))];
+% EL = [EL(arrayfun(@(x) isa(x,'GraphEdge_Internal'),EL));EL(arrayfun(@(x) isa(x,'GraphEdge_External'),EL))];
+% 
+% GraphL = Graph([blkdiag(MLupper{:});blkdiag(MLlower{:})],VL,EL);
+% SysL = GraphModel(GraphL);
+% figure; plot(SysL.graph,'NodeColor','r','EdgeColor','b')
+% 
+% %%
+% SymbolicSolver(SysL);
 
 
 %% 
