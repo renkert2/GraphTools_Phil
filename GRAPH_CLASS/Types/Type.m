@@ -88,10 +88,14 @@ classdef Type < matlab.mixin.Copyable
         end
         
         
-        function val = calcVal(obj, vars_) % Calculates type value with symbolic 'vars' substituted with numeric 'vars_'
+        function val = calcVal(obj, varargin) % Calculates type value with symbolic 'vars' substituted with numeric 'vars_'
+            assert(numel(varargin)==numel(obj.params), 'Arguments must match Parameter Structure');
+            val = obj.Val_Func(varargin{:});
         end
         
-        function jac = calcJac(obj, vars_) % Calculates type Jacobian with symbolic 'vars' substituted with numeric 'vars_'
+        function jac = calcJac(obj, varargin) % Calculates type Jacobian with symbolic 'vars' substituted with numeric 'vars_'
+            assert(numel(varargin)==numel(obj.params), 'Arguments must match Parameter Structure');
+            jac = obj.Jac_Func(varargin{:});
         end
         
     end
