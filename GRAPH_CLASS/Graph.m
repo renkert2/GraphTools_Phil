@@ -12,15 +12,18 @@ classdef Graph < matlab.mixin.Copyable
     %           propertey.
     % 12/20/2020 - A graph is now entirely defined by edges and vertices.
     %           The edge and incidence matrix are dependent properties.
+    % 12/21/2020 - A graph edge and vertex set can now be defined in
+    %           arbitrary order.
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % potential improvements:
     % Consider added Matlab "digraph" or adjcancy matrix as a propertey.
-    % Consider adding dynamic and algebric index get functions
-    % Objects being passed in arbitrary order
     % Consider improving how we find the head and tail vertex indices.
     % At some point, graph can be defined with only edges
+    % Move the Internal/External etc get functions into the GraphVertex and
+    %   GraphEdge classes. Since those functions only operate on vertices
+    %   and edges, it seems they fit better there.
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
     
@@ -31,9 +34,6 @@ classdef Graph < matlab.mixin.Copyable
         % set of edges
         Edges (:,1) GraphEdge = GraphEdge.empty() 
     end
-    
-    properties %(SetAccess = immutable)
-            end
     
     properties (SetAccess = private)
     
@@ -71,16 +71,15 @@ classdef Graph < matlab.mixin.Copyable
         % Heads
         Heads (1,1) double 
         
-        % dynamic and Algebraic vertices
-%         DynamicVertices (:,1) double 
-%         AlgebraicVertices (:,1) double 
     end
     
     properties (Dependent) % make this hidden at some point
-        InternalVertices (:,1) GraphVertex = GraphVertex.empty()
-        ExternalVertices (:,1) GraphVertex = GraphVertex.empty()
-        InternalEdges    (:,1) GraphEdge   = GraphEdge.empty() 
-        ExternalEdges    (:,1) GraphEdge   = GraphEdge.empty() 
+        InternalVertices  (:,1) GraphVertex = GraphVertex.empty()
+        DynamicVertices   (:,1) GraphVertex = GraphVertex.empty()
+        AlgebraicVertices (:,1) GraphVertex = GraphVertex.empty()
+        ExternalVertices  (:,1) GraphVertex = GraphVertex.empty()
+        InternalEdges     (:,1) GraphEdge   = GraphEdge.empty() 
+        ExternalEdges     (:,1) GraphEdge   = GraphEdge.empty() 
     end
     
     methods
@@ -91,78 +90,71 @@ classdef Graph < matlab.mixin.Copyable
            if nargin == 0
                % do nothing
            elseif nargin == 2
+               
                obj.Vertices = varargin{1};
                obj.Edges = varargin{2};
                obj.init()
                
            else
-              error('A Graph object must be initialized as an empty object or as Graph(Edge Matrix or Incidence Matrix, Vertices, Edges).') 
+              error('A Graph object must be initialized as an empty object or as Graph(Vertex_Set, Edge_Set ).') 
            end
                               
         end
-        
-        function m = updateM(obj)
-            m = zeros(max(max(obj.E)),size(obj.E,1));
-               for i = 1:size(obj.E,1)
-                   m(obj.E(i,1),i) =  1; % tails
-                   m(obj.E(i,2),i) = -1; % heads
-               end
-        end
-        
-        function e = updateE(obj)
-            e = zeros(size(obj.M,2),2);
-            e(:,1) = (1:size(obj.M,1))*(obj.M == 1); % set edge matrix tails
-            e(:,2) = (1:size(obj.M,1))*(obj.M == -1); % set edge matrix heads
-        end
-            
-        function x = get.v_tot(obj)
+                      
+        function x = get.v_tot(obj) % total number of vertices
             x = obj.Nv + obj.Nev;
         end
         
-        function x = get.Tails(obj)
+        function x = get.Tails(obj) % tail incidence matrix
             x = double(obj.M'== 1);
         end
         
-        function x = get.Heads(obj)
+        function x = get.Heads(obj) % head incidence matrix
             x = double(obj.M'== -1);
         end
         
-        function x = get.InternalVertices(obj) % these should be functions of the vertex and edge objects
+        function x = get.InternalVertices(obj) % these should be functions of the vertex and edge objects?
             x = obj.Vertices(arrayfun(@(x) isa(x,'GraphVertex_Internal'),obj.Vertices));
-        end     
-        function x = get.InternalEdges(obj)
+        end 
+        function x = get.DynamicVertices(obj) % these should be functions of the vertex and edge objects
+            x = obj.Vertices(arrayfun(@(x) (isa(x,'GraphVertex_Internal') && (sum(abs(x.Coefficient))>0)),obj.Vertices));
+        end
+        function x = get.AlgebraicVertices(obj) % these should be functions of the vertex and edge objects
+            x = obj.Vertices(arrayfun(@(x) (isa(x,'GraphVertex_Internal') && (sum(abs(x.Coefficient))==0)),obj.Vertices));
+        end
+        function x = get.InternalEdges(obj) % these should be functions of the vertex and edge objects
             x = obj.Edges(arrayfun(@(x) isa(x,'GraphEdge_Internal'),obj.Edges));
         end
-        function x = get.ExternalVertices(obj)
+        function x = get.ExternalVertices(obj) % these should be functions of the vertex and edge objects
             x = obj.Vertices(~arrayfun(@(x) isa(x,'GraphVertex_Internal'),obj.Vertices));
         end     
-        function x = get.ExternalEdges(obj)
+        function x = get.ExternalEdges(obj) % these should be functions of the vertex and edge objects
             x = obj.Edges(~arrayfun(@(x) isa(x,'GraphEdge_Internal'),obj.Edges));
         end
         
         
-        function init(obj) 
+        function init(obj)
+            
+            % reorder vertices in order of [xd;xa;xt] and edges in [int; ext]
+            obj.Vertices = [obj.DynamicVertices; obj.AlgebraicVertices; obj.ExternalVertices];
+            obj.Edges    = [obj.InternalEdges; obj.ExternalEdges];
+
+            % calculate graph size, order, etc
             obj.Nv  = length(obj.InternalVertices);
             obj.Ne  = length(obj.InternalEdges);
             obj.Nu  = max([obj.InternalEdges.Input]);
             obj.Nev = length(obj.Vertices)-obj.Nv;
             obj.Nee = length(obj.Edges)-obj.Ne;
             
+            % list of tail and head vertices
             vTail = vertcat(obj.InternalEdges.TailVertex);
             vHead = vertcat(obj.InternalEdges.HeadVertex);
-
-            % this finds tails and heads vertices. The code is clunky
-            % because we can't use == for a hetergenous class. We could
-            % look into speeding this up at some point.
-%             vT_idx = arrayfun(@(x) (find(x==obj.Vertices)),vTail);
             
+            % indicies of tail and vertices
             vT_idx =  arrayfun(@(x) find(arrayfun(@(y) eq(x,y),obj.Vertices)),vTail);
             vH_idx =  arrayfun(@(x) find(arrayfun(@(y) eq(x,y),obj.Vertices)),vHead);
 
-%             isequal(vTail(1),obj.Vertices)
-%             vT_idx = arrayfun(@(x) (my_find_eq(x,obj.InternalVertices,0))+(my_find_eq(x,obj.ExternalVertices,obj.Nv)),vTail);
-%             vH_idx = arrayfun(@(x) (my_find_eq(x,obj.InternalVertices,0))+(my_find_eq(x,obj.ExternalVertices,obj.Nv)),vHead);
-
+            % calculate Edge and Incidence matrix
             obj.E = [vT_idx vH_idx];
             m = zeros(max(max(obj.E)),size(obj.E,1));
             for i = 1:size(obj.E,1)
@@ -176,39 +168,35 @@ classdef Graph < matlab.mixin.Copyable
         
         function plot(obj,varargin)
             % basic digraph plotting.
-%             figure
-            E = obj.E; % edge matrix
-            try
-                Edge_ext = vertcat(obj.ExternalEdges.HeadVertex);
-                E_idx = arrayfun(@(x) find(x==obj.InternalVertices),Edge_ext);
-                Eext = [[obj.v_tot+1:1:obj.v_tot+length(E_idx)]' E_idx];
-                E = [E; Eext]; % augment E matrix with external edges
+            E_Augmented = obj.E; % edge matrix
+            try % try to augment the edge matrix to include external edges
+                E_idx = arrayfun(@(x) find(x==obj.InternalVertices),vertcat(obj.ExternalEdges.HeadVertex)); % index of vertices with external edges
+                Eext = [[obj.v_tot+1:1:obj.v_tot+obj.Nee]' E_idx]; % edge matrix of external edges
+                E_Augmented = [E_Augmented; Eext]; % augment E matrix with external edges
                 skipPlotExt = 0;
             catch
                 skipPlotExt = 1;
             end
-            G = digraph(E(:,1),E(:,2));
-            h = plot(G,varargin{:});
-            labeledge(h,E(:,1)',E(:,2)',[1:obj.Ne, 1:obj.Nee]);
-            highlight(h,[obj.Nv+1:1:obj.v_tot],'NodeColor','w')
-            xLoc = h.XData(obj.Nv+1:1:obj.v_tot);
-            yLoc = h.YData(obj.Nv+1:1:obj.v_tot);
-            hold on; scatter(xLoc,yLoc,5*h.MarkerSize,'MarkerEdgeColor',h.NodeColor(1,:)); hold off;
+            G = digraph(E_Augmented(:,1),E_Augmented(:,2)); % make digraph
+            h = plot(G,varargin{:}); % plot digraph
+            labeledge(h,E_Augmented(:,1)',E_Augmented(:,2)',[1:obj.Ne, 1:obj.Nee]); % edge lables
+            highlight(h,[obj.Nv+1:1:obj.v_tot],'NodeColor','w') % remove external vertices
+            xLoc = h.XData(obj.Nv+1:1:obj.v_tot); yLoc = h.YData(obj.Nv+1:1:obj.v_tot); % get external vertex location
+            hold on; scatter(xLoc,yLoc,5*h.MarkerSize,'MarkerEdgeColor',h.NodeColor(1,:)); hold off; % add external vertices back
             if ~skipPlotExt
-                highlight(h,reshape(Eext',1,[]),'LineStyle','--')
-                highlight(h,[obj.v_tot+1:1:obj.v_tot+length(E_idx)],'NodeLabelColor','w')
-                highlight(h,[obj.v_tot+1:1:obj.v_tot+length(E_idx)],'NodeColor','w')
-                xLoc = [ h.XData(Eext(:,1))];
-                yLoc = [ h.YData(Eext(:,1))];
+                highlight(h,reshape(Eext',1,[]),'LineStyle','--') % make external edges dashed
+                highlight(h,[obj.v_tot+1:1:obj.v_tot+length(E_idx)],'NodeLabelColor','w','NodeColor','w') % remove augmented external edge tail vertices and labels
+                xLoc = [ h.XData(Eext(:,1))]; yLoc = [ h.YData(Eext(:,1))]; % get external edge tail vertex location
             end
-            hold on; scatter(xLoc,yLoc,5*h.MarkerSize,'MarkerEdgeColor',h.EdgeColor(1,:)); hold off;
-
+            hold on; scatter(xLoc,yLoc,5*h.MarkerSize,'MarkerEdgeColor',h.EdgeColor(1,:)); hold off; % plot external edge tail vertices
         end
         
-        function ReorderVertices(obj,idx)
-            obj.Vertices = obj.Vertices(idx);
-            obj.init();
-        end
+        % for now, I want this funcitonality removed since I want all
+        % vertices in order of [dynamic; algebraic; external]
+%         function ReorderVertices(obj,idx) 
+%             obj.Vertices = obj.Vertices(idx);
+%             obj.init();
+%         end
         
     end
 end

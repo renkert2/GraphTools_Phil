@@ -54,18 +54,16 @@
         Esys(i).HeadVertex = Vsys(Emat(i,2));
         Esys(i).TailVertex = Vsys(Emat(i,1));
     end  
-    
-%     Sys = ;
-    
+        
     Sys = GraphModel(Graph(Vsys,Esys));
     
     % reorder vertices
-    idx_d = (1:size(Sys.C_coeff,1))'.*any(Sys.C_coeff ~= 0,2);
-    idx_d(idx_d==0) = [];
-    idx_a = (1:size(Sys.C_coeff,1))'.*~any(Sys.C_coeff ~= 0,2);
-    idx_a(idx_a==0) = [];    
-    Sys.graph.ReorderVertices([idx_d;idx_a]);
-    Sys.init(); % at some point, I'd like this to call whenever the graph property updates
+%     idx_d = (1:size(Sys.C_coeff,1))'.*any(Sys.C_coeff ~= 0,2);
+%     idx_d(idx_d==0) = [];
+%     idx_a = (1:size(Sys.C_coeff,1))'.*~any(Sys.C_coeff ~= 0,2);
+%     idx_a(idx_a==0) = [];    
+%     Sys.graph.ReorderVertices([idx_d;idx_a]);
+%     Sys.init(); % at some point, I'd like this to call whenever the graph property updates
     
 %     g = Graph(Emat,Vsys,Esys);
 %     Sys = GraphModel(g);
