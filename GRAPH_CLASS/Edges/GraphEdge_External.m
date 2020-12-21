@@ -3,7 +3,7 @@ classdef GraphEdge_External < GraphEdge
     %   Detailed explanation goes here
     
     properties
-       AffectedVertex (1,1) GraphVertex_Internal  % affected vertex 
+        Description (1,1) string
         
     end
 

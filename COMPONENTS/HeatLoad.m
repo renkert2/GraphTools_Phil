@@ -46,11 +46,11 @@ classdef HeatLoad < Component
             Vertex(3) = GraphVertex_External('Description','Outlet','Capacitance',C(1));
              
             % Define Edges
-            Edge(1) = GraphEdge_Internal('PowerFlow',P(1),'Input',1,'Port',1,'Coefficient',obj.cp_f);
-            Edge(2) = GraphEdge_Internal('PowerFlow',P(1),'Input',1,'Port',2,'Coefficient',obj.cp_f);
-            Edge(3) = GraphEdge_External('AffectedVertex',Vertex(1));
+            Edge(1) = GraphEdge_Internal('PowerFlow',P(1),'Input',1,'Port',1,'Coefficient',obj.cp_f,'TailVertex',Vertex(E(1,1)),'HeadVertex',Vertex(E(1,2)));
+            Edge(2) = GraphEdge_Internal('PowerFlow',P(1),'Input',1,'Port',2,'Coefficient',obj.cp_f,'TailVertex',Vertex(E(2,1)),'HeadVertex',Vertex(E(2,2)));
+            Edge(3) = GraphEdge_External('HeadVertex',Vertex(1),'Description','Heat Load');
 
-             g = Graph(E,Vertex,Edge);
+             g = Graph(Vertex,Edge);
             
         end
     end

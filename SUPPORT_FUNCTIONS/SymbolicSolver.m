@@ -37,18 +37,20 @@ function [Sys] = SymbolicSolver(Sys)
 
 
 %% Define symbolic variables
-idx_x_d = (sum(abs(Sys.C_coeff(1:Sys.graph.Nv)),2) ~= 0);
-idx_x_a = (sum(abs(Sys.C_coeff(1:Sys.graph.Nv)),2) == 0);
+idx_x_d = (sum(abs(Sys.C_coeff(1:Sys.graph.Nv,:)),2) ~= 0);
+idx_x_a = (sum(abs(Sys.C_coeff(1:Sys.graph.Nv,:)),2) == 0);
 idx_x_e = Sys.graph.Nv+1:Sys.graph.Nv+Sys.graph.Nev;
 
-x_d     = sym('x_d%d'    ,[sum(idx_x_d)        1]); % dynamic states
+x       = sym('x%d'    ,[sum(idx_x_d)        1]); % dynamic states
 x_a     = sym('x_a%d'    ,[sum(idx_x_a)        1]); % algebraic states
-x_e     = sym('x_t%d'    ,[length(idx_x_e)     1]); % external states
-P_e     = sym('P_e%d'    ,[Sys.graph.Nee             1]); % external edge flows
 u       = sym('u%d'      ,[Sys.graph.Nu              1]); % inputs
+d       = sym('d%d'      ,[Sys.graph.Nev+Sys.graph.Nee 1]);
+
+x_e     = d(1:Sys.graph.Nev); % external states
+P_e     = d(Sys.graph.Nev+1:end);
 
 %% Get state vector filled up with symbolic varialbes
-x_full(idx_x_d,1) = x_d;
+x_full(idx_x_d,1) = x;
 x_full(idx_x_a,1) = x_a;
 x_full(idx_x_e,1) = x_e;
 
@@ -71,7 +73,6 @@ x_a_solution = linsolve(A,B); % find solution to the algebraic system
 t2(i) = toc;
 %% Solve for the dynamic equations
 tic
-
 eqnD(1:sum(idx_x_d),1) = diag(C(idx_x_d))^-1*(-Sys.graph.M(idx_x_d,:)*P + Sys.D(idx_x_d,:)*P_e); % system of dynamic equations (
 x_d_solution = subs(eqnD,x_a,x_a_solution); % plug in the algebraic system solution into the dynamic system equations
 t3(i) = toc;
@@ -82,38 +83,40 @@ end
 y = [x_full(idx_x_d);x_a_solution]; %y = [x_d; x_a(x_d,x_e,u,P_e)]
 
 %% Store symbolic calculations
-% Sys.Symb.fc = x_d_solution;
-% Sys.Symb.y = y;
+Sys.f_sym = x_d_solution;
+Sys.g_sym = y;
 
 %% Convert to functions
 % % use to convert symbolic expressions into functions
-x_d1     = sym('x_d%d'    ,[sum(idx_x_d)        1]); % dynamic states
-x_a1     = sym('x_a%d'    ,[sum(idx_x_a)        1]); % dynamic states
-x_e1     = sym('x_t%d'    ,[length(idx_x_e)     1]); % external states
-P_e1     = sym('P_e%d'    ,[Sys.graph.Nee             1]); % external edge flows
-u1       = sym('u%d'      ,[Sys.graph.Nu              1]); % inputs
+x1       = sym('x%d'    ,[sum(idx_x_d)        1]); % dynamic states
+u1       = sym('u%d'    ,[Sys.graph.Nu              1]); % inputs
+d1       = sym('d%d'    ,[Sys.graph.Nev+Sys.graph.Nee 1]);
+% x_a1     = sym('x_a%d'    ,[sum(idx_x_a)        1]); % dynamic states
+% x_e1     = sym('x_t%d'    ,[length(idx_x_e)     1]); % external states
+% P_e1     = sym('P_e%d'    ,[Sys.graph.Nee             1]); % external edge flows
 
 N2 = 1;
+
 for i = 1:N2
-    tic
-    solveAB = matlabFunction(A,B,'Vars',[{[x_d1] [x_e1], [u1], [P_e1]}]);
-    t4(i) = toc;
+%     tic
+%     solveAB = matlabFunction(A,B,'Vars',[{[x_d1] [u1], [d1]}]);
+%     t4(i) = toc;
     
     tic
-    solveAlg = matlabFunction(x_a_solution,'Vars',[{[x_d1] [x_e1], [u1], [P_e1]}]);
+    Sys.CalcF = matlabFunction(x_d_solution,'Vars',[{[x1] [u1], [d1]}]);
     t5(i) = toc;
     
     tic
-    solveAB = matlabFunction(x_d_solution,'Vars',[{[x_d1] [x_e1], [u1], [P_e1]}]);
+    Sys.CalcG = matlabFunction(y,'Vars',[{[x1] [u1], [d1]}]);
     t6(i) = toc;
 end
 
-mean(t1)
-mean(t2)
-mean(t3)
-mean(t4);
-mean(t5);
-mean(t6);
+% mean(t1)
+% mean(t2)
+% mean(t3)
+% mean(t4);
+% mean(t5);
+% mean(t6);
 % % use to save the algebraic solution in the graph structure
 % Sys.solveAlg = matlabFunction(x_a_solution,'Vars',[{[x_d1] [x_e1], [u1], [P_e1]}]); % algrebraic state solution
 % Sys.solveDyn = matlabFunction(x_d_solution,'Vars',[{[x_d1] [x_e1], [u1], [P_e1]}]); % dynamic state derivative solution

@@ -4,7 +4,9 @@ classdef GraphEdge < matlab.mixin.Heterogeneous & matlab.mixin.Copyable
     %   The matlab.mixin.Heterogeneous type will allow us to create heterogeneous object
     %   arrays of all the child classes.  
     
-   
+    properties
+           HeadVertex (1,1) GraphVertex
+    end
 
 
     methods

@@ -6,8 +6,8 @@ classdef GraphVertex < matlab.mixin.Heterogeneous & matlab.mixin.Copyable
     properties
         Description string = string.empty()
         Type = 1 % Vertex Type: 1 - Energy Flow, 2 - State Flow
-        Capacitance Type_Capacitance = Type_Capacitance.empty();
-        Coefficient = 0
+        Capacitance (:,1) Type_Capacitance = Type_Capacitance.empty();
+        Coefficient (:,1) {mustBeNonnegative} = 0
         Initial = 0
     end
     
@@ -18,5 +18,19 @@ classdef GraphVertex < matlab.mixin.Heterogeneous & matlab.mixin.Copyable
             end
         end
     end
+    
+%     methods (Sealed)
+%         function x = eq(A,B)
+%             x = zeros(size(B));
+%             for i = 1:length(B)
+%                 try
+%                     x(i) = A == B(i);
+%                 catch
+%                     x(i) = logical(0);
+%                 end
+%             end           
+%         end             
+%     end
+
 end
 

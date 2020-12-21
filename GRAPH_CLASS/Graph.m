@@ -10,15 +10,17 @@ classdef Graph < matlab.mixin.Copyable
     % Revision History:
     % 12/5/2020 - Consider added Matlab "digraph" or adjcancy matrix as a 
     %           propertey.
+    % 12/20/2020 - A graph is now entirely defined by edges and vertices.
+    %           The edge and incidence matrix are dependent properties.
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % potential improvements:
     % Consider added Matlab "digraph" or adjcancy matrix as a propertey.
-    % consider adding dynamic and algebric index get functions
-    % note that M and E are technically dependent on Vertices and Edges...
-    % at some point, we'll need to account for internal and external
-    % objects being passed in arbitrary order
+    % Consider adding dynamic and algebric index get functions
+    % Objects being passed in arbitrary order
+    % Consider improving how we find the head and tail vertex indices.
+    % At some point, graph can be defined with only edges
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
     
@@ -31,11 +33,7 @@ classdef Graph < matlab.mixin.Copyable
     end
     
     properties %(SetAccess = immutable)
-        % Graph Edge Matrix
-        E (:,2) double %{mustBeInteger,mustBePositive}; requires default value for Validation Functions
-        % Incidence Matrix
-        M (:,:) double %{mustBeInteger,mustBeMember({-1,1,0,[]})}; requires default value for Validation Functions
-    end
+            end
     
     properties (SetAccess = private)
     
@@ -53,6 +51,13 @@ classdef Graph < matlab.mixin.Copyable
         
         % Number of external edges
         Nee (1,1) double %{mustBeInteger,mustBeNonnegative}
+        
+        % Graph Edge Matrix
+        E (:,2) double %{mustBeInteger,mustBePositive}; requires default value for Validation Functions
+        
+        % Incidence Matrix
+        M (:,:) double %{mustBeInteger,mustBeMember({-1,1,0,[]})}; requires default value for Validation Functions
+
       
     end
     
@@ -65,6 +70,10 @@ classdef Graph < matlab.mixin.Copyable
         
         % Heads
         Heads (1,1) double 
+        
+        % dynamic and Algebraic vertices
+%         DynamicVertices (:,1) double 
+%         AlgebraicVertices (:,1) double 
     end
     
     properties (Dependent) % make this hidden at some point
@@ -81,22 +90,11 @@ classdef Graph < matlab.mixin.Copyable
             % Immediately calculate the incidence matrix
            if nargin == 0
                % do nothing
-           elseif nargin == 3
-               if any(varargin{1}<0)
-                   obj.M = varargin{1}; % define Incidence matrix
-                   obj.E = updateE(obj);
-               else
-                   obj.E = varargin{1}; % define Edge Matrix
-                   obj.M = updateM(obj); % define Edge Matrix
-               end
-               obj.Vertices = varargin{2};
-               obj.Edges = varargin{3};
+           elseif nargin == 2
+               obj.Vertices = varargin{1};
+               obj.Edges = varargin{2};
+               obj.init()
                
-               obj.Nv  = length(obj.InternalVertices);
-               obj.Ne  = length(obj.InternalEdges);
-               obj.Nu  = max([obj.InternalEdges.Input]);
-               obj.Nev = length(obj.Vertices)-obj.Nv;
-               obj.Nee = length(obj.Edges)-obj.Ne;
            else
               error('A Graph object must be initialized as an empty object or as Graph(Edge Matrix or Incidence Matrix, Vertices, Edges).') 
            end
@@ -142,8 +140,37 @@ classdef Graph < matlab.mixin.Copyable
             x = obj.Edges(~arrayfun(@(x) isa(x,'GraphEdge_Internal'),obj.Edges));
         end
         
+        
         function init(obj) 
-            % placeholder
+            obj.Nv  = length(obj.InternalVertices);
+            obj.Ne  = length(obj.InternalEdges);
+            obj.Nu  = max([obj.InternalEdges.Input]);
+            obj.Nev = length(obj.Vertices)-obj.Nv;
+            obj.Nee = length(obj.Edges)-obj.Ne;
+            
+            vTail = vertcat(obj.InternalEdges.TailVertex);
+            vHead = vertcat(obj.InternalEdges.HeadVertex);
+
+            % this finds tails and heads vertices. The code is clunky
+            % because we can't use == for a hetergenous class. We could
+            % look into speeding this up at some point.
+%             vT_idx = arrayfun(@(x) (find(x==obj.Vertices)),vTail);
+            
+            vT_idx =  arrayfun(@(x) find(arrayfun(@(y) eq(x,y),obj.Vertices)),vTail);
+            vH_idx =  arrayfun(@(x) find(arrayfun(@(y) eq(x,y),obj.Vertices)),vHead);
+
+%             isequal(vTail(1),obj.Vertices)
+%             vT_idx = arrayfun(@(x) (my_find_eq(x,obj.InternalVertices,0))+(my_find_eq(x,obj.ExternalVertices,obj.Nv)),vTail);
+%             vH_idx = arrayfun(@(x) (my_find_eq(x,obj.InternalVertices,0))+(my_find_eq(x,obj.ExternalVertices,obj.Nv)),vHead);
+
+            obj.E = [vT_idx vH_idx];
+            m = zeros(max(max(obj.E)),size(obj.E,1));
+            for i = 1:size(obj.E,1)
+                m(obj.E(i,1),i) =  1; % tails
+                m(obj.E(i,2),i) = -1; % heads
+            end
+            obj.M = m;
+            
         end
         
         
@@ -152,7 +179,7 @@ classdef Graph < matlab.mixin.Copyable
 %             figure
             E = obj.E; % edge matrix
             try
-                Edge_ext = vertcat(obj.ExternalEdges.AffectedVertex);
+                Edge_ext = vertcat(obj.ExternalEdges.HeadVertex);
                 E_idx = arrayfun(@(x) find(x==obj.InternalVertices),Edge_ext);
                 Eext = [[obj.v_tot+1:1:obj.v_tot+length(E_idx)]' E_idx];
                 E = [E; Eext]; % augment E matrix with external edges
@@ -176,6 +203,11 @@ classdef Graph < matlab.mixin.Copyable
             end
             hold on; scatter(xLoc,yLoc,5*h.MarkerSize,'MarkerEdgeColor',h.EdgeColor(1,:)); hold off;
 
+        end
+        
+        function ReorderVertices(obj,idx)
+            obj.Vertices = obj.Vertices(idx);
+            obj.init();
         end
         
     end

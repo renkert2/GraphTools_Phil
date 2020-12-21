@@ -16,6 +16,8 @@ tank2 = Tank('Name','Tank 2','T_init',50);
 
 % don't change the order of the components
 Comps = [HX1; load1; SJ1; SJ2; tank1; tank2];
+Graphs = [Comps(:).graph];
+
 
 % plot component graphs
 figure
@@ -25,13 +27,12 @@ for i = 1:length(Comps)
     title(Comps(i).Name)
 end
 
-Graphs = [Comps(:).graph];
 
 %%
 Sys = GenSysGraph(Graphs,ConnectV,ConnectE);
 figure
-plot(Sys,'NodeColor','r','EdgeColor','b')
-SysGraph = GraphModel(Sys);
+plot(Sys.graph,'NodeColor','r','EdgeColor','b')
+
 % test 2
 
 %% Make a larger graph
@@ -48,8 +49,8 @@ SysGraph = GraphModel(Sys);
 % SysL = GraphModel(GraphL);
 % figure; plot(SysL.graph,'NodeColor','r','EdgeColor','b')
 % 
-% %%
-% SymbolicSolver(SysL);
+%%
+% SymbolicSolver(Sys);
 
 
 %% 

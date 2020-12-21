@@ -22,20 +22,20 @@ classdef GraphModel < Model
                 obj.graph = varargin{1};
                 init(obj);
             end
-        end
+        end      
         
-%         function ReorderStates(obj,idxNew)
-%             obj.Graph.M = obj.Graph.M(idxNew,:); %this will require an update to obj.Graph.E
-%             obj.C_coeff = obj.C_coeff(idxNew,:);
-%             obj.x_init  = obj.x_init(idxNew);
-%             obj.DynType = obj.DynType(idxNew);
-%             %             obj.D       = obj.D(idxNew);
-%             
-%             E = obj.Graph.E;
-%             E(:,1) = (1:size(obj.Graph.M,1))*(obj.Graph.M == 1); % set edge matrix tails
-%             E(:,2) = (1:size(obj.Graph.M,1))*(obj.Graph.M == -1); % set edge matrix heads
-%             obj.Graph.E = E;
-%         end
+        function ReorderStates(obj,idxNew)
+            obj.Graph.M = obj.Graph.M(idxNew,:); %this will require an update to obj.Graph.E
+            obj.C_coeff = obj.C_coeff(idxNew,:);
+            obj.x_init  = obj.x_init(idxNew);
+            obj.DynType = obj.DynType(idxNew);
+            %             obj.D       = obj.D(idxNew);
+            
+            E = obj.Graph.E;
+            E(:,1) = (1:size(obj.Graph.M,1))*(obj.Graph.M == 1); % set edge matrix tails
+            E(:,2) = (1:size(obj.Graph.M,1))*(obj.Graph.M == -1); % set edge matrix heads
+            obj.Graph.E = E;
+        end
 
         function init(obj)
             % make vertex matrices
@@ -44,7 +44,7 @@ classdef GraphModel < Model
             
             % D matrix
             Dmat = zeros(obj.graph.v_tot,obj.graph.Nee);
-            E_idx = arrayfun(@(x) find(x==obj.graph.InternalVertices),vertcat(obj.graph.ExternalEdges.AffectedVertex));            
+            E_idx = arrayfun(@(x) find(x==obj.graph.InternalVertices),vertcat(obj.graph.ExternalEdges.HeadVertex));            
             for i  = 1:length(E_idx)
                 Dmat(E_idx(i),i) = 1;
             end
@@ -71,9 +71,14 @@ classdef GraphModel < Model
             PTypeAll = vertcat(Eint(:).PowerFlow); % list of all capacitance types
             numPType = arrayfun(@(x) length(x.PowerFlow),Eint); % find number of capacitance types per vertex
             [obj.P_coeff,obj.PType] = MakeCoeffMatrix(Eint,PTypeAll,numPType);
+           
+            obj.Nx = sum(any(obj.C_coeff ~= 0,2));
+            obj.Nu = obj.graph.Nu;
+            obj.Nd = obj.graph.Nev + obj.graph.Nee;
+            obj.Ny = obj.graph.Nv;
+            obj.SymbolicSolve
             
-            
-            
+            init@Model(obj);
             
             
         end
@@ -87,29 +92,127 @@ classdef GraphModel < Model
         end
         
         
-        function SolveGraph(obj) % this function will only work for symbolic expressions at the moment
+        function SymbolicSolve(obj) % this function will only work for symbolic expressions at the moment
         
-            P = CalcP(Sys,x_full,u); % calculates power flows
-            C = CalcC(Sys,x_full); % calcualtes capacitance
+            idx_x_d = (sum(abs(obj.C_coeff(1:obj.graph.Nv,:)),2) ~= 0);
+            idx_x_a = (sum(abs(obj.C_coeff(1:obj.graph.Nv,:)),2) == 0);
+            idx_x_e = obj.graph.Nv+1:obj.graph.Nv+obj.graph.Nev;
             
-            eqnA(1:sum(idx_x_a),1) = -Sys.graph.M(idx_x_a,:)*P + Sys.D(idx_x_a,:)*P_e == 0; % system of algebraic equations
+            x       = sym('x%d'      ,[sum(idx_x_d)        1]); % dynamic states
+            x_a     = sym('x_a%d'    ,[sum(idx_x_a)        1]); % algebraic states
+            u       = sym('u%d'      ,[obj.graph.Nu              1]); % inputs
+            d       = sym('d%d'      ,[obj.graph.Nev+obj.graph.Nee 1]);
+            x_e     = d(1:obj.graph.Nev); % external states
+            P_e     = d(obj.graph.Nev+1:end);
             
+            % Get state vector filled up with symbolic varialbes
+            x_full(idx_x_d,1) = x;
+            x_full(idx_x_a,1) = x_a;
+            x_full(idx_x_e,1) = x_e;
+            
+            % Calculate power flows and capacitances
+            P = CalcP(obj,x_full,u); % calculates power flows
+            C = CalcC(obj,x_full); % calcualtes capacitance
+            
+            % Solve system dynamics           
+            eqnA(1:sum(idx_x_a),1) = -obj.graph.M(idx_x_a,:)*P + obj.D(idx_x_a,:)*P_e == 0; % system of algebraic equations
+            eqnD(1:sum(idx_x_d),1) = diag(C(idx_x_d))^-1*(-obj.graph.M(idx_x_d,:)*P + obj.D(idx_x_d,:)*P_e); % system of dynamic equations (
             [A,Bu] = equationsToMatrix(eqnA,x_a); % convert eqnA to the form Ax=B
             x_a_solution = linsolve(A,Bu); % find solution to the algebraic system
-            
-            eqnD(1:sum(idx_x_d),1) = diag(C(idx_x_d))^-1*(-Sys.graph.M(idx_x_d,:)*P + Sys.D(idx_x_d,:)*P_e); % system of dynamic equations (
             x_d_solution = subs(eqnD,x_a,x_a_solution); % plug in the algebraic system solution into the dynamic system equations
-           
-            obj.f = x_d_solution;
-            obj.g = [x_full(idx_x_d);x_a_solution]; %y = [x_d; x_a(x_d,x_e,u,P_e)]
+                        
+            % Store symbolic calculations
+            obj.f_sym = x_d_solution; % system derivatives
+            obj.g_sym = [x_full(idx_x_d);x_a_solution]; % all system states
 
             
         end
         
+    
+    
+    
+        function [P] = CalcP(obj,x0,u0)
+            % CalcP calculates the power flows of a graph model.
+            
+            %%% INPUTS
+            % Sys  - System graph model object
+            % x0   - state vector
+            % u0   - input vector
+            % Pmap - vector of lookup map values
+            
+            %%% OUTPUTS
+            % P - Power flows
+            
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            % Author: Christopher T. Aksland
+            % Association: University of Illionis at Urbana-Champaign
+            % Contact: aksland2@illinois.edu
+            % Revision History:
+            % 11/22/2020 - Function creation
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            % Potential improvements
+            % -
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            
+            % P   = zeros(size(Sys.P_coeff_mod));
+            xt = obj.graph.Tails*x0; %tail states
+            xh = obj.graph.Heads*x0; %head states
+            Nu = numel(fieldnames(obj.B)); % max number of inputs incident per edge
+            u = cell(1,Nu); % initialize edge input data.
+            for i = 1:Nu
+                u{:,i} = obj.B.(['B',num2str(i)])*u0; % inputs indident per edge
+            end
+            
+            % calculate the powerflow along each edge. Note the 3x vector size from
+            % repmat required to simulate a multi-domain graph
+            P = sym(zeros(size(obj.P_coeff)));
+            for i = 1:size(obj.P_coeff,2)
+                P(:,i) = obj.P_coeff(:,i).*obj.PType(i).Val_Func(xt,xh,[u{:}]);
+            end
+            
+            % sum the powerflow coefficients
+            P = sum(P,2);
+            
+        end
+        
+        function [C] = CalcC(obj,x0)
+            % CalcC calculates the capacitance values of a graph model.
+            
+            %%% INPUTS
+            % Sys  - System graph model object
+            % x0   - state vector
+            
+            %%% OUTPUTS
+            % C - Capacitance vector
+            
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            % Author: Christopher T. Aksland
+            % Association: University of Illionis at Urbana-Champaign
+            % Contact: aksland2@illinois.edu
+            % Revision History:
+            % 11/22/2020 - Function creation
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            % Potential improvements
+            % -
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            
+            % graph lookups
+            c   = sym(zeros(size(obj.C_coeff)));
+            % caculate the capacitance of each vertex for each coefficient
+            for i = 1:size(obj.C_coeff,2)
+                c(:,i) = obj.C_coeff(:,i).*obj.CType(i).Val_Func(x0); % the 1 and 0 in these lines will need to be changed
+            end
+            c = sum(c,2); % sum across capacitance coefficients
+            
+            C = c(1:obj.graph.Nv); % solve for the capacitance of each vertex
+            
+        end
+        
     end
-    
-    
-    
     methods(Static)
         function g_sys = Combine(G, ConnectV, ConnectE) % Create a new GraphModel Object
             % Algorithm 1
