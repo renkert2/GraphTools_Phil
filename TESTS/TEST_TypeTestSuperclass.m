@@ -14,7 +14,7 @@ t_cap.Val_Str = "x^3";
 t_cap.Val_Sym = x^5;
 
 t_cap.calcVal(2)
-t_cap.calcJac(3,3)
+% t_cap.calcJac(3,3)
 %% PowerFlow Type
 
 t_pf = Type_PowerFlow('xt*xh*u3')

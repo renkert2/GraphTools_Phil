@@ -17,8 +17,12 @@ classdef Type_PowerFlow < Type
         function val = calcVal(obj, xt, xh, u) % Calculates type value with symbolic 'vars' substituted with numeric 'vars_'
             num_args = nargin-1; % Matlab counts obj as an input argument
             if num_args == 3
-                assert(numel(u) == obj.num_inputs, 'Invalid number of inputs');
-                val = calcVal@Type(obj, xt, xh, u);
+                if obj.num_inputs
+                    assert(size(u,2) >= obj.num_inputs, 'Invalid number of inputs. Number of columns of u must be greater than or equal to the number of inputs');
+                    val = calcVal@Type(obj, xt, xh, u);
+                else
+                    val = calcVal@Type(obj,xt,xh);
+                end
             elseif num_args == 2
                 assert(obj.num_inputs == 0, "Input argument 'u' required'");
                 val = calcVal@Type(obj, xt, xh);
@@ -28,8 +32,20 @@ classdef Type_PowerFlow < Type
         end
         
         function jac = calcJac(obj, xt, xh, u) % Calculates type Jacobian with symbolic 'vars' substituted with numeric 'vars_'
-            assert(numel(u)==obj.num_inputs, 'Invalid number of inputs');
-            jac = calcJac@Type(obj, xt, xh, u);
+            num_args = nargin-1; % Matlab counts obj as an input argument
+            if num_args == 3
+                if obj.num_inputs
+                    assert(size(u,2) >= obj.num_inputs, 'Invalid number of inputs. Number of columns of u must be greater than or equal to the number of inputs');
+                    jac = calcJac@Type(obj, xt, xh, u);
+                else
+                    jac = calcJac@Type(obj,xt,xh);
+                end
+            elseif num_args == 2
+                assert(obj.num_inputs == 0, "Input argument 'u' required'");
+                jac = calcJac@Type(obj, xt, xh);
+            else
+                error("Invalid arguments")
+            end
         end
         
         
@@ -80,12 +96,8 @@ classdef Type_PowerFlow < Type
             
             function [vars, params] = calcVars(num_inputs)
                 state_vars = [sym('xt'), sym('xh')];
-                if num_inputs > 1
-                    input_vars = sym('u', [1 num_inputs]);
-                    vars = [state_vars, input_vars];
-                    params = {state_vars(1), state_vars(2), input_vars};
-                elseif num_inputs == 1
-                    input_vars = [sym('u1')];
+                if num_inputs >= 1
+                    input_vars =sym('u', [1, max(num_inputs,2)]);
                     vars = [state_vars, input_vars];
                     params = {state_vars(1), state_vars(2), input_vars};
                 elseif num_inputs == 0
