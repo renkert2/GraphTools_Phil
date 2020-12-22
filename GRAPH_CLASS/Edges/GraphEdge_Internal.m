@@ -6,6 +6,8 @@ classdef GraphEdge_Internal < GraphEdge
         Input
         Port
         Coefficient = 0
+        TailVertex (1,1) GraphVertex
+
     end
     
     methods
@@ -14,4 +16,3 @@ classdef GraphEdge_Internal < GraphEdge
         end       
     end
 end
-
