@@ -23,19 +23,6 @@ classdef GraphModel < Model
                 init(obj);
             end
         end      
-        
-        function ReorderStates(obj,idxNew)
-            obj.Graph.M = obj.Graph.M(idxNew,:); %this will require an update to obj.Graph.E
-            obj.C_coeff = obj.C_coeff(idxNew,:);
-            obj.x_init  = obj.x_init(idxNew);
-            obj.DynType = obj.DynType(idxNew);
-            %             obj.D       = obj.D(idxNew);
-            
-            E = obj.Graph.E;
-            E(:,1) = (1:size(obj.Graph.M,1))*(obj.Graph.M == 1); % set edge matrix tails
-            E(:,2) = (1:size(obj.Graph.M,1))*(obj.Graph.M == -1); % set edge matrix heads
-            obj.Graph.E = E;
-        end
 
         function init(obj)
             % make vertex matrices
@@ -75,7 +62,6 @@ classdef GraphModel < Model
             obj.Nx = sum(any(obj.C_coeff ~= 0,2));
             obj.Nu = obj.graph.Nu;
             obj.Nd = obj.graph.Nev + obj.graph.Nee;
-            obj.Ny = obj.graph.Nv;
             obj.SymbolicSolve
             
             init@Model(obj);
