@@ -65,17 +65,3 @@ plot(Sys.graph,'NodeColor','r','EdgeColor','b')
 
 
 
-
-
-% notes:
-% WE should remove the external edge class and add it as a vertex property.
-% we don't define graphs with external edges part of the edge set so it
-% shouldn't be included here.
-
-% added in setaccess = private functionality such that only parameters
-% that don't affect graph structure can be edited post system generation
-
-
-%% 
-
-
