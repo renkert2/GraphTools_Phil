@@ -190,14 +190,6 @@ classdef Graph < matlab.mixin.Copyable
             end
             hold on; scatter(xLoc,yLoc,5*h.MarkerSize,'MarkerEdgeColor',h.EdgeColor(1,:)); hold off; % plot external edge tail vertices
         end
-        
-        % for now, I want this funcitonality removed since I want all
-        % vertices in order of [dynamic; algebraic; external]
-%         function ReorderVertices(obj,idx) 
-%             obj.Vertices = obj.Vertices(idx);
-%             obj.init();
-%         end
-        
     end
 end
 
