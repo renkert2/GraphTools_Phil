@@ -5,8 +5,8 @@ classdef GraphEdge_Internal < GraphEdge
         PowerFlow Type_PowerFlow = Type_PowerFlow.empty()
         Input GraphInput = GraphInput.empty()
         Port
-        Coefficient = 0
-        TailVertex (1,1) GraphVertex
+        Coefficient double = 0
+        TailVertex (1,1) GraphVertex = GraphVertex.empty()
 
     end
     

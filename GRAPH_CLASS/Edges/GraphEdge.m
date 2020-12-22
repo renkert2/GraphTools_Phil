@@ -6,7 +6,7 @@ classdef GraphEdge < matlab.mixin.Heterogeneous & matlab.mixin.Copyable
     
     properties
         Description (1,1) string
-        HeadVertex (1,1) GraphVertex
+        HeadVertex (1,1) GraphVertex = GraphVertex.empty()
     end
 
     methods
