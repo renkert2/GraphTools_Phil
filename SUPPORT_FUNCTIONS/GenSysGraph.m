@@ -44,35 +44,27 @@
     INP = MakeInputMap(gComp,E);
     
     M = V*blkdiag(gComp.M)*E;
-%     Emat(:,1) = (1:size(M,1))*(M == 1); % set edge matrix tails
-%     Emat(:,2) = (1:size(M,1))*(M == -1); % set edge matrix heads
+    Emat(:,1) = (1:size(M,1))*(M == 1); % set edge matrix tails
+    Emat(:,2) = (1:size(M,1))*(M == -1); % set edge matrix heads
     
     Vsys = VAll(Vidx);
     Esys = [EAll_int(Eidx);EAll_ext]; % Ecomp -> Esys
-    for i = 1:length(INP)
+    for i = 1:length(Eidx) % loop for each edge
         Esys(i).Input = INP{i};
-    end
+        Esys(i).HeadVertex = Vsys(Emat(i,2));
+        Esys(i).TailVertex = Vsys(Emat(i,1));
+    end  
+        
+    Sys = GraphModel(Graph(Vsys,Esys));
     
-    %%%%%%%%%% Code to update D matrix %%%%%%%%
-    for i = 1:length(gComp)
-        Dcomp(i).D = zeros(gComp(i).v_tot,gComp(i).v_tot);
-        try
-            EE = gComp(i).ExternalEdges.V_ind;
-            for j = 1:length(EE)
-                Dcomp(i).D(EE(j),j) = 1; 
-            end
-        end             
-    end
-    D = V*blkdiag(Dcomp.D)*V'; %
-    D(:,~any(D,1)) = [];
-    Didx = (1:1:size(D,1))*D;
-    for i = 1:length(Didx)
-        EAll_ext(i).V_ind = Didx(i);
-    end
-    %%%%%%%%%% Code to update D matrix %%%%%%%%
+    % reorder vertices
+%     idx_d = (1:size(Sys.C_coeff,1))'.*any(Sys.C_coeff ~= 0,2);
+%     idx_d(idx_d==0) = [];
+%     idx_a = (1:size(Sys.C_coeff,1))'.*~any(Sys.C_coeff ~= 0,2);
+%     idx_a(idx_a==0) = [];    
+%     Sys.graph.ReorderVertices([idx_d;idx_a]);
+%     Sys.init(); % at some point, I'd like this to call whenever the graph property updates
     
-    
-    Sys = Graph(M,Vsys,Esys);
 %     g = Graph(Emat,Vsys,Esys);
 %     Sys = GraphModel(g);
     

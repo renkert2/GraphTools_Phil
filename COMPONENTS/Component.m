@@ -23,7 +23,7 @@ classdef Component < matlab.mixin.Heterogeneous & handle
     methods (Access = protected)
         function ConstructGraph(obj)
             g = DefineGraph(obj);
-            g.init();
+%             g.init();
 %             obj.Model = GraphModel(g);
             obj.graph = g;
         end
