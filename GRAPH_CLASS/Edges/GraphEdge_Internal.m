@@ -3,7 +3,7 @@ classdef GraphEdge_Internal < GraphEdge
     %   Detailed explanation goes here
     properties
         PowerFlow Type_PowerFlow = Type_PowerFlow.empty()
-        Input
+        Input GraphInput = GraphInput.empty()
         Port
         Coefficient = 0
         TailVertex (1,1) GraphVertex

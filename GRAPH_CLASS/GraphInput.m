@@ -2,20 +2,14 @@ classdef GraphInput < handle
     %GraphInput
     
     properties
-        Property1
+        Description string = string.empty()
     end
     
     methods
-        function obj = untitled(inputArg1,inputArg2)
-            %UNTITLED Construct an instance of this class
-            %   Detailed explanation goes here
-            obj.Property1 = inputArg1 + inputArg2;
-        end
-        
-        function outputArg = method1(obj,inputArg)
-            %METHOD1 Summary of this method goes here
-            %   Detailed explanation goes here
-            outputArg = obj.Property1 + inputArg;
+        function obj = GraphInput(varargin)
+            if nargin > 1
+                obj = my_inputparser(obj,varargin{:});
+            end
         end
     end
 end
