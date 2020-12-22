@@ -153,16 +153,17 @@ function [P] = CalcP(Sys,x0,u0)
 xt = Sys.graph.Tails*x0; %tail states
 xh = Sys.graph.Heads*x0; %head states
 Nu = numel(fieldnames(Sys.B)); % max number of inputs incident per edge
-u = cell(1,Nu); % initialize edge input data.
+Ne = Sys.graph.Ne;
+u = sym(zeros(Ne,Nu)); % initialize edge input data.
 for i = 1:Nu
-    u{:,i} = Sys.B.(['B',num2str(i)])*u0; % inputs indident per edge
+    u(:,i) = Sys.B.(['B',num2str(i)])*u0; % inputs indident per edge
 end
 
 % calculate the powerflow along each edge. Note the 3x vector size from
 % repmat required to simulate a multi-domain graph
 P = sym(zeros(size(Sys.P_coeff)));
 for i = 1:size(Sys.P_coeff,2)
-    P(:,i) = Sys.P_coeff(:,i).*Sys.PType(i).Val_Func(xt,xh,[u{:}]);
+    P(:,i) = Sys.P_coeff(:,i).*Sys.PType(i).calcVal(xt,xh,u);
 end
 
 % sum the powerflow coefficients
