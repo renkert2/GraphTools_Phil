@@ -39,23 +39,14 @@ classdef GraphModel < Model
             
             % B matrix
             Eint = obj.graph.InternalEdges;
-%             numU = max(arrayfun(@(x) length(x.Input),Eint));
-%             for j = 1:numU
-%                obj.B.(['B',num2str(j)]) = zeros(obj.graph.Ne,obj.graph.Nu);
-%                for i = 1:length(Eint)
-%                    try
-%                        obj.B.(['B',num2str(j)])(i,Eint(i).Input(j)) = 1;
-%                    end
-%                end
-%             end
+            numU = max(arrayfun(@(x) length(x.Input),Eint));
 
-            obj.B = zeros(obj.graph.Ne, obj.graph.Nu, obj.graph.Nu); % Inputs added along second dimensions; separate inputs along third dimension
-            for j = 1:obj.graph.Nu
-                for i = 1:length(Eint)
-                    obj.B(i,Eint(i).Input(j),j) = 1;
+            obj.B = zeros(obj.graph.Ne, obj.graph.Nu, numU); % Inputs added along second dimensions; separate inputs along third dimension
+            for i = 1:numel(Eint)
+                for j = 1:numel(Eint(i).Input)
+                    obj.B(i,:,j) = (Eint(i).Input(j)==obj.graph.Inputs);
                 end
             end
-            
             
             % C matrix
             CTypeAll = vertcat(obj.graph.Vertices(:).Capacitance);
@@ -153,11 +144,11 @@ classdef GraphModel < Model
             % P   = zeros(size(Sys.P_coeff_mod));
             xt = obj.graph.Tails*x0; %tail states
             xh = obj.graph.Heads*x0; %head states
-            Nu = numel(fieldnames(obj.B)); % max number of inputs incident per edge
+            [~,~,Nu] = size(obj.B); % max number of inputs incident per edge
             Ne = obj.graph.Ne;
             u = sym(zeros(Ne,Nu)); % initialize edge input data.
             for i = 1:Nu
-                u(:,i) = obj.B.(['B',num2str(i)])*u0; % inputs indident per edge
+                u(:,i) = obj.B(:,:,i)*u0;
             end
             
             % calculate the powerflow along each edge. Note the 3x vector size from
