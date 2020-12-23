@@ -36,6 +36,7 @@ classdef Graph < matlab.mixin.Copyable
     end
     
     properties (SetAccess = private)
+        Inputs (:,1) GraphInput = GraphInput.empty()
     
         % Number of vertices
         Nv (1,1) double %{mustBeInteger,mustBeNonnegative}
@@ -137,12 +138,15 @@ classdef Graph < matlab.mixin.Copyable
             
             % reorder vertices in order of [xd;xa;xt] and edges in [int; ext]
             obj.Vertices = [obj.DynamicVertices; obj.AlgebraicVertices; obj.ExternalVertices];
-            obj.Edges    = [obj.InternalEdges; obj.ExternalEdges];
+            obj.Edges    = [obj.InternalEdges; obj.ExternalEdges];            
+            
+            % Calculate input array from Internal Edges
+            obj.Inputs = unique(vertcat(obj.InternalEdges.Input));
 
             % calculate graph size, order, etc
             obj.Nv  = length(obj.InternalVertices);
             obj.Ne  = length(obj.InternalEdges);
-            obj.Nu  = max([obj.InternalEdges.Input]);
+            obj.Nu  = length(obj.Inputs);
             obj.Nev = length(obj.Vertices)-obj.Nv;
             obj.Nee = length(obj.Edges)-obj.Ne;
             

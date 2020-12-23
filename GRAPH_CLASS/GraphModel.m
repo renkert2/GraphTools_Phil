@@ -39,15 +39,23 @@ classdef GraphModel < Model
             
             % B matrix
             Eint = obj.graph.InternalEdges;
-            numU = max(arrayfun(@(x) length(x.Input),Eint));
-            for j = 1:numU
-               obj.B.(['B',num2str(j)]) = zeros(obj.graph.Ne,obj.graph.Nu);
-               for i = 1:length(Eint)
-                   try
-                       obj.B.(['B',num2str(j)])(i,Eint(i).Input(j)) = 1;
-                   end
-               end
+%             numU = max(arrayfun(@(x) length(x.Input),Eint));
+%             for j = 1:numU
+%                obj.B.(['B',num2str(j)]) = zeros(obj.graph.Ne,obj.graph.Nu);
+%                for i = 1:length(Eint)
+%                    try
+%                        obj.B.(['B',num2str(j)])(i,Eint(i).Input(j)) = 1;
+%                    end
+%                end
+%             end
+
+            obj.B = zeros(obj.graph.Ne, obj.graph.Nu, obj.graph.Nu); % Inputs added along second dimensions; separate inputs along third dimension
+            for j = 1:obj.graph.Nu
+                for i = 1:length(Eint)
+                    obj.B(i,Eint(i).Input(j),j) = 1;
+                end
             end
+            
             
             % C matrix
             CTypeAll = vertcat(obj.graph.Vertices(:).Capacitance);

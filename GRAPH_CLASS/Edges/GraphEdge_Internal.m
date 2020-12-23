@@ -6,13 +6,18 @@ classdef GraphEdge_Internal < GraphEdge
         Input GraphInput = GraphInput.empty()
         Port
         Coefficient double = 0
-        TailVertex (1,1) GraphVertex = GraphVertex.empty()
+        TailVertex GraphVertex = GraphVertex()
 
     end
     
     methods
         function obj = GraphEdge_Internal(varargin) % constructor method
             obj@GraphEdge(varargin{:}); % calls the superclass constructor
-        end       
+        end
+        
+        function set.TailVertex(obj, tail_vertex)
+            assert(numel(tail_vertex)<=1, 'Edge can have only one tail vertex');
+            obj.TailVertex = tail_vertex;
+        end
     end
 end
