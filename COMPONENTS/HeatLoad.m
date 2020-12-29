@@ -10,21 +10,17 @@ classdef HeatLoad < Component
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
     properties
-        
-        % Block Name
-        Name char ='Heat Load'
         % Working Fluid
         fluid char = 'JP8'
         % Initial Fluid temperature [C]
         T_init(1,1) double {mustBeNumeric} = 25;
         % Fluid Specific Heat [J/kg]
-        cp_f (1,1) double {mustBeNumeric} = 2000;
-        
+        cp_f (1,1) double {mustBeNumeric} = 2000;  
     end
     
     methods
         function obj = HeatLoad(varargin)          
-            obj@Component(varargin{:}); % calls the superclass constructor           
+            obj@Component('Name', 'Heat Load', varargin{:}); % calls the superclass constructor           
         end
     end
     

@@ -10,9 +10,6 @@ classdef Tank < Component
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
     properties
-        
-        % Block Name
-        Name char ='Tank'
         % Working Fluid
         fluid char = 'JP8'
         % Initial tank mass [kg]
@@ -26,7 +23,7 @@ classdef Tank < Component
     
     methods
         function obj = Tank(varargin)          
-            obj@Component(varargin{:}); % calls the superclass constructor           
+            obj@Component('Name', 'Tank', varargin{:}); % calls the superclass constructor           
         end
     end
     

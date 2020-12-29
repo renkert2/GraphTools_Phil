@@ -10,9 +10,6 @@ classdef HeatExchanger < Component
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
     properties
-        
-        % Block Name
-        Name char ='Heat Exchanger'
         % Side 1 working Fluid
         fluid1 char = 'JP8'
         % Side 2 working Fluid
@@ -32,7 +29,7 @@ classdef HeatExchanger < Component
     
     methods
         function obj = HeatExchanger(varargin)          
-            obj@Component(varargin{:}); % calls the superclass constructor           
+            obj@Component('Name' ,'Heat Exchanger', varargin{:}); % calls the superclass constructor
         end
     end
     

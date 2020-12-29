@@ -10,9 +10,6 @@ classdef SplitJunction < Component
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
     properties
-        
-        % Block Name
-        Name char ='Split Junction'
         % Working Fluid
         fluid char = 'JP8'
         % Initial Fluid temperature [C]
@@ -27,7 +24,7 @@ classdef SplitJunction < Component
     
     methods
         function obj = SplitJunction(varargin)          
-            obj@Component(varargin{:}); % calls the superclass constructor           
+            obj@Component('Name', 'Split Junction', varargin{:}); % calls the superclass constructor           
         end
     end
     
@@ -53,7 +50,7 @@ classdef SplitJunction < Component
             end 
             
             % define edges
-            for i = 1:obj.n_in+obj.n_out
+            for i = 1:(obj.n_in+obj.n_out)
                 % Define input for each edge
                 desc = sprintf("SplitJunction Input %d", i);
                 I(i) = GraphInput(desc);
