@@ -11,8 +11,8 @@ classdef Component < matlab.mixin.Heterogeneous & handle
         function obj = Component(varargin)
             if nargin > 1
                 my_inputparser(obj,varargin{:}); % input parser component models
-                obj.init(); % I don't know why we need this and can't just call ConstructGraph - CTA
             end
+            obj.init(); % I don't know why we need this and can't just call ConstructGraph - CTA
         end
         
         function init(obj)
