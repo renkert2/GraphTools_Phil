@@ -41,7 +41,7 @@
     Vidx = V_mod*(1:length(VAll))';
     Eidx = E_mod'*(1:length(EAll_int))';
 
-    INP = MakeInputMap(gComp,E);
+    %INP = MakeInputMap(gComp,E); % No Longer needed with GraphInput class
     
     M = V*blkdiag(gComp.M)*E;
     Emat(:,1) = (1:size(M,1))*(M == 1); % set edge matrix tails
@@ -49,8 +49,8 @@
     
     Vsys = VAll(Vidx);
     Esys = [EAll_int(Eidx);EAll_ext]; % Ecomp -> Esys
-    for i = 1:length(Eidx) % loop for each edge
-        Esys(i).Input = INP{i};
+    for i = 1:length(Eidx) % loop for each internal edge
+        %Esys(i).Input = INP{i};
         Esys(i).HeadVertex = Vsys(Emat(i,2));
         Esys(i).TailVertex = Vsys(Emat(i,1));
     end  
@@ -480,17 +480,30 @@ function [INP] = MakeInputMap(gComp,E)
     EAll_int  = EAll(arrayfun(@(x) isa(x,'GraphEdge_Internal'),EAll));
     numU = max(arrayfun(@(x) length(x.Input),EAll_int));
 
-    Dummy.B.B1 = []; % this will be a structure that stores B matrix information
-    
+%     Dummy.B.B1 = []; % this will be a structure that stores B matrix information
+%     
+%     for k = 1:length(gComp)
+%         for j = 1:numU
+%             Dummy.B(k).(['B',num2str(j)]) = zeros(gComp(k).Ne,gComp(k).Ne);
+%             for i = 1:length(gComp(k).Edges)
+%                 try
+%                     Dummy.B(k).(['B',num2str(j)])(i,gComp(k).Edges(i).Input(j)) = 1;
+%                 end
+%             end
+%         end
+%     end
+
+    B_dummy_cell = cell(length(gComp)); 
     for k = 1:length(gComp)
-        for j = 1:numU
-            Dummy.B(k).(['B',num2str(j)]) = zeros(gComp(k).Ne,gComp(k).Ne);
-            for i = 1:length(gComp(k).Edges)
-                try
-                    Dummy.B(k).(['B',num2str(j)])(i,gComp(k).Edges(i).Input(j)) = 1;
-                end
+        B_temp = zeros(gComp(k).Ne, gComp(k).Ne, numU); % Inputs added along second dimensions; separate inputs along third dimension
+        EInt = gComp(k).InternalEdges;
+        for i = 1:length(comp_edges)
+            for j = 1:numel(EInt(i).Input)
+                B_temp(i,:,j) = (Eint(i).Input(j)==gComp(k).Inputs);
             end
         end
+        
+        B_dummy_cell{k} = B_temp;
     end
     
     %%%%%%%%%%%%%%% START CALCULATE B_Comp to B_Sys %%%%%%%%%%%%
@@ -568,23 +581,22 @@ function [INP] = MakeInputMap(gComp,E)
 end
 
 function [V_op,V_op_mod,E_op,E_op_mod] = Comp2SysMaps(Comp,ConnectV,ConnectE)
+e_tot = 0;
+v_tot = 0;
+Ne_mat = zeros(1,length(Comp));
+Nv_mat = zeros(1,length(Comp));
+chi_ubar = [];
+chi_lbar = [];
+for i = 1:length(Comp)
+    Nv_mat(i) = v_tot;
+    Ne_mat(i) = e_tot;
+    chi_ubar = [chi_ubar; (1:1:Comp(i).Nv)'+v_tot];
+    chi_lbar = [chi_lbar; (Comp(i).Nv+1:1:Comp(i).Nv+Comp(i).Nev)'+v_tot];
+    v_tot = v_tot + Comp(i).Nv + Comp(i).Nev;
+    e_tot = e_tot + Comp(i).Ne;
+end
 
-    e_tot = 0;
-    v_tot = 0;
-    Ne_mat = zeros(1,length(Comp));
-    Nv_mat = zeros(1,length(Comp));
-    chi_ubar = [];
-    chi_lbar = [];
-    for i = 1:length(Comp)
-        Nv_mat(i) = v_tot;
-        Ne_mat(i) = e_tot;
-        chi_ubar = [chi_ubar; (1:1:Comp(i).Nv)'+v_tot];
-        chi_lbar = [chi_lbar; (Comp(i).Nv+1:1:Comp(i).Nv+Comp(i).Nev)'+v_tot];
-        v_tot = v_tot + Comp(i).Nv + Comp(i).Nev;
-        e_tot = e_tot + Comp(i).Ne;
-    end
-    
-VAll = vertcat(Comp.Vertices);    
+VAll = vertcat(Comp.Vertices);
 chi = (1:1:v_tot)';
 Xi = (1:1:e_tot)';
 
@@ -598,7 +610,7 @@ for i = 1:size(ConnectV,2)
         delta_lbar = [delta_lbar; delta{i}];
     else
         delta_ubar = [delta_ubar; delta{i}];
-    end 
+    end
     chi_hat = [chi_hat; delta{i}'];
 end
 

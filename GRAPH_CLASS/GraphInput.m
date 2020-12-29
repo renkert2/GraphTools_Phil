@@ -2,7 +2,11 @@ classdef GraphInput < handle
     %GraphInput
     
     properties
-        Description string = string.empty()
+        Description string = string.empty() 
+    end
+    
+    properties (SetAccess = ?Component)
+        Parent Component = Component.empty()
     end
     
     methods

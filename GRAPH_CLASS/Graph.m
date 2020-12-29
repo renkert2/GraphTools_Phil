@@ -141,7 +141,7 @@ classdef Graph < matlab.mixin.Copyable
             obj.Edges    = [obj.InternalEdges; obj.ExternalEdges];            
             
             % Calculate input array from Internal Edges
-            obj.Inputs = unique(vertcat(obj.InternalEdges.Input));
+            obj.Inputs = unique(vertcat(obj.InternalEdges.Input), 'stable');
 
             % calculate graph size, order, etc
             obj.Nv  = length(obj.InternalVertices);
