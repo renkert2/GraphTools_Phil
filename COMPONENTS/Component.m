@@ -4,6 +4,7 @@ classdef Component < matlab.mixin.Heterogeneous & handle
     %   Detailed explanation goes here
     
     properties %(SetAccess = protected)
+        Name string = "Component"
         graph Graph = Graph.empty()
     end
     
@@ -15,21 +16,32 @@ classdef Component < matlab.mixin.Heterogeneous & handle
             obj.init(); % I don't know why we need this and can't just call ConstructGraph - CTA
         end
         
+        function set.Name(obj, name)
+            obj.Name = string(name);
+        end
+        
         function init(obj)
             obj.ConstructGraph();
+            obj.DefineChildren();
         end
     end
     
     methods (Access = protected)
         function ConstructGraph(obj)
             g = DefineGraph(obj);
-%             g.init();
-%             obj.Model = GraphModel(g);
             obj.graph = g;
         end
         
         function g = DefineGraph(p)
             g = Graph(); % Function to be defined by child classes
+        end
+        
+        function DefineChildren(obj)
+            try
+                for i = 1:numel(obj.graph.Inputs)
+                    obj.graph.Inputs(i).Parent = obj;
+                end
+            end
         end
     end
     
