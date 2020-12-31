@@ -190,7 +190,7 @@ classdef GraphModel < Model
             c   = sym(zeros(size(obj.C_coeff)));
             % caculate the capacitance of each vertex for each coefficient
             for i = 1:size(obj.C_coeff,2)
-                c(:,i) = obj.C_coeff(:,i).*obj.CType(i).Val_Func(x0); % the 1 and 0 in these lines will need to be changed
+                c(:,i) = obj.C_coeff(:,i).*obj.CType(i).calcVal(x0); % the 1 and 0 in these lines will need to be changed
             end
             c = sum(c,2); % sum across capacitance coefficients
             
