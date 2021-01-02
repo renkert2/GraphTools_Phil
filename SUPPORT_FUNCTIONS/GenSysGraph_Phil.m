@@ -1,4 +1,4 @@
-function [G_sys] = GenSysGraph_Phil(G, ConnectE, ConnectV) % Input is vector of GraphClass elements
+function [G_sys, ConnectE, ConnectV] = GenSysGraph_Phil(G, ConnectE, ConnectV, opts) % Input is vector of GraphClass elements
 % G - GraphClass Class Array
 % ConnectX - Cell vector with first list containing component
 % indices; second list containing equivalent properties (edges
@@ -8,6 +8,7 @@ arguments
     G (:,1) Graph
     ConnectE cell = {}
     ConnectV cell = {}
+    opts.CopyEdges logical = true;
 end
 
 % Format ConnectV and ConnectE as {:,1} cell array containing list of
@@ -30,7 +31,7 @@ end
 ConnectV_E = cell(2*Nce, 1);
 edge_conn_map(Nce,2) = GraphEdge();
 for ce = 1:Nce
-    edges = ConnectE{ce};
+    edges = fliplr(ConnectE{ce});
 
     equiv_heads = [edges.HeadVertex];
     equiv_tails = [edges.TailVertex];
@@ -68,11 +69,11 @@ for cv = 1:length(ConnectV)
     elseif n_int_verts == 1
         primary_vertex = verts(int_vert_flags);
     else
-        error('Only one Internal Vertex can be involved in a connection')
+        error('Error in Vertex Connection %d.  Only one Internal Vertex can be involved in a connection.', cv)
     end
     primary_vertices(cv,1) = primary_vertex;
     
-    conn_verts = verts(arrayfun(@(x) primary_vertex ~= x, verts));
+    conn_verts = verts(primary_vertex ~= verts);
     
     r = vconnmap_counter(cv)+(1:numel(conn_verts)); % Range of elements in vertex_conn_map to be assigned
     vertex_conn_map(r, 1) = conn_verts;
@@ -91,19 +92,24 @@ all_edges = vertcat(G.Edges);
 sys_verts = all_verts(~ismember(all_verts, vertex_conn_map(:,1)));
 sys_edges = all_edges(~ismember(all_edges, edge_conn_map(:,1)));
 
+if opts.CopyEdges
+    sys_edges = copy(sys_edges);
+end
+
 for i = 1:numel(sys_edges)
     head_v = sys_edges(i).HeadVertex;
     
-    if ismember(head_v, vertex_conn_map(:,1))
-        log_index = arrayfun(@(x) x==head_v, vertex_conn_map(:,1));
+    log_index = head_v == vertex_conn_map(:,1);
+    if any(log_index)
         primary_vertex = vertex_conn_map(log_index, 2);
         sys_edges(i).HeadVertex = primary_vertex;
     end
     
     if isa(sys_edges(i), 'GraphEdge_Internal')
         tail_v = sys_edges(i).TailVertex;
-        if ismember(tail_v, vertex_conn_map(:,1))
-            log_index = arrayfun(@(x) x==tail_v, vertex_conn_map(:,1));
+        
+        log_index = tail_v == vertex_conn_map(:,1);
+        if any(log_index)
             primary_vertex = vertex_conn_map(log_index, 2);
             sys_edges(i).TailVertex = primary_vertex;
         end 
@@ -114,19 +120,37 @@ end
 G_sys = Graph(sys_verts, sys_edges);
 
 function ConnectX = formatConnectX(ConnectX, class, prop)
-    if all(cellfun(@(x) isa(x, class), ConnectX),'all')
+    if all(cellfun(@(x) isa(x, class), ConnectX),'all') % Connect X Already given as lists of equivalent GraphVertices or GraphEdges with dominant element in front of list
         return
-    elseif all(cellfun(@(x) isa(x, 'double'), ConnectX),'all')
-        vec_lengths = cellfun(@numel, ConnectX);
-        assert(all(vec_lengths(1,:)==vec_lengths(2,:)), 'Component and Property Vectors must be the same lenght for each connection');
-
+    elseif all(cellfun(@(x) isa(x, 'double'), ConnectX),'all') % ConnectX specified with component indices in 1st row, Property indices in second row
         num_connections = size(ConnectX,2);
+        if size(ConnectX,1) == 3 % If third row specifying dominant component is given
+            ConnectX_temp = cell(2, num_connections);
+            for c = 1:num_connections
+                comps = ConnectX{1,c};
+                props = ConnectX{2,c};
+                dom_comp = ConnectX{3,c};
+                
+                i = dom_comp == comps ; % Identify dominant component in first row
+                
+                new_comps = [comps(i) comps(~i)];
+                new_props = [props(i) props(~i)];
+                
+                ConnectX_temp{1,c} = new_comps;
+                ConnectX_temp{2,c} = new_props;
+            end
+            ConnectX = ConnectX_temp;
+        end
+        
+        vec_lengths = cellfun(@numel, ConnectX);
+        assert(all(vec_lengths(1,:)==vec_lengths(2,:)), 'Component and Property Vectors must be the same length for each connection');
+
         ConnectX_temp = cell(num_connections, 1);
         for c = 1:num_connections
             graphs_i = ConnectX{1,c};
             elems_i = ConnectX{2,c};
             elems = arrayfun(@(c,e) G(c).(prop)(e), graphs_i, elems_i, 'UniformOutput', false); % Arrayfun can't handle heterogenous object arrays so nonuniform output required
-            elems = vertcat(elems{:}); % Convert cell array to heterogenous object array
+            elems = [elems{:}]; % Convert cell array to heterogenous object array
             ConnectX_temp{c} = elems;
         end
         ConnectX = ConnectX_temp;

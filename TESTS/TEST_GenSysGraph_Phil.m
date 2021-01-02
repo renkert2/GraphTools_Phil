@@ -22,11 +22,52 @@ Comps = [HX1; load1; SJ1; SJ2; tank1; tank2];
 Graphs = [Comps(:).graph];
 
 %%
-Sys_graph = GenSysGraph_Phil(Graphs,ConnectE,ConnectV);
-figure
-plot(Sys_graph,'NodeColor','r','EdgeColor','b')
+tic
+[Sys_graph_phil, ConnectE_mod, ConnectV_mod] = GenSysGraph_Phil(Graphs, ConnectE, ConnectV, 'CopyEdges', true);
+new_time = toc
 
-Sys = GraphModel(Sys_graph);
+tic 
+[Sys_graph_phil] = GenSysGraph_Phil(Graphs, ConnectE_mod, ConnectV_mod(1:6), 'CopyEdges', true);
+new_time_2 = toc
+
+tic
+Sys_graph_old = GenSysGraph(Graphs, ConnectV, ConnectE);
+old_time = toc
+
+%% Ensure both graphs are equivalent
+verts = [vertcat(Sys_graph_phil.Vertices) vertcat(Sys_graph_old.Vertices)];
+edges = [vertcat(Sys_graph_phil.Edges) vertcat(Sys_graph_old.Edges)];
+
+nv = size(verts,1);
+vert_grid = zeros(nv);
+
+for i = 1:nv
+    for j = 1:nv
+        vert_grid(i,j) = isequal(verts(i,1), verts(j, 2));
+    end
+end
+
+ne = size(edges,1);
+edge_grid = zeros(ne);
+
+for i = 1:ne
+    for j = 1:ne
+        edge_grid(i,j) = isequal(edges(i,1), edges(j, 2));
+    end
+end
+
+assert(sum(vert_grid,'all') == nv, 'Vertices do not match!')
+assert(sum(edge_grid,'all') == ne, 'Edges do not match!')
+
+
+%%
+figure
+plot(Sys_graph_phil,'NodeColor','r','EdgeColor','b')
+
+figure
+plot(Sys_graph_old,'NodeColor','r','EdgeColor','b')
+
+Sys = GraphModel(Sys_graph_old);
 
 
 
