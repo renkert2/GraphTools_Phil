@@ -31,6 +31,10 @@ tic
 new_time_2 = toc
 
 tic
+[Sys_graph_phil] = Combine(Graphs, ConnectE_mod, ConnectV_mod(1:6), 'CopyEdges', true);
+new_time_3 = toc
+
+tic
 Sys_graph_old = GenSysGraph(Graphs, ConnectV, ConnectE);
 old_time = toc
 
