@@ -32,10 +32,6 @@ classdef Component < matlab.mixin.Heterogeneous & handle
             obj.graph = g;
         end
         
-        function g = DefineGraph(p)
-            g = Graph(); % Function to be defined by child classes
-        end
-        
         function DefineChildren(obj)
             try
                 for i = 1:numel(obj.graph.Inputs)
@@ -45,6 +41,8 @@ classdef Component < matlab.mixin.Heterogeneous & handle
         end
     end
     
-    
+    methods (Abstract, Access = protected)
+        DefineGraph(p)       
+    end
 end
 

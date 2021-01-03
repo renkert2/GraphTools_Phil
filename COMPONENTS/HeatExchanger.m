@@ -69,8 +69,7 @@ classdef HeatExchanger < Component
             Edge(4) = GraphEdge_Internal('PowerFlow',P(1),'Input',I(2),'Port',4,'Coefficient',obj.cp_f2,'TailVertex',Vertex(E(4,1)),'HeadVertex',Vertex(E(4,2)));
             Edge(5) = GraphEdge_Internal('PowerFlow',[P(2); P(3)],'Coefficient',[obj.HTC -obj.HTC],'TailVertex',Vertex(E(5,1)),'HeadVertex',Vertex(E(5,2)));
             
-            g = Graph(Vertex,Edge);
-            
+            g = Graph(Vertex,Edge); 
         end
     end
 end
