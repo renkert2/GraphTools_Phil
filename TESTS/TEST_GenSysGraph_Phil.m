@@ -35,7 +35,7 @@ tic
 new_time_3 = toc
 
 tic
-Sys_graph_old = GenSysGraph(Graphs, ConnectV, ConnectE);
+Sys_graph_old = GenSysGraph(Graphs, ConnectV, ConnectE); % Unmodified version ouputs GraphModel instead of graph.  It actually runs faster than the OOP method!
 old_time = toc
 
 %% Ensure both graphs are equivalent
