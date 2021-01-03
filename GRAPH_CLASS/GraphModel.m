@@ -75,8 +75,7 @@ classdef GraphModel < Model
         function Simulate(obj)
             
         end
-        
-        
+          
         function SymbolicSolve(obj) % this function will only work for symbolic expressions at the moment
         
             idx_x_d = (sum(abs(obj.C_coeff(1:obj.graph.Nv,:)),2) ~= 0);
@@ -112,10 +111,7 @@ classdef GraphModel < Model
 
             
         end
-        
-    
-    
-    
+            
         function [P] = CalcP(obj,x0,u0)
             % CalcP calculates the power flows of a graph model.
             
@@ -196,13 +192,6 @@ classdef GraphModel < Model
             
             C = c(1:obj.graph.Nv); % solve for the capacitance of each vertex
             
-        end
-        
-    end
-    methods(Static)
-        function g_sys = Combine(G, ConnectV, ConnectE) % Create a new GraphModel Object
-            % Algorithm 1
-            % Algorithm 2
         end
         
     end
