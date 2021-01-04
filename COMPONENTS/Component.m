@@ -3,10 +3,9 @@ classdef Component < matlab.mixin.Heterogeneous & handle
     %Battery, Motor, Heat Exchanger, etc...
     %   Detailed explanation goes here
     
-    properties %(SetAccess = protected)
-        
+    properties %(SetAccess = protected)        
         % Block Name
-        Name char = '' 
+        Name string = "Component"
         graph Graph = Graph.empty()
     end
     
@@ -32,24 +31,33 @@ classdef Component < matlab.mixin.Heterogeneous & handle
 
         end
         
+        function set.Name(obj, name)
+            obj.Name = string(name);
+        end
+        
         function init(obj)
             obj.ConstructGraph();
+            obj.DefineChildren();
         end
     end
     
     methods (Access = protected)
         function ConstructGraph(obj)
             g = DefineGraph(obj);
-%             g.init();
-%             obj.Model = GraphModel(g);
             obj.graph = g;
         end
         
-        function g = DefineGraph(p)
-            g = Graph(); % Function to be defined by child classes
+        function DefineChildren(obj)
+            try
+                for i = 1:numel(obj.graph.Inputs)
+                    obj.graph.Inputs(i).Parent = obj;
+                end
+            end
         end
     end
     
-    
+    methods (Abstract, Access = protected)
+        DefineGraph(p)       
+    end
 end
 

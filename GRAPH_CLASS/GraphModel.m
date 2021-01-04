@@ -40,13 +40,12 @@ classdef GraphModel < Model
             % B matrix
             Eint = obj.graph.InternalEdges;
             numU = max(arrayfun(@(x) length(x.Input),Eint));
-            for j = 1:numU
-               obj.B.(['B',num2str(j)]) = zeros(obj.graph.Ne,obj.graph.Nu);
-               for i = 1:length(Eint)
-                   try
-                       obj.B.(['B',num2str(j)])(i,Eint(i).Input(j)) = 1;
-                   end
-               end
+
+            obj.B = zeros(obj.graph.Ne, obj.graph.Nu, numU); % Inputs added along second dimensions; separate inputs along third dimension
+            for i = 1:numel(Eint)
+                for j = 1:numel(Eint(i).Input)
+                    obj.B(i,:,j) = (Eint(i).Input(j)==obj.graph.Inputs);
+                end
             end
             
             % C matrix
@@ -76,8 +75,7 @@ classdef GraphModel < Model
         function Simulate(obj)
             
         end
-        
-        
+          
         function SymbolicSolve(obj) % this function will only work for symbolic expressions at the moment
         
             idx_x_d = (sum(abs(obj.C_coeff(1:obj.graph.Nv,:)),2) ~= 0);
@@ -113,10 +111,7 @@ classdef GraphModel < Model
 
             
         end
-        
-    
-    
-    
+            
         function [P] = CalcP(obj,x0,u0)
             % CalcP calculates the power flows of a graph model.
             
@@ -145,11 +140,11 @@ classdef GraphModel < Model
             % P   = zeros(size(Sys.P_coeff_mod));
             xt = obj.graph.Tails*x0; %tail states
             xh = obj.graph.Heads*x0; %head states
-            Nu = numel(fieldnames(obj.B)); % max number of inputs incident per edge
+            [~,~,Nu] = size(obj.B); % max number of inputs incident per edge
             Ne = obj.graph.Ne;
             u = sym(zeros(Ne,Nu)); % initialize edge input data.
             for i = 1:Nu
-                u(:,i) = obj.B.(['B',num2str(i)])*u0; % inputs indident per edge
+                u(:,i) = obj.B(:,:,i)*u0;
             end
             
             % calculate the powerflow along each edge. Note the 3x vector size from
@@ -191,19 +186,12 @@ classdef GraphModel < Model
             c   = sym(zeros(size(obj.C_coeff)));
             % caculate the capacitance of each vertex for each coefficient
             for i = 1:size(obj.C_coeff,2)
-                c(:,i) = obj.C_coeff(:,i).*obj.CType(i).Val_Func(x0); % the 1 and 0 in these lines will need to be changed
+                c(:,i) = obj.C_coeff(:,i).*obj.CType(i).calcVal(x0); % the 1 and 0 in these lines will need to be changed
             end
             c = sum(c,2); % sum across capacitance coefficients
             
             C = c(1:obj.graph.Nv); % solve for the capacitance of each vertex
             
-        end
-        
-    end
-    methods(Static)
-        function g_sys = Combine(G, ConnectV, ConnectE) % Create a new GraphModel Object
-            % Algorithm 1
-            % Algorithm 2
         end
         
     end
