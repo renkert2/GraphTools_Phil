@@ -4,9 +4,10 @@ classdef GraphEdge_Internal < GraphEdge
     properties
         PowerFlow Type_PowerFlow = Type_PowerFlow.empty()
         Input
-        Port
         Coefficient = 0
         TailVertex (1,1) GraphVertex
+        Port
+
 
     end
     

@@ -11,8 +11,6 @@ classdef SplitJunction < Component
     
     properties
         
-        % Block Name
-        Name char ='Split Junction'
         % Working Fluid
         fluid char = 'JP8'
         % Initial Fluid temperature [C]

@@ -4,15 +4,32 @@ classdef Component < matlab.mixin.Heterogeneous & handle
     %   Detailed explanation goes here
     
     properties %(SetAccess = protected)
+        
+        % Block Name
+        Name char = '' 
         graph Graph = Graph.empty()
     end
     
     methods
         function obj = Component(varargin)
-            if nargin > 1
+            if nargin == 1
+                if isstruct(varargin{1})
+                    for i = 1:numel(varargin{1})
+                        try
+                            obj.(varargin{1}(i).Name) = varargin{1}(i).Value;
+                        catch
+                            % eventually update this to indicate that no
+                            % property for this class exists.
+                        end
+                    end
+                else
+                    error('Components must be defined using a structure of Name/Value fields or Name-Value pairs')
+                end
+            elseif nargin > 1
                 my_inputparser(obj,varargin{:}); % input parser component models
-                obj.init(); % I don't know why we need this and can't just call ConstructGraph - CTA
             end
+            obj.init(); % I don't know why we need this and can't just call ConstructGraph - CTA
+
         end
         
         function init(obj)

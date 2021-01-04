@@ -11,8 +11,6 @@ classdef Tank < Component
     
     properties
         
-        % Block Name
-        Name char ='Tank'
         % Working Fluid
         fluid char = 'JP8'
         % Initial tank mass [kg]
@@ -61,7 +59,7 @@ classdef Tank < Component
             
             % define edges
             Edge(1) = GraphEdge_Internal('PowerFlow',P(1),'Input',1,'Port',1,'Coefficient',obj.cp_f,'TailVertex',Vertex(E(1,1)),'HeadVertex',Vertex(E(1,2)));
-            Edge(2) = GraphEdge_Internal('PowerFlow',P(1),'Input',2,'Port',2,'Coefficient',obj.cp_f,'TailVertex',Vertex(E(2,1)),'HeadVertex',Vertex(E(2,2)));
+            Edge(2) = GraphEdge_Internal('PowerFlow',P(1),'Input',2,'Port',3,'Coefficient',obj.cp_f,'TailVertex',Vertex(E(2,1)),'HeadVertex',Vertex(E(2,2)));
             Edge(3) = GraphEdge_Internal('PowerFlow',P(2),'Input',[1 2],'Coefficient',obj.cp_f,'TailVertex',Vertex(E(3,1)),'HeadVertex',Vertex(E(3,2)));
             Edge(4) = GraphEdge_Internal('PowerFlow',P(3),'Input',[1 2],'Coefficient',1,'TailVertex',Vertex(E(4,1)),'HeadVertex',Vertex(E(4,2)));
             Edge(5) = GraphEdge_External('HeadVertex',Vertex(1),'Description','Heat Load');
