@@ -21,8 +21,7 @@ classdef HeatLoad < Component
     
     methods
         function obj = HeatLoad(varargin)          
-            obj@Component(varargin{:}); % calls the superclass constructor           
-%             obj@Component('Name', 'Heat Load', varargin{:}); % why is the name passed here? Name is user specified          
+            obj@Component(varargin{:}); % calls the superclass constructor                     
         end
     end
     

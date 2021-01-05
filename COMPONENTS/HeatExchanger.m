@@ -30,7 +30,6 @@ classdef HeatExchanger < Component
     methods
         function obj = HeatExchanger(varargin)          
             obj@Component(varargin{:}); % calls the superclass constructor
-%             obj@Component('Name' ,'Heat Exchanger', varargin{:}); % why is the name passed here? Name is user specified 
         end
     end
     

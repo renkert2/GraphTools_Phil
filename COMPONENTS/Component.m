@@ -5,7 +5,7 @@ classdef Component < matlab.mixin.Heterogeneous & handle
     
     properties %(SetAccess = protected)        
         % Block Name
-        Name string = "Component"
+        Name string = string.empty()
         graph Graph = Graph.empty()
     end
     
@@ -52,6 +52,8 @@ classdef Component < matlab.mixin.Heterogeneous & handle
                 for i = 1:numel(obj.graph.Inputs)
                     obj.graph.Inputs(i).Parent = obj;
                 end
+            catch
+                warning('Error defining component as parent object')
             end
         end
     end
