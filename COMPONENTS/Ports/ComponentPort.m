@@ -3,6 +3,7 @@ classdef ComponentPort < handle
     %   Detailed explanation goes here
     
     properties
+        Description string
         PortType PortTypes
         Edge GraphEdge
     end

@@ -41,19 +41,11 @@ classdef Component < matlab.mixin.Heterogeneous & handle
             obj.DefineChildren();
         end
         
-        function Combine(C, ConnectP)
+        function Combine(obj, ConnectP)
             arguments
-                C (:,1) Component % Array of components to be connected in a system
-                ConnectP (:,2) ComponentPort % Array of Component Ports to be connected.  Connections along dimension 1, equivalent ports along dimension 2
+                obj (:,1) Component
+                ConnectP 
             end
-            
-            % Ensure Equivalent Ports are being connected
-            
-            % Construct Connect E
-            
-            % Construct G
-            
-            % Generate System Graph with Combine(G, ConnectE)
             
         end
     end
