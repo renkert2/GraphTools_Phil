@@ -40,20 +40,48 @@ classdef Component < matlab.mixin.Heterogeneous & handle
             obj.ConstructGraph();
             obj.DefineChildren();
         end
-        
-        function Combine(C, ConnectP)
+       
+    end
+    
+    methods (Sealed)
+         
+        function gSys = Combine(C, ConnectP, varargin)
             arguments
                 C (:,1) Component % Array of components to be connected in a system
-                ConnectP (:,2) ComponentPort % Array of Component Ports to be connected.  Connections along dimension 1, equivalent ports along dimension 2
+                ConnectP (:,1) cell % vector of Component Ports to be connected.  Connections along dimension 1, equivalent ports along dimension 2
+            end
+            arguments (Repeating)
+                varargin
             end
             
-            % Ensure Equivalent Ports are being connected
+            num_c = size(ConnectP,1);
+            ConnectE = {};
+            ConnectV = {};
             
-            % Construct Connect E
+            for c = 1:num_c % For each port connection
+                ports = ConnectP{c};
+                type = ports(1).Type;
+                domain = ports(1).Domain;
+                
+                assert(isa(ports, 'ComponentPort'), 'Entry %d in ConnectP must be of ComponentPort type',c) 
+                assert(all(type == [ports(2:end).Type]), 'Incompatible port types in connection %d', c);
+                assert(all(domain == [ports(2:end).Domain]), 'Incompatible port types in connection %d', c);
+                
+                if type == 1 % Type 1 Connection
+                    assert(numel(ports) == 2, 'Type 1 Connection can only contain two edges');
+                    ConnectE{end+1,1} = [ports.Element];
+                elseif type == 2 % Type 2 Connection
+                    ConnectV{end+1,1} = [ports.Element];
+                end
+                
+                
+            end
             
             % Construct G
+            G = [C.graph];
             
             % Generate System Graph with Combine(G, ConnectE)
+            gSys = Combine(G, ConnectE, ConnectV, varargin{:});
             
         end
     end
@@ -66,8 +94,12 @@ classdef Component < matlab.mixin.Heterogeneous & handle
         
         function DefineChildren(obj)
             try
-                for i = 1:numel(obj.graph.Inputs)
-                    obj.graph.Inputs(i).Parent = obj;
+                obj.graph.Parent = obj;
+                graph_children = ["Vertices", "Edges", "Inputs"];
+                for child = graph_children
+                    for i = 1:numel(obj.graph.(child))
+                        obj.graph.(child)(i).Parent = obj;
+                    end
                 end
             catch
                 warning('Error defining component as parent object')
