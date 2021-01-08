@@ -11,6 +11,10 @@ classdef GraphVertex < handle & matlab.mixin.Heterogeneous & matlab.mixin.Copyab
         Initial = 0
     end
     
+    properties (SetAccess = ?Component)
+        Parent Component = Component.empty()
+    end
+    
     methods
         function obj = GraphVertex(varargin)
             if nargin > 1

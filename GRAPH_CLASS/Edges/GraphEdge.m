@@ -8,6 +8,10 @@ classdef GraphEdge < matlab.mixin.Heterogeneous & matlab.mixin.Copyable
         Description (1,1) string
         HeadVertex (1,1) GraphVertex = GraphVertex()
     end
+    
+    properties (SetAccess = ?Component)
+        Parent Component = Component.empty()
+    end
 
     methods
         function obj = GraphEdge(varargin)

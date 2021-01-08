@@ -83,6 +83,10 @@ classdef Graph < matlab.mixin.Copyable
         ExternalEdges     (:,1) GraphEdge   = GraphEdge.empty() 
     end
     
+    properties (SetAccess = ?Component)
+        Parent Component = Component.empty()
+    end
+    
     methods
         
         function obj = Graph(varargin) % constructor method
