@@ -32,7 +32,9 @@ classdef Graph < matlab.mixin.Copyable
         % set of vertices
         Vertices (:,1) GraphVertex = GraphVertex.empty() 
         % set of edges
-        Edges (:,1) GraphEdge = GraphEdge.empty() 
+        Edges (:,1) GraphEdge = GraphEdge.empty()
+        % Allow Reordering of Vertices in graph.init()
+        ReorderElements logical = true
     end
     
     properties (SetAccess = private)
@@ -95,11 +97,14 @@ classdef Graph < matlab.mixin.Copyable
            if nargin == 0
                % do nothing
            elseif nargin == 2
-               
                obj.Vertices = varargin{1};
                obj.Edges = varargin{2};
                obj.init()
-               
+           elseif nargin == 3
+               obj.Vertices = varargin{1};
+               obj.Edges = varargin{2};
+               obj.ReorderElements = varargin{3};
+               obj.init()  
            else
               error('A Graph object must be initialized as an empty object or as Graph(Vertex_Set, Edge_Set ).') 
            end
@@ -137,13 +142,8 @@ classdef Graph < matlab.mixin.Copyable
             x = obj.Edges(~arrayfun(@(x) isa(x,'GraphEdge_Internal'),obj.Edges));
         end
         
-        function init(obj, opts)
-            arguments
-                obj
-                opts.ReorderVertices logical = true
-            end
-            
-            if opts.ReorderVertices
+        function init(obj)
+            if obj.ReorderElements
                 % reorder vertices in order of [xd;xa;xt] and edges in [int; ext]
                 obj.Vertices = [obj.DynamicVertices; obj.AlgebraicVertices; obj.ExternalVertices];
                 obj.Edges    = [obj.InternalEdges; obj.ExternalEdges];
