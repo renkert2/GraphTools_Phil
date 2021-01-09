@@ -44,7 +44,6 @@ classdef Component < matlab.mixin.Heterogeneous & handle
     end
     
     methods (Sealed)
-         
         function gSys = Combine(C, ConnectP, varargin)
             arguments
                 C (:,1) Component % Array of components to be connected in a system
@@ -108,7 +107,7 @@ classdef Component < matlab.mixin.Heterogeneous & handle
     end
     
     methods (Abstract, Access = protected)
-        DefineGraph(p)       
+        DefineGraph(obj)
     end
 end
 
