@@ -137,11 +137,17 @@ classdef Graph < matlab.mixin.Copyable
             x = obj.Edges(~arrayfun(@(x) isa(x,'GraphEdge_Internal'),obj.Edges));
         end
         
-        function init(obj)
+        function init(obj, opts)
+            arguments
+                obj
+                opts.ReorderVertices logical = true
+            end
             
-            % reorder vertices in order of [xd;xa;xt] and edges in [int; ext]
-            obj.Vertices = [obj.DynamicVertices; obj.AlgebraicVertices; obj.ExternalVertices];
-            obj.Edges    = [obj.InternalEdges; obj.ExternalEdges];            
+            if opts.ReorderVertices
+                % reorder vertices in order of [xd;xa;xt] and edges in [int; ext]
+                obj.Vertices = [obj.DynamicVertices; obj.AlgebraicVertices; obj.ExternalVertices];
+                obj.Edges    = [obj.InternalEdges; obj.ExternalEdges];
+            end
             
             % Calculate input array from Internal Edges
             obj.Inputs = unique(vertcat(obj.InternalEdges.Input), 'stable');
