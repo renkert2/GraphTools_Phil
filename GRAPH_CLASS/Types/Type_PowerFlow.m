@@ -16,35 +16,55 @@ classdef Type_PowerFlow < Type
         
         function val = calcVal(obj, xt, xh, u) % Calculates type value with symbolic 'vars' substituted with numeric 'vars_'
             num_args = nargin-1; % Matlab counts obj as an input argument
-            if num_args == 3
-                if obj.num_inputs
-                    assert(size(u,2) >= obj.num_inputs, 'Invalid number of inputs. Number of columns of u must be greater than or equal to the number of inputs');
-                    val = calcVal@Type(obj, xt, xh, u);
-                else
-                    val = calcVal@Type(obj,xt,xh);
+            val = zeros(size(obj));
+            for i = 1:size(obj,1)
+                for j = 1:size(obj,2)
+                    type = obj(i,j);
+                    if num_args == 3
+                        if type.num_inputs
+                            assert(all(size(u,2) >= [type.num_inputs]), 'Invalid number of inputs. Number of columns of u must be greater than or equal to the number of inputs');
+                            val_temp = calcVal@Type(type, xt, xh, u);
+                        else
+                            val_temp = calcVal@Type(type,xt,xh);
+                        end
+                    elseif num_args == 2
+                        assert(all([type.num_inputs] == 0), "Input argument 'u' required'");
+                        val_temp = calcVal@Type(type, xt, xh);
+                    else
+                        error("Invalid arguments")
+                    end
+                    val(i,j) = val_temp;
                 end
-            elseif num_args == 2
-                assert(obj.num_inputs == 0, "Input argument 'u' required'");
-                val = calcVal@Type(obj, xt, xh);
-            else
-                error("Invalid arguments")
             end
         end
         
-        function jac = calcJac(obj, xt, xh, u) % Calculates type Jacobian with symbolic 'vars' substituted with numeric 'vars_'
+        function val = calcJac(obj, xt, xh, u) % Calculates type Jacobian with symbolic 'vars' substituted with numeric 'vars_'
             num_args = nargin-1; % Matlab counts obj as an input argument
-            if num_args == 3
-                if obj.num_inputs
-                    assert(size(u,2) >= obj.num_inputs, 'Invalid number of inputs. Number of columns of u must be greater than or equal to the number of inputs');
-                    jac = calcJac@Type(obj, xt, xh, u);
-                else
-                    jac = calcJac@Type(obj,xt,xh);
+            if numel(obj)>1
+                val = cell(size(obj));
+            end
+            for i = 1:size(obj,1)
+                for j = 1:size(obj,2)
+                    type = obj(i,j);
+                    if num_args == 3
+                        if type.num_inputs
+                            assert(all(size(u,2) >= [type.num_inputs]), 'Invalid number of inputs. Number of columns of u must be greater than or equal to the number of inputs');
+                            val_temp = calcJac@Type(type, xt, xh, u);
+                        else
+                            val_temp = calcJac@Type(type,xt,xh);
+                        end
+                    elseif num_args == 2
+                        assert(all([type.num_inputs] == 0), "Input argument 'u' required'");
+                        val_temp = calcJac@Type(type, xt, xh);
+                    else
+                        error("Invalid arguments")
+                    end
+                    if numel(obj)>1
+                        val{i,j} = val_temp;
+                    else
+                        val = val_temp;
+                    end
                 end
-            elseif num_args == 2
-                assert(obj.num_inputs == 0, "Input argument 'u' required'");
-                jac = calcJac@Type(obj, xt, xh);
-            else
-                error("Invalid arguments")
             end
         end
         

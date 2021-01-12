@@ -89,11 +89,13 @@ classdef Type < matlab.mixin.Copyable
         
         
         function val = calcVal(obj, varargin) % Calculates type value with symbolic 'vars' substituted with numeric 'vars_'
+            assert(numel(obj)==1, 'Type.calcVal can only be called on a single Type object')
             assert(numel(varargin)==numel(obj.params), 'Arguments must match Parameter Structure');
-            val = obj.Val_Func(varargin{:});
+            val = obj.Val_Func(varargin{:});   
         end
         
         function jac = calcJac(obj, varargin) % Calculates type Jacobian with symbolic 'vars' substituted with numeric 'vars_'
+            assert(numel(obj)==1, 'Type.calcVal can only be called on a single Type object')
             assert(numel(varargin)==numel(obj.params), 'Arguments must match Parameter Structure');
             jac = obj.Jac_Func(varargin{:});
         end
