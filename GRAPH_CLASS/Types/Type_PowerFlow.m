@@ -17,7 +17,7 @@ classdef Type_PowerFlow < Type
         function val = calcVal(obj, xt, xh, u) % Calculates type value with symbolic 'vars' substituted with numeric 'vars_'
             num_args = nargin-1; % Matlab counts obj as an input arguments
             num_inputs_array = [obj.num_inputs];
-            if num_args == 3
+            if num_args == 3 && ~isempty(u)
                 if isvector(u)
                     if iscolumn(u)
                         u = u'; % Vector of inputs u must be a row vector
@@ -31,9 +31,9 @@ classdef Type_PowerFlow < Type
                 else
                     val = calcVal@Type(obj,xt,xh);
                 end
-            elseif num_args == 2
+            elseif num_args == 2 || isempty(u)
                 assert(all(num_inputs_array == 0), "Input argument 'u' required'");
-                val = calcVal@Type(type, xt, xh);
+                val = calcVal@Type(obj, xt, xh);
             else
                 error("Invalid arguments")
             end
@@ -42,7 +42,7 @@ classdef Type_PowerFlow < Type
         function val = calcJac(obj, xt, xh, u) % Calculates type Jacobian with symbolic 'vars' substituted with numeric 'vars_'
             num_args = nargin-1; % Matlab counts obj as an input arguments
             num_inputs_array = [obj.num_inputs];
-            if num_args == 3
+            if num_args == 3 && ~isempty(u)
                 if isvector(u)
                     if iscolumn(u)
                         u = u'; % Vector of inputs u must be a row vector
@@ -56,9 +56,9 @@ classdef Type_PowerFlow < Type
                 else
                     val = calcJac@Type(obj,xt,xh);
                 end
-            elseif num_args == 2
+            elseif num_args == 2 || isempty(u)
                 assert(all(num_inputs_array == 0), "Input argument 'u' required'");
-                val = calcJac@Type(type, xt, xh);
+                val = calcJac@Type(obj, xt, xh);
             else
                 error("Invalid arguments")
             end

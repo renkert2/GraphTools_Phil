@@ -92,10 +92,14 @@ classdef Type < matlab.mixin.Copyable
             num_params = arrayfun(@(x) numel(x.params), obj);
             assert(numel(varargin)==max(num_params), 'Arguments must match Parameter Structure.  For object array, ensure maximum number of inputs are given');
             
-            val = zeros(size(obj));
-            for i = 1:size(obj,1)
-                for j = 1:size(obj,2)
-                    val(i,j) = obj(i,j).Val_Func(varargin{1:num_params(i,j)});
+            if numel(obj)==1
+                val = obj.Val_Func(varargin{1:num_params});
+            else
+                val = cell(size(obj));
+                for i = 1:size(obj,1)
+                    for j = 1:size(obj,2)
+                        val{i,j} = obj(i,j).Val_Func(varargin{1:num_params(i,j)});
+                    end
                 end
             end
         end
@@ -105,7 +109,7 @@ classdef Type < matlab.mixin.Copyable
             assert(numel(varargin)==max(num_params), 'Arguments must match Parameter Structure.  For object array, ensure maximum number of inputs are given');
             
             if numel(obj) == 1
-                val = obj.JacFunc(varargin{:});
+                val = obj.JacFunc(varargin{1:num_params});
             else
                 val = cell(size(obj));
                 for i = 1:size(obj,1)
