@@ -9,7 +9,7 @@ classdef ComponentPort < handle
     end
     
     properties (SetAccess = protected)
-        Type PortTypes = 1
+        Type PortTypes = 1 % Interconnection Types
     end
     
     methods
