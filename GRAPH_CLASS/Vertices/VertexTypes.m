@@ -57,15 +57,37 @@ classdef VertexTypes
             x = obj.VariableType == VariableTypes.Flow;
         end
         
-        function x = isCompatible(obj1, obj2)
-            if (obj1.Domain == Domains.Abstract || obj2.Domain == Domains.Abstract)
+        function x = isConnectable(varargin) % isConnectable = true -> Vertices can be connceted via an edge
+            obj_array = [varargin{:}];
+            assert(numel(obj_array) == 2, 'isConnectable requires two VertexType arguments as comma separated list or array of two objects');
+            obj1 = obj_array(1);
+            obj2 = obj_array(2);
+            
+            if (obj1.VariableType == VariableTypes.Abstract || obj2.VariableType == VariableTypes.Abstract)
                 x = true;
-            elseif (obj1.VariableType ~= obj2.VariableType) && (obj1.Domain == obj2.Domain)
+            elseif (obj1.VariableType ~= obj2.VariableType)
                 x = true;
             else
                 x = false;
             end
         end
+        
+        function x = isCompatible(varargin) % isCompatible = true -> Vertices can be combined in equivalence connection
+            if nargin > 1
+                obj_array = [varargin{:}];
+            else
+                obj_array = varargin{1};
+            end
+                
+            assert(numel(obj_array)>=2,'Array of two or more objects required');
+            
+            definedTypes = obj_array(VertexTypes.Abstract ~= obj_array); % Allow combination of abstract types
+            if ~isempty(definedTypes)
+                x = all(definedTypes(1) == definedTypes);
+            else
+                x = true;
+            end
+        end            
     end
         
 end

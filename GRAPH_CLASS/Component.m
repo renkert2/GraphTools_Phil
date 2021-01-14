@@ -64,16 +64,14 @@ classdef Component < matlab.mixin.Heterogeneous & handle
                 
                 assert(isa(ports, 'ComponentPort'), 'Entry %d in ConnectP must be of ComponentPort type',c) 
                 assert(all(type == [ports(2:end).Type]), 'Incompatible port types in connection %d', c);
-                assert(all(domain == [ports(2:end).Domain]), 'Incompatible port types in connection %d', c);
+                assert(all(domain == [ports(2:end).Domain]), 'Incompatible port domains in connection %d', c);
                 
                 if type == 1 % Type 1 Connection
                     assert(numel(ports) == 2, 'Type 1 Connection can only contain two edges');
                     ConnectE{end+1,1} = [ports.Element];
                 elseif type == 2 % Type 2 Connection
                     ConnectV{end+1,1} = [ports.Element];
-                end
-                
-                
+                end 
             end
             
             % Construct G

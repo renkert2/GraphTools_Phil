@@ -4,16 +4,17 @@ classdef GraphModel < Model
     %   Detailed explanation goes here
     properties
         graph Graph = Graph.empty()
-        
+    end
+    
+    properties (SetAccess = private)
         C_coeff % capacitance coefficient matrix
         CType Type_Capacitance = Type_Capacitance.empty()
         P_coeff % capacitance coefficient matrix
         PType Type_PowerFlow = Type_PowerFlow.empty()
         x_init % capacitance coefficient matrix
-        DynType % capacitance coefficient matrix
+        DynType DynamicTypes = DynamicTypes.EnergyFlow
         D % capacitance coefficient matrix
-        B % input mapping matrix
-        
+        B % input mapping matrix   
     end
     
     methods
@@ -27,7 +28,7 @@ classdef GraphModel < Model
         function init(obj)
             % make vertex matrices
             obj.x_init  = vertcat(obj.graph.Vertices.Initial); 
-            obj.DynType = vertcat(obj.graph.Vertices.Type); 
+            obj.DynType = vertcat(obj.graph.Vertices.DynamicType); 
             
             % D matrix
             Dmat = zeros(obj.graph.v_tot,obj.graph.Nee);

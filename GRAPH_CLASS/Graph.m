@@ -239,7 +239,10 @@ classdef Graph < matlab.mixin.Copyable
                 edges = fliplr(ConnectE{ce});
                 
                 equiv_heads = [edges.HeadVertex];
+                assert(isCompatible([equiv_heads.VertexType]), 'Incompatible head vertices in edge connection %d', ce) % Check for compatible head vertices with isCompatible method of VertexTypes
+                
                 equiv_tails = [edges.TailVertex];
+                assert(isCompatible([equiv_tails.VertexType]), 'Incompatible tail vertices in edge connection %d', ce) % Check for compatible tail vertices with isCompatible method of VertexTypes
                 
                 ConnectV_E{2*ce - 1} = equiv_heads;
                 ConnectV_E{2*ce} = equiv_tails;
@@ -267,6 +270,12 @@ classdef Graph < matlab.mixin.Copyable
             vconnmap_counter = cumsum([0; Nvconn_delta-1]);
             for cv = 1:length(ConnectV)
                 verts = ConnectV{cv};
+                
+                % Check for compatible Vertex Types with isCompatible method of VertexTypes
+                types = [verts.VertexType];
+                assert(isCompatible(types), 'Incompatible VertexTypes in Vertex Connection %d of ConnectV', cv);
+                
+                % Check Number of Internal Vertices and Assign Primary Vertex
                 int_vert_flags = arrayfun(@(x) isa(x,'GraphVertex_Internal'), verts);
                 n_int_verts = sum(int_vert_flags);
                 if n_int_verts == 0
