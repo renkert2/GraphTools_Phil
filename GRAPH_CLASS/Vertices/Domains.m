@@ -1,4 +1,4 @@
-classdef Domain
+classdef Domains
     enumeration
         Abstract
         Electrical

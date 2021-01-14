@@ -1,4 +1,4 @@
-classdef VertexType
+classdef VertexTypes
     %VERTEXTYPE Summary of this class goes here
     %   Detailed explanation goes here
     enumeration
@@ -35,30 +35,30 @@ classdef VertexType
     end
     
     properties
-        Domain Domain = 'Abstract'
-        VariableType VariableType = 'Abstract'
+        Domain Domains = 'Abstract'
+        VariableType VariableTypes = 'Abstract'
     end
     
     methods
-        function obj = VertexType(domain, var_type)
+        function obj = VertexTypes(domain, var_type)
             obj.Domain = domain;
             obj.VariableType = var_type;
         end
         
         function x = isAbstract(obj)
-            x = obj.VariableType == VariableType.Abstract;
+            x = obj.VariableType == VariableTypes.Abstract;
         end
         
         function x = isEffort(obj)
-            x = obj.VariableType == VariableType.Effort;
+            x = obj.VariableType == VariableTypes.Effort;
         end
         
         function x = isFlow(obj)
-            x = obj.VariableType == VariableType.Flow;
+            x = obj.VariableType == VariableTypes.Flow;
         end
         
         function x = isCompatible(obj1, obj2)
-            if (obj1.Domain == Domain.Abstract || obj2.Domain == Domain.Abstract)
+            if (obj1.Domain == Domains.Abstract || obj2.Domain == Domains.Abstract)
                 x = true;
             elseif (obj1.VariableType ~= obj2.VariableType) && (obj1.Domain == obj2.Domain)
                 x = true;

@@ -4,12 +4,12 @@ classdef ComponentPort < handle
     
     properties
         Description string
-        Domain DomainTypes = "Abstract"
         Element = GraphEdge.empty() %mustBeVertexOrEdge
     end
     
     properties (SetAccess = protected)
         Type PortTypes = 1 % Interconnection Types
+        Domain Domain
     end
     
     methods
