@@ -22,8 +22,6 @@ classdef Type_PowerFlow < Type
                     if iscolumn(u)
                         u = u'; % Vector of inputs u must be a row vector
                     end
-                else
-                    error('u must be a vector of inputs')
                 end
                 if any(num_inputs_array)
                     assert(length(u) >= max(num_inputs_array), 'Invalid number of inputs. Number of columns of u must be greater than or equal to the maximum number of inputs');
