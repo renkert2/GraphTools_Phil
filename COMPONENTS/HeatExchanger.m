@@ -52,8 +52,8 @@ classdef HeatExchanger < Component
             P(3) = Type_PowerFlow("xh");
             
             % Define Vertices
-            Vertex(1) = GraphVertex_Internal('Description','Temp S1','Type',1,'Capacitance',C(1),'Coefficient',10,'Initial',25);
-            Vertex(2) = GraphVertex_Internal('Description','Temp S2','Type',1,'Capacitance',C(1),'Coefficient',10,'Initial',25);
+            Vertex(1) = GraphVertex_Internal('Description','Temp S1','Capacitance',C(1),'Coefficient',10,'Initial',25, 'VertexType', 'Temperature');
+            Vertex(2) = GraphVertex_Internal('Description','Temp S2','Capacitance',C(1),'Coefficient',10,'Initial',25, 'VertexType', 'Temperature');
             Vertex(3) = GraphVertex_External('Description','Inlet S1','Capacitance',C(1));
             Vertex(4) = GraphVertex_External('Description','Inlet S2','Capacitance',C(1));
             Vertex(5) = GraphVertex_External('Description','Outlet S1','Capacitance',C(1));

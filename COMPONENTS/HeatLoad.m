@@ -38,7 +38,7 @@ classdef HeatLoad < Component
             P(1) = Type_PowerFlow("u1*xt");
             
             % Define Vertices
-            Vertex(1) = GraphVertex_Internal('Description','Load Temp','Type',1,'Capacitance',C(1));
+            Vertex(1) = GraphVertex_Internal('Description','Load Temp','Capacitance',C(1), 'VertexType', 'Temperature');
             Vertex(2) = GraphVertex_External('Description','Inlet','Capacitance',C(1));
             Vertex(3) = GraphVertex_External('Description','Outlet','Capacitance',C(1));
             
