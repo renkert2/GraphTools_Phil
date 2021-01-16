@@ -6,7 +6,10 @@ classdef GraphEdge < matlab.mixin.Heterogeneous & matlab.mixin.Copyable
     
     properties
         Description (1,1) string
-        HeadVertex (1,1) GraphVertex = GraphVertex()
+    end
+    
+    properties (SetAccess = ?Component)
+        Parent Component = Component.empty()
     end
 
     methods
@@ -14,12 +17,6 @@ classdef GraphEdge < matlab.mixin.Heterogeneous & matlab.mixin.Copyable
             if nargin > 1
                 obj = my_inputparser(obj,varargin{:});
             end
-        end
-        
-                
-        function set.HeadVertex(obj, head_vertex)
-            assert(numel(head_vertex)<=1, 'Edge can have only one head vertex');
-            obj.HeadVertex = head_vertex;
         end
     end
     

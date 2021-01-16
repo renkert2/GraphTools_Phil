@@ -32,7 +32,9 @@ classdef Graph < matlab.mixin.Copyable
         % set of vertices
         Vertices (:,1) GraphVertex = GraphVertex.empty() 
         % set of edges
-        Edges (:,1) GraphEdge = GraphEdge.empty() 
+        Edges (:,1) GraphEdge = GraphEdge.empty()
+        % Allow Reordering of Vertices in graph.init()
+        ReorderElements logical = true
     end
     
     properties (SetAccess = private)
@@ -83,6 +85,10 @@ classdef Graph < matlab.mixin.Copyable
         ExternalEdges     (:,1) GraphEdge   = GraphEdge.empty() 
     end
     
+    properties (SetAccess = ?Component)
+        Parent Component = Component.empty()
+    end
+    
     methods
         
         function obj = Graph(varargin) % constructor method
@@ -91,11 +97,14 @@ classdef Graph < matlab.mixin.Copyable
            if nargin == 0
                % do nothing
            elseif nargin == 2
-               
                obj.Vertices = varargin{1};
                obj.Edges = varargin{2};
                obj.init()
-               
+           elseif nargin == 3
+               obj.Vertices = varargin{1};
+               obj.Edges = varargin{2};
+               obj.ReorderElements = varargin{3};
+               obj.init()  
            else
               error('A Graph object must be initialized as an empty object or as Graph(Vertex_Set, Edge_Set ).') 
            end
@@ -134,10 +143,11 @@ classdef Graph < matlab.mixin.Copyable
         end
         
         function init(obj)
-            
-            % reorder vertices in order of [xd;xa;xt] and edges in [int; ext]
-            obj.Vertices = [obj.DynamicVertices; obj.AlgebraicVertices; obj.ExternalVertices];
-            obj.Edges    = [obj.InternalEdges; obj.ExternalEdges];            
+            if obj.ReorderElements
+                % reorder vertices in order of [xd;xa;xt] and edges in [int; ext]
+                obj.Vertices = [obj.DynamicVertices; obj.AlgebraicVertices; obj.ExternalVertices];
+                obj.Edges    = [obj.InternalEdges; obj.ExternalEdges];
+            end
             
             % Calculate input array from Internal Edges
             obj.Inputs = unique(vertcat(obj.InternalEdges.Input), 'stable');
@@ -229,7 +239,10 @@ classdef Graph < matlab.mixin.Copyable
                 edges = fliplr(ConnectE{ce});
                 
                 equiv_heads = [edges.HeadVertex];
+                assert(isCompatible([equiv_heads.VertexType]), 'Incompatible head vertices in edge connection %d', ce) % Check for compatible head vertices with isCompatible method of VertexTypes
+                
                 equiv_tails = [edges.TailVertex];
+                assert(isCompatible([equiv_tails.VertexType]), 'Incompatible tail vertices in edge connection %d', ce) % Check for compatible tail vertices with isCompatible method of VertexTypes
                 
                 ConnectV_E{2*ce - 1} = equiv_heads;
                 ConnectV_E{2*ce} = equiv_tails;
@@ -257,6 +270,12 @@ classdef Graph < matlab.mixin.Copyable
             vconnmap_counter = cumsum([0; Nvconn_delta-1]);
             for cv = 1:length(ConnectV)
                 verts = ConnectV{cv};
+                
+                % Check for compatible Vertex Types with isCompatible method of VertexTypes
+                types = [verts.VertexType];
+                assert(isCompatible(types), 'Incompatible VertexTypes in Vertex Connection %d of ConnectV', cv);
+                
+                % Check Number of Internal Vertices and Assign Primary Vertex
                 int_vert_flags = arrayfun(@(x) isa(x,'GraphVertex_Internal'), verts);
                 n_int_verts = sum(int_vert_flags);
                 if n_int_verts == 0

@@ -25,8 +25,7 @@ classdef SplitJunction < Component
     
     methods
         function obj = SplitJunction(varargin)          
-            obj@Component(varargin{:}); % calls the superclass constructor           
-%             obj@Component('Name', 'Split Junction', varargin{:}); % why is the name passed here? Name is user specified      
+            obj@Component(varargin{:}); % calls the superclass constructor                
         end
     end
     
@@ -43,7 +42,7 @@ classdef SplitJunction < Component
             P(1) = Type_PowerFlow("u1*xt");
             
             % define vertices
-            Vertex(1) = GraphVertex_Internal('Description','Junction Temp','Type',1,'Capacitance',C(1),'Capacitance',C(1));
+            Vertex(1) = GraphVertex_Internal('Description','Junction Temp','Capacitance',C(1),'Capacitance',C(1), 'VertexType', 'Temperature');
             for i = 1:obj.n_in
                 Vertex(i+1) = GraphVertex_External('Description',['Inlet' num2str(i)],'Capacitance',C(1));
             end      

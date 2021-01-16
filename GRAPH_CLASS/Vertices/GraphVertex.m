@@ -5,10 +5,15 @@ classdef GraphVertex < handle & matlab.mixin.Heterogeneous & matlab.mixin.Copyab
     %   arrays of all the child classes.  
     properties
         Description string = string.empty()
-        Type = 1 % Vertex Type: 1 - Energy Flow, 2 - State Flow
+        VertexType VertexTypes = "Abstract"
+        DynamicType DynamicTypes = "EnergyFlow" % Dynamic Type: 1 - Energy Flow, 2 - State Flow
         Capacitance (:,1) Type_Capacitance = Type_Capacitance.empty();
         Coefficient (:,1) {mustBeNonnegative} = 0
         Initial = 0
+    end
+    
+    properties (SetAccess = ?Component)
+        Parent Component = Component.empty()
     end
     
     methods

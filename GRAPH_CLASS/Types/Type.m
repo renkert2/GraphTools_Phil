@@ -89,15 +89,36 @@ classdef Type < matlab.mixin.Copyable
         
         
         function val = calcVal(obj, varargin) % Calculates type value with symbolic 'vars' substituted with numeric 'vars_'
-            assert(numel(varargin)==numel(obj.params), 'Arguments must match Parameter Structure');
-            val = obj.Val_Func(varargin{:});
+            num_params = arrayfun(@(x) numel(x.params), obj);
+            assert(numel(varargin)==max(num_params), 'Arguments must match Parameter Structure.  For object array, ensure maximum number of inputs are given');
+            
+            if numel(obj)==1
+                val = obj.Val_Func(varargin{1:num_params});
+            else
+                val = cell(size(obj));
+                for i = 1:size(obj,1)
+                    for j = 1:size(obj,2)
+                        val{i,j} = obj(i,j).Val_Func(varargin{1:num_params(i,j)});
+                    end
+                end
+            end
         end
         
-        function jac = calcJac(obj, varargin) % Calculates type Jacobian with symbolic 'vars' substituted with numeric 'vars_'
-            assert(numel(varargin)==numel(obj.params), 'Arguments must match Parameter Structure');
-            jac = obj.Jac_Func(varargin{:});
-        end
-        
+        function val = calcJac(obj, varargin) % Calculates type Jacobian with symbolic 'vars' substituted with numeric 'vars_'
+            num_params = arrayfun(@(x) numel(x.params), obj);
+            assert(numel(varargin)==max(num_params), 'Arguments must match Parameter Structure.  For object array, ensure maximum number of inputs are given');
+            
+            if numel(obj) == 1
+                val = obj.JacFunc(varargin{1:num_params});
+            else
+                val = cell(size(obj));
+                for i = 1:size(obj,1)
+                    for j = 1:size(obj,2)
+                        val{i,j} = obj(i,j).Jac_Func(varargin{1:num_params(i,j)});
+                    end
+                end
+            end
+        end  
     end
 end
     
