@@ -32,7 +32,7 @@ end
 
 
 %%
-Sys = GenSysGraph(Graphs,ConnectV,ConnectE);
+Sys = GraphModel(Combine(Graphs,ConnectE));
 figure
 plot(Sys.graph,'NodeColor','r','EdgeColor','b')
 

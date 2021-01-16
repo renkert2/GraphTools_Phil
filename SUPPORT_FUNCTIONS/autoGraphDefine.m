@@ -1,4 +1,4 @@
-function [GRAPH,G] = autoGraphDefine(SYS,PLOTGRAPH)
+function [GRAPH,ConnectE,G] = autoGraphDefine(SYS,PLOTGRAPH)
 %AUTOGRAPHDEFINE generates directed graph of DAEMOT system
 %
 %   [G, GRAPH] = AUTOGRAPHDEFINE(SYS) parses the Simulink model SYS for all 
@@ -130,3 +130,6 @@ if PLOTGRAPH
     end
     hold off
 end
+
+ConnectE = ExtractExConn(GRAPH);
+

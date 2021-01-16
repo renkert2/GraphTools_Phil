@@ -2,13 +2,9 @@ clear all; close all; clc
 
 %%
  
-[Graph,~] = autoGraphDefine('ToySystem',1);
+[Graph,ConnectE,~] = autoGraphDefine('ToySystem',1);
 
 %%
-
-ConnectE = ExtractExConn(Graph);
-ConnectV = ExtractVxConn(Graph,ConnectE);
-
 Comps = [Graph.Comp]';
 Graphs = [Comps.graph]';
 
@@ -20,8 +16,6 @@ for i = 1:length(Comps)
     title(Comps(i).Name)
 end
 
-
-Sys = GenSysGraph(Graphs,ConnectV,ConnectE);
-
+Sys = GraphModel(Combine(Graphs,ConnectE));
 figure
 plot(Sys.graph,'NodeColor','r','EdgeColor','b')
