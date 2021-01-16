@@ -47,8 +47,8 @@ classdef HeatExchanger < Component
             C(1) = Type_Capacitance("1");
              
             % Power Flow Types
-            P(1) = Type_PowerFlow("u1*xt");
-            P(1) = Type_PowerFlow("u1*xt");
+            P(1) = Type_PowerFlow("u1*xt"); 
+%             P(1) = Type_PowerFlow("u1*xt");
             P(2) = Type_PowerFlow("xt");
             P(3) = Type_PowerFlow("xh");
             
