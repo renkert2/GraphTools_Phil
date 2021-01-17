@@ -82,6 +82,28 @@ classdef GraphModel < Model
         function Simulate(obj)
             
         end
+        
+        function Names = StateNames(obj)
+            Desc = vertcat(obj.graph.InternalVertices.Description);
+            Blks = vertcat(vertcat(obj.graph.InternalVertices.Parent).Name);
+            Names = join([Blks,repmat('\',length(Blks),1),Desc]);
+        end
+        
+        function Names = InputNames(obj)
+            Desc = vertcat(obj.graph.Inputs.Description);
+            Blks = vertcat(vertcat(obj.graph.Inputs.Parent).Name);
+            Names = join([Blks,repmat('\',length(Blks),1),Desc]);
+        end
+        
+        function Names = DisturbanceNames(obj)
+            Desc = [vertcat(obj.graph.ExternalVertices.Description);vertcat(obj.graph.ExternalEdges.Description)];
+            Blks = [vertcat(vertcat(obj.graph.ExternalVertices.Parent).Name); vertcat(vertcat(obj.graph.ExternalEdges.Parent).Name)];
+            Names = join([Blks,repmat('\',length(Blks),1),Desc]);
+        end
+        
+        function plot(obj,varargin)
+            plot(obj.graph,varargin{:})
+        end
           
         function SymbolicSolve(obj) % this function will only work for symbolic expressions at the moment
         

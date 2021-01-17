@@ -34,7 +34,7 @@ end
 %%
 Sys = GraphModel(Combine(Graphs,ConnectE));
 figure
-plot(Sys.graph,'NodeColor','r','EdgeColor','b')
+plot(Sys,'NodeColor','r','EdgeColor','b')
 
 % test 2
 
