@@ -54,8 +54,6 @@ plot(Sys.graph,'NodeColor','r','EdgeColor','b')
 % 
 %%
 % SymbolicSolver(Sys);
-
-
 %% 
 % [Sys.graph.Vertices(:).Description]'
 % tank1.graph.Vertices(2).Description

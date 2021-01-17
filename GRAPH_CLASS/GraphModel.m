@@ -11,10 +11,11 @@ classdef GraphModel < Model
         CType Type_Capacitance = Type_Capacitance.empty()
         P_coeff % capacitance coefficient matrix
         PType Type_PowerFlow = Type_PowerFlow.empty()
+        CapFunction (:,1) LookupFunction = LookupFunction.empty()
         x_init % capacitance coefficient matrix
         DynType DynamicTypes = DynamicTypes.EnergyFlow
         D % capacitance coefficient matrix
-        B % input mapping matrix   
+        B (:,:,:)% input mapping matrix   
     end
     
     methods
@@ -58,7 +59,12 @@ classdef GraphModel < Model
             PTypeAll = vertcat(Eint(:).PowerFlow); % list of all capacitance types
             numPType = arrayfun(@(x) length(x.PowerFlow),Eint); % find number of capacitance types per vertex
             [obj.P_coeff,obj.PType] = MakeCoeffMatrix(Eint,PTypeAll,numPType);
-           
+            
+            % Lookup Functions
+            obj.CapFunction = vertcat(obj.graph.InternalVertices(:).CapFunction);
+%             Functions = vertcat(obj.graph.InternalVertices(:).CapFunction);
+%             obj.CapFunction = Functions(~arrayfun(@(x) isempty(x.Breakpoints),Functions));
+         
             obj.Nx = sum(any(obj.C_coeff ~= 0,2));
             obj.Nu = obj.graph.Nu;
             obj.Nd = obj.graph.Nev + obj.graph.Nee;
@@ -191,7 +197,18 @@ classdef GraphModel < Model
             end
             c = sum(c,2); % sum across capacitance coefficients
             
-            C = c(1:obj.graph.Nv); % solve for the capacitance of each vertex
+            % function lookups
+            LF = sym(ones(obj.graph.Nv,1));
+            for i = 1:length(LF)
+                if ~isempty(obj.CapFunction(i).Breakpoints)
+                    [~,idx] = ismember(obj.CapFunction(i).Breakpoints(:),obj.graph.Vertices);
+                    input = num2cell(x0(idx));
+                    LF(i) = obj.CapFunction(i).Function.calcVal(input{:});
+                end
+            end
+            
+            
+            C = LF.*c(1:obj.graph.Nv); % solve for the capacitance of each vertex
             
         end
         

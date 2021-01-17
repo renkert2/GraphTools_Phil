@@ -38,7 +38,6 @@ classdef Tank < Component
                  5 2];
             % Capacitance Types
             C(1) = Type_Capacitance("1"); 
-            C(2) = Type_Capacitance("x"); 
              
             % Power Flow Types
             P(1) = Type_PowerFlow("u1*xt");
@@ -46,7 +45,7 @@ classdef Tank < Component
             P(3) = Type_PowerFlow("(u1-u2)");
           
             % define vertices
-            Vertex(1) = GraphVertex_Internal('Description','Liquid Temp','Capacitance',[C(2) C(1)],'Coefficient',[1000 .5],'Initial',25, 'VertexType', 'Temperature');
+            Vertex(1) = GraphVertex_Internal('Description','Liquid Temp','Capacitance',C(1),'Coefficient',obj.cp_f,'Initial',25, 'VertexType', 'Temperature');
             Vertex(2) = GraphVertex_Internal('Description','Tank Mass','Capacitance',C(1),'Coefficient',1,'Initial',100);
             Vertex(3) = GraphVertex_External('Description','Inlet','Capacitance',C(1));
             Vertex(4) = GraphVertex_External('Description','Outlet','Capacitance',C(1));
@@ -62,6 +61,10 @@ classdef Tank < Component
             Edge(3) = GraphEdge_Internal('PowerFlow',P(2),'Input',[I(1) I(2)],'Coefficient',obj.cp_f,'TailVertex',Vertex(E(3,1)),'HeadVertex',Vertex(E(3,2)));
             Edge(4) = GraphEdge_Internal('PowerFlow',P(3),'Input',[I(1) I(2)],'Coefficient',1,'TailVertex',Vertex(E(4,1)),'HeadVertex',Vertex(E(4,2)));
             Edge(5) = GraphEdge_External('HeadVertex',Vertex(1),'Description','Heat Load');
+            
+            % special lookup functions
+            T = Type([sym('p1')],{sym('p1')},'p1');
+            Vertex(1).CapFunction = LookupFunction('Function',T,'Breakpoints',[Vertex(2)]);
              
             g = Graph(Vertex,Edge);
             
