@@ -5,17 +5,16 @@ clear all; close all; clc
 [Graph,ConnectE,~] = autoGraphDefine('ToySystem',1);
 
 %%
-Comps = [Graph.Comp]';
-Graphs = [Comps.graph]';
+Graphs = [vertcat(Graph.Comp).graph];
 
 % plot component graphs
 figure
-for i = 1:length(Comps)
-    subplot(ceil(length(Comps)/2),2,i)
-    plot(Comps(i).graph)
-    title(Comps(i).Name)
+for i = 1:length(Graphs)
+    subplot(ceil(length(Graphs)/2),2,i)
+    plot(Graphs(i))
+    title(Graphs(i).Parent.Name)
 end
 
 Sys = GraphModel(Combine(Graphs,ConnectE));
 figure
-plot(Sys.graph,'NodeColor','r','EdgeColor','b')
+plot(Sys,'NodeColor','r','EdgeColor','b')

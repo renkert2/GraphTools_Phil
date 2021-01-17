@@ -9,7 +9,9 @@ classdef Model < matlab.mixin.Copyable
         Nx % number of states
         Nu % number of inputs
         Nd % number of disturbances
+        
 %         Ny % number of outputs
+
     end
     
     properties 
@@ -19,6 +21,13 @@ classdef Model < matlab.mixin.Copyable
         f_sym (:,1) sym
         g_sym (:,1) sym
           
+    end
+    
+    properties (Dependent)
+        StateNames (:,1) string
+        InputNames (:,1) string
+        DisturbanceNames (:,1) string
+        
     end
     
     properties (SetAccess = protected)
@@ -91,6 +100,20 @@ classdef Model < matlab.mixin.Copyable
 %             G  = obj.LinearModel.CalcG(x0,u0,d0);
             G0 = obj.CalcG(x0,u0,d0) - C*x0 - D*u0 - G*d0;
                
+        end
+        
+        function x = get.StateNames(obj)
+            x = StateNames(obj);
+        end
+        
+        function x = get.InputNames(obj)
+            x = InputNames(obj);
+
+        end
+        
+        function x = get.DisturbanceNames(obj)
+            x = DisturbanceNames(obj);
+                        
         end
            
         
