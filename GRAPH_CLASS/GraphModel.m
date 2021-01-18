@@ -84,8 +84,8 @@ classdef GraphModel < Model
         end
         
         function x = StateNames(obj)
-            Desc = vertcat(obj.graph.InternalVertices.Description);
-            Blks = vertcat(vertcat(obj.graph.InternalVertices.Parent).Name);
+            Desc = vertcat(obj.graph.DynamicVertices.Description);
+            Blks = vertcat(vertcat(obj.graph.DynamicVertices.Parent).Name);
             x = join([Blks,repmat('\',length(Blks),1),Desc]);
         end
         
@@ -98,6 +98,12 @@ classdef GraphModel < Model
         function x = DisturbanceNames(obj)
             Desc = [vertcat(obj.graph.ExternalVertices.Description);vertcat(obj.graph.ExternalEdges.Description)];
             Blks = [vertcat(vertcat(obj.graph.ExternalVertices.Parent).Name); vertcat(vertcat(obj.graph.ExternalEdges.Parent).Name)];
+            x = join([Blks,repmat('\',length(Blks),1),Desc]);
+        end
+        
+        function x = OutputNames(obj)
+            Desc = vertcat(obj.graph.InternalVertices.Description);
+            Blks = vertcat(vertcat(obj.graph.InternalVertices.Parent).Name);
             x = join([Blks,repmat('\',length(Blks),1),Desc]);
         end
         

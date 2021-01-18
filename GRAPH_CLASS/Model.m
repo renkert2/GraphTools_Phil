@@ -27,6 +27,7 @@ classdef Model < matlab.mixin.Copyable
         StateNames (:,1) string
         InputNames (:,1) string
         DisturbanceNames (:,1) string
+        OutputNames (:,1) string
         
     end
     
@@ -108,14 +109,15 @@ classdef Model < matlab.mixin.Copyable
         
         function x = get.InputNames(obj)
             x = InputNames(obj);
-
         end
         
         function x = get.DisturbanceNames(obj)
-            x = DisturbanceNames(obj);
-                        
+            x = DisturbanceNames(obj);                       
         end
-           
+        
+        function x = get.OutputNames(obj)
+            x = OutputNames(obj);                       
+        end
         
     end
 end
