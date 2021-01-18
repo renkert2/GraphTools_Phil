@@ -4,7 +4,6 @@ classdef GraphEdge_Internal < GraphEdge
     properties
         PowerFlow Type_PowerFlow = Type_PowerFlow.empty()
         Input GraphInput = GraphInput.empty()
-        Port
         Coefficient (:,1) double = 0
         TailVertex GraphVertex = GraphVertex.empty()
         HeadVertex GraphVertex = GraphVertex.empty()
@@ -48,14 +47,7 @@ classdef GraphEdge_Internal < GraphEdge
             end
             obj.Input = input;
         end
-                 
-        function set.Port(obj, port) % Ensure ports are column vector
-            if ~iscolumn(port)
-                port = port';
-            end
-            obj.Port = port;
-        end
-            
+                          
         function set.Coefficient(obj, coeff) % Ensure coefficients are column vector
             if ~iscolumn(coeff)
                 coeff = coeff';

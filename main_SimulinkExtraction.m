@@ -2,10 +2,10 @@ clear all; close all; clc
 
 %%
  
-[Graph,ConnectE,~] = autoGraphDefine('ToySystem',1);
+[Comps,ConnectP,G] = autoGraphDefine('ToySystem',1);
 
 %%
-Graphs = [vertcat(Graph.Comp).graph];
+Graphs = [Comps.graph];
 
 % plot component graphs
 figure
@@ -15,6 +15,7 @@ for i = 1:length(Graphs)
     title(Graphs(i).Parent.Name)
 end
 
-Sys = GraphModel(Combine(Graphs,ConnectE));
+SystemGraph = Combine(Comps,ConnectP);
+SysModel = GraphModel(SystemGraph);
 figure
-plot(Sys,'NodeColor','r','EdgeColor','b')
+plot(SysModel,'NodeColor','r','EdgeColor','b')

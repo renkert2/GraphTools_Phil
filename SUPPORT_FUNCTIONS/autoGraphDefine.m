@@ -1,4 +1,4 @@
-function [GRAPH,ConnectE,G] = autoGraphDefine(SYS,PLOTGRAPH)
+function [COMPS,ConnectP,G] = autoGraphDefine(SYS,PLOTGRAPH)
 %AUTOGRAPHDEFINE generates directed graph of DAEMOT system
 %
 %   [G, GRAPH] = AUTOGRAPHDEFINE(SYS) parses the Simulink model SYS for all 
@@ -131,5 +131,24 @@ if PLOTGRAPH
     hold off
 end
 
-ConnectE = ExtractExConn(GRAPH);
+%% Get Component Connection Set
+% edge matrix for internal connections
+E_int = E((E(:,1)<=sum(~idx) & E(:,2)<=sum(~idx)),:);
+% add Port information
+Comp = vertcat(GRAPH.Comp);
+nComp = length(Comp); % number of elements with components
+for i = 1:nComp
+    GRAPH(i).Port = [GRAPH(i).UpVertex, GRAPH(i).DownVertex]; % ports is all upstream and downsteam vertices
+end
+
+ConnectP = cell(1,size(E_int,1));
+for i = 1:length(ConnectP)
+    port1 = find(GRAPH(E_int(i,1)).Port==E_int(i,2)); % port of the first component connected to second component
+    port2 = find(GRAPH(E_int(i,2)).Port==E_int(i,1)); % port of the second component connected to first component
+    ConnectP{i} = [GRAPH(E_int(i,1)).Comp.Ports(port1) GRAPH(E_int(i,2)).Comp.Ports(port2)]; 
+end
+
+%% 
+COMPS = vertcat(GRAPH.Comp);
+% ConnectE = ExtractExConn(GRAPH);
 

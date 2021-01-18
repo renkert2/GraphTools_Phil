@@ -59,7 +59,7 @@ classdef SplitJunction < Component
                     desc = sprintf("Outflow %d", i-obj.n_in);
                 end
                 I(i) = GraphInput(desc);
-                Edge(i) = GraphEdge_Internal('PowerFlow',P(1),'Input',I(i),'Port',i,'Coefficient',obj.cp_f,'TailVertex',Vertex(E(i,1)),'HeadVertex',Vertex(E(i,2)));
+                Edge(i) = GraphEdge_Internal('PowerFlow',P(1),'Input',I(i),'Coefficient',obj.cp_f,'TailVertex',Vertex(E(i,1)),'HeadVertex',Vertex(E(i,2)));
             end
                                     
             % Build Graph

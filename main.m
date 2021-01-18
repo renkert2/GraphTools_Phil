@@ -8,9 +8,8 @@ load ToySystem
 figure; plot(G)
 
 %% Generate and plot component models
-
-HX1   = HeatExchanger('Name','HX 1','T1_init',16);
 load1 = HeatLoad('Name','Load 1','T_init',16);
+HX1   = HeatExchanger('Name','HX 1','T1_init',16);
 SJ1   = SplitJunction('Name','J2S1','n_in',2,'n_out',1);
 SJ2   = SplitJunction('Name','J1S2','n_in',1,'n_out',2);
 tank1 = Tank('Name','Tank 1','T_init',50);
@@ -18,9 +17,17 @@ tank2 = Tank('Name','Tank 2','T_init',50);
 
 
 % don't change the order of the components
-Comps = [HX1; load1; SJ1; SJ2; tank1; tank2];
+Comps = [load1; HX1; SJ1; SJ2; tank1; tank2];
 Graphs = [Comps(:).graph];
 
+% define port connections
+ConnectP{1} = [Comps(1).Ports(1) Comps(5).Ports(3)];
+ConnectP{2} = [Comps(1).Ports(3) Comps(3).Ports(1)];
+ConnectP{3} = [Comps(3).Ports(2) Comps(6).Ports(3)];
+ConnectP{4} = [Comps(3).Ports(3) Comps(2).Ports(2)];
+ConnectP{5} = [Comps(2).Ports(4) Comps(4).Ports(1)];
+ConnectP{6} = [Comps(4).Ports(2) Comps(5).Ports(1)];
+ConnectP{7} = [Comps(4).Ports(3) Comps(6).Ports(1)];
 
 % plot component graphs
 figure
@@ -32,34 +39,7 @@ end
 
 
 %%
-Sys = GraphModel(Combine(Graphs,ConnectE));
+Sys = GraphModel(Combine(Comps,ConnectP'));
 figure
 plot(Sys,'NodeColor','r','EdgeColor','b')
-
-% test 2
-
-%% Make a larger graph
-% N = 10;
-% MLupper = repmat({Sys.M(1:Sys.Nv,:)}, 1, N);
-% MLlower = repmat({Sys.M(Sys.Nv+1:end,:)}, 1, N);
-% VL = repmat(Sys.Vertices,N,1);
-% EL = repmat(Sys.Edges,N,1);
-% 
-% VL = [VL(arrayfun(@(x) isa(x,'GraphVertex_Internal'),VL));VL(arrayfun(@(x) isa(x,'GraphVertex_External'),VL))];
-% EL = [EL(arrayfun(@(x) isa(x,'GraphEdge_Internal'),EL));EL(arrayfun(@(x) isa(x,'GraphEdge_External'),EL))];
-% 
-% GraphL = Graph([blkdiag(MLupper{:});blkdiag(MLlower{:})],VL,EL);
-% SysL = GraphModel(GraphL);
-% figure; plot(SysL.graph,'NodeColor','r','EdgeColor','b')
-% 
-%%
-% SymbolicSolver(Sys);
-%% 
-% [Sys.graph.Vertices(:).Description]'
-% tank1.graph.Vertices(2).Description
-% tank1.graph.Vertices(2).Description = 'Tank 1 Mass';
-% tank1.graph.Vertices(2).Description
-% [Sys.graph.Vertices(:).Description]'
-
-
 
