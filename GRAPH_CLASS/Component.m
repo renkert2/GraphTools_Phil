@@ -60,11 +60,10 @@ classdef Component < matlab.mixin.Heterogeneous & handle
             for c = 1:num_c % For each port connection
                 ports = ConnectP{c};
                 type = ports(1).Type;
-                domain = ports(1).Domain;
                 
                 assert(isa(ports, 'ComponentPort'), 'Entry %d in ConnectP must be of ComponentPort type',c) 
                 assert(all(type == [ports(2:end).Type]), 'Incompatible port types in connection %d', c);
-                assert(all(domain == [ports(2:end).Domain]), 'Incompatible port domains in connection %d', c);
+                assert(isCompatible([ports.Domain]), 'Incompatible port domains in connection %d', c);
                 
                 if type == 1 % Type 1 Connection
                     assert(numel(ports) == 2, 'Type 1 Connection can only contain two edges');

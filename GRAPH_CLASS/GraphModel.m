@@ -110,6 +110,7 @@ classdef GraphModel < Model
         function plot(obj,varargin)
             plot(obj.graph,varargin{:})
         end
+
           
         function SymbolicSolve(obj) % this function will only work for symbolic expressions at the moment
         

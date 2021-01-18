@@ -75,11 +75,11 @@ classdef Model < matlab.mixin.Copyable
             
             obj.LinModel = LinearModel(A,B,E,C,D,H);
             
-            obj.CalcF = matlabFunction(obj.f_sym,'Vars',[{[x1] [u1], [d1]}]);
-            obj.CalcG = matlabFunction(obj.g_sym,'Vars',[{[x1] [u1], [d1]}]);
+            obj.CalcF = matlabFunction(obj.f_sym,'Vars',[{[x1], [u1], [d1]}]);
+            obj.CalcG = matlabFunction(obj.g_sym,'Vars',[{[x1], [u1], [d1]}]);
 
-            obj.LinModel.CalcState  = matlabFunction(obj.LinModel.A_sym,obj.LinModel.B_sym,obj.LinModel.E_sym,'Vars',[{[x1] [u1], [d1]}]);
-            obj.LinModel.CalcOutput = matlabFunction(obj.LinModel.C_sym,obj.LinModel.D_sym,obj.LinModel.H_sym,'Vars',[{[x1] [u1], [d1]}]);
+            obj.LinModel.CalcState  = matlabFunction(obj.LinModel.A_sym,obj.LinModel.B_sym,obj.LinModel.E_sym,'Vars',[{[x1], [u1], [d1]}]);
+            obj.LinModel.CalcOutput = matlabFunction(obj.LinModel.C_sym,obj.LinModel.D_sym,obj.LinModel.H_sym,'Vars',[{[x1], [u1], [d1]}]);
 %             obj.LinearModel.CalcOutput = matlabFunction(obj.LinearModel.B_sym,'Vars',[{[x1] [u1], [d1]}]);
 %             obj.LinearModel.CalcE = matlabFunction(obj.LinearModel.E_sym,'Vars',[{[x1] [u1], [d1]}]);
 %             obj.LinearModel.CalcC = matlabFunction(obj.LinearModel.C_sym,'Vars',[{[x1] [u1], [d1]}]);
