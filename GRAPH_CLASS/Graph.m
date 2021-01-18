@@ -227,17 +227,25 @@ classdef Graph < matlab.mixin.Copyable
                 ConnectV = formatConnectX(ConnectV, 'GraphVertex', 'Vertices');
             end
             
-            %% Parse ConnectE for necessary Vertex Connections and create edge_conn_map:
+            %% Parse ConnectE for necessary Vertex Connections, create edge_conn_map, and create input_conn_map:
             % - Appends ConnectV with necessary vertex connections resulting from edge connections
             % edge_conn_map:
             % - First column contains edges replaced in connection that will be modified in the connection,
             % - Second column contains primary edges resulting from connection
             % - s.t. edge_conn_map(:,1) becomes edge_conn_map(:,2)
+            % input_conn_map:
+            % - First column contains inputs replaced in connection that will be modified in the connection,
+            % - Second column contains primary inputs resulting from connection
+            % - s.t. input_conn_map(:,1) becomes input_conn_map(:,2)
+            
             ConnectV_E = cell(2*Nce, 1);
             edge_conn_map(Nce,2) = GraphEdge();
+            input_conn_map = GraphInput.empty();
+
             for ce = 1:Nce
                 edges = fliplr(ConnectE{ce});
-                
+                edge_conn_map(ce, :) = edges;
+                                   
                 equiv_heads = [edges.HeadVertex];
                 assert(isCompatible([equiv_heads.VertexType]), 'Incompatible head vertices in edge connection %d', ce) % Check for compatible head vertices with isCompatible method of VertexTypes
                 
@@ -247,7 +255,18 @@ classdef Graph < matlab.mixin.Copyable
                 ConnectV_E{2*ce - 1} = equiv_heads;
                 ConnectV_E{2*ce} = equiv_tails;
                 
-                edge_conn_map(ce, :) = edges;
+                old_inputs = [edges(1).Input];
+                new_inputs = [edges(2).Input];
+                
+                if (~isempty(old_inputs)) && (~isempty(new_inputs))
+                    if numel(old_inputs) == numel(new_inputs)
+                        for i = 1:numel(old_inputs)
+                            input_conn_map(end+1,:) = [old_inputs(i) new_inputs(i)]; % Input from first edge in ConnectE will replace input from second edge in ConnectE
+                        end
+                    else
+                        error('Incompatible inputs in edge connection %d', ce);
+                    end
+                end
             end
             
             if isempty(ConnectV)
@@ -294,10 +313,23 @@ classdef Graph < matlab.mixin.Copyable
                 vertex_conn_map(r,2) = primary_vertex;
             end
             
+            %% Process vertex_conn_map
             vertex_conn_map = unique(vertex_conn_map, 'rows','stable'); % remove duplicate mappings in vertex_conn_map
             if length(vertex_conn_map(:,1)) ~= length(unique(vertex_conn_map(:,1)))
                 error('Vertices assigned to multiple primary vertices.');
             end
+            
+            % Reformat serial connections in vertex_conn_map
+            vertex_conn_map = ReformatSerialConnections(vertex_conn_map);
+            
+            %% Process input_conn_map
+            input_conn_map = unique(input_conn_map, 'rows','stable'); % remove duplicate mappings in input_conn_map
+            if length(input_conn_map(:,1)) ~= length(unique(input_conn_map(:,1)))
+                error('Inputs assigned to different primary inputs.');
+            end
+            
+            % Reformat serial connections in input_conn_map
+            input_conn_map = ReformatSerialConnections(input_conn_map);
             
             %% Construct Vertex and Edge Vectors
             all_verts = vertcat(G.Vertices);
@@ -311,6 +343,7 @@ classdef Graph < matlab.mixin.Copyable
             end
             
             for i = 1:numel(sys_edges)
+                % Replace head vertex in system edges
                 head_v = sys_edges(i).HeadVertex;
                 
                 log_index = head_v == vertex_conn_map(:,1);
@@ -319,13 +352,26 @@ classdef Graph < matlab.mixin.Copyable
                     sys_edges(i).HeadVertex = primary_vertex;
                 end
                 
+
                 if isa(sys_edges(i), 'GraphEdge_Internal')
+                    % Replace tail vertex in system edges
                     tail_v = sys_edges(i).TailVertex;
                     
                     log_index = tail_v == vertex_conn_map(:,1);
                     if any(log_index)
                         primary_vertex = vertex_conn_map(log_index, 2);
                         sys_edges(i).TailVertex = primary_vertex;
+                    end
+                    
+                    % Replace inputs in system edges
+                    inputs = [sys_edges(i).Input];
+                    if ~isempty(inputs)
+                        for j = 1:numel(inputs)
+                            log_index = inputs(j) == input_conn_map(:,1);
+                            if any(log_index)
+                                sys_edges(i).Input(j) = input_conn_map(log_index,2);
+                            end
+                        end
                     end
                 end
             end
@@ -370,6 +416,15 @@ classdef Graph < matlab.mixin.Copyable
                     ConnectX = ConnectX_temp;
                 else
                     error('Invalid ConnectX cell array');
+                end
+            end
+            function conn_map = ReformatSerialConnections(conn_map)
+                inters = intersect(conn_map(:,1),conn_map(:,2)); % Find common elements in first and second columns of conn_map
+                if ~isempty(inters) % If intersections exist
+                    for i = 1:numel(inters)
+                        target_val = conn_map(inters(i) == conn_map(:,1),2); 
+                        conn_map(inters(i) == conn_map(:,2),2) = target_val;
+                    end
                 end
             end
         end
