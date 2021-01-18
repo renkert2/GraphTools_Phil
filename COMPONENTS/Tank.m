@@ -52,8 +52,8 @@ classdef Tank < Component
             Vertex(5) = GraphVertex_External('Description','Sink','Capacitance',C(1));
             
             % define Inputs
-            I(1) = GraphInput("Tank Input 1");
-            I(2) = GraphInput("Tank Input 2");
+            I(1) = GraphInput("Inflow");
+            I(2) = GraphInput("Outflow");
             
             % define edges
             Edge(1) = GraphEdge_Internal('PowerFlow',P(1),'Input',I(1),'Port',1,'Coefficient',obj.cp_f,'TailVertex',Vertex(E(1,1)),'HeadVertex',Vertex(E(1,2)));
@@ -66,7 +66,15 @@ classdef Tank < Component
             T = Type([sym('p1')],{sym('p1')},'p1');
             Vertex(1).CapFunction = LookupFunction('Function',T,'Breakpoints',[Vertex(2)]);
              
+            % Build Graph
             g = Graph(Vertex,Edge);
+            obj.graph = g;
+            
+            % Define Ports
+            p(1) = ComponentPort('Description','Inflow','Element',Edge(1));
+            % skip port 2 since it's a source in the simulink block
+            p(3) = ComponentPort('Description','Outflow','Element',Edge(2));
+            obj.Ports = p;
             
         end
     end

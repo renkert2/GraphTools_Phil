@@ -50,7 +50,15 @@ classdef HeatLoad < Component
             Edge(2) = GraphEdge_Internal('PowerFlow',P(1),'Input',I(1),'Port',3,'Coefficient',obj.cp_f,'TailVertex',Vertex(E(2,1)),'HeadVertex',Vertex(E(2,2)));
             Edge(3) = GraphEdge_External('HeadVertex',Vertex(1),'Description','Heat Load');
 
-             g = Graph(Vertex,Edge);
+            % Build Graph
+            g = Graph(Vertex,Edge);
+            obj.graph = g;
+            
+            % Define Ports
+            p(1) = ComponentPort('Description','Inflow','Element',Edge(1));
+            % skip port 2 since it's a source in the simulink block
+            p(3) = ComponentPort('Description','Outflow','Element',Edge(2));
+            obj.Ports = p;
             
         end
     end

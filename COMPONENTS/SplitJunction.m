@@ -53,12 +53,32 @@ classdef SplitJunction < Component
             % define edges
             for i = 1:(obj.n_in+obj.n_out)
                 % Define input for each edge
-                desc = sprintf("SplitJunction Input %d", i);
+                if i <=obj.n_in
+                    desc = sprintf("Inflow %d", i);
+                else
+                    desc = sprintf("Outflow %d", i-obj.n_in);
+                end
                 I(i) = GraphInput(desc);
                 Edge(i) = GraphEdge_Internal('PowerFlow',P(1),'Input',I(i),'Port',i,'Coefficient',obj.cp_f,'TailVertex',Vertex(E(i,1)),'HeadVertex',Vertex(E(i,2)));
             end
-                        
+                                    
+            % Build Graph
             g = Graph(Vertex,Edge);
+            obj.graph = g;
+            
+            % Define Ports
+            
+            for i = 1:(obj.n_in+obj.n_out)
+                % Define input for each edge
+                if i <=obj.n_in
+                    desc = sprintf("Inflow %d", i);
+                else
+                    desc = sprintf("Outflow %d", i-obj.n_in);
+                end
+                p(i) = ComponentPort('Description',desc,'Element',Edge(i));
+            end
+            
+            obj.Ports = p; 
             
         end
     end
