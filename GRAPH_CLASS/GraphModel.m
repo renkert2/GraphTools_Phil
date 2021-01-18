@@ -68,14 +68,7 @@ classdef GraphModel < Model
             
             
         end
-        
-        function Modify(obj)
-        
-        end
-        
-        function Simulate(obj)
-            
-        end
+       
           
         function SymbolicSolve(obj) % this function will only work for symbolic expressions at the moment
         
