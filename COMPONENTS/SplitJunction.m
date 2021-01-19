@@ -30,7 +30,7 @@ classdef SplitJunction < Component
     end
     
     methods (Access = protected)
-        function g = DefineGraph(obj)
+        function DefineComponent(obj)
             % edge matrix
             E = [[(2:obj.n_in+1)',ones(obj.n_in,1)]; ...
                                 [ones(obj.n_out,1),(obj.n_in+2:obj.n_in+obj.n_out+1)']];
@@ -61,7 +61,7 @@ classdef SplitJunction < Component
                 I(i) = GraphInput(desc);
                 Edge(i) = GraphEdge_Internal('PowerFlow',P(1),'Input',I(i),'Coefficient',obj.cp_f,'TailVertex',Vertex(E(i,1)),'HeadVertex',Vertex(E(i,2)));
             end
-                                    
+                                
             % Build Graph
             g = Graph(Vertex,Edge);
             obj.graph = g;

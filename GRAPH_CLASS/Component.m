@@ -28,7 +28,7 @@ classdef Component < matlab.mixin.Heterogeneous & handle
             elseif nargin > 1
                 my_inputparser(obj,varargin{:}); % input parser component models
             end
-            obj.init(); % I don't know why we need this and can't just call ConstructGraph - CTA
+            obj.init_super(); % I don't know why we need this and can't just call ConstructGraph - CTA
 
         end
         
@@ -36,8 +36,8 @@ classdef Component < matlab.mixin.Heterogeneous & handle
             obj.Name = string(name);
         end
         
-        function init(obj)
-            obj.ConstructGraph();
+        function init_super(obj)
+            obj.DefineComponent();
             obj.DefineChildren();
         end
        
@@ -82,12 +82,7 @@ classdef Component < matlab.mixin.Heterogeneous & handle
         end
     end
     
-    methods (Access = protected)
-        function ConstructGraph(obj)
-            g = DefineGraph(obj);
-            obj.graph = g;
-        end
-        
+    methods (Access = protected)        
         function DefineChildren(obj)
             try
                 obj.graph.Parent = obj;
@@ -104,7 +99,7 @@ classdef Component < matlab.mixin.Heterogeneous & handle
     end
     
     methods (Abstract, Access = protected)
-        DefineGraph(obj)
+        DefineComponent(obj)
     end
 end
 
