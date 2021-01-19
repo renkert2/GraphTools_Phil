@@ -107,8 +107,61 @@ classdef GraphModel < Model
             x = join([Blks,repmat('\',length(Blks),1),Desc]);
         end
         
-        function plot(obj,varargin)
-            plot(obj.graph,varargin{:})
+        function h = plot(obj,varargin)
+            % Pass the Graph Model you would like to plot with modifiers in
+            % NAME-VALUE pairs. The modifiers can include ANY modifiers
+            % used in the MATLAB digraph plotting PLUS the added option for
+            % graph model detailed labels. To invoke the detailed labels 
+            % modifiers, use the NAME "DetailedLabels" with VALUE,
+            % "States","Edges","Disturbances", or "All".
+            
+            if mod(length(varargin),2) == 1
+                error('Plot modifiers must be in name-value pairs')
+            end      
+            % extract and remove the DetailedLabels options from varargin 
+            idxName = find(cellfun(@(x) strcmp('DetailedLabels',x),varargin));
+            idxValue = idxName+1;
+            LABELS = {varargin{idxValue}};
+            varargin([idxName,idxValue]) = [];
+            
+            h = plot(obj.graph,varargin{:});
+            
+            for i = 1:length(LABELS)
+                opts = {'All','States','Edges','Disturbances'};             
+                switch LABELS{i}
+                    case opts{1}
+                        LabelStates(obj,h)                    
+                        LabelEdges(obj,h)                    
+                        LabelDisturbances(obj,h)                    
+                    case opts{2}
+                        LabelStates(obj,h)                    
+                    case opts{3}
+                        LabelEdges(obj,h)                    
+                    case opts{4}                 
+                        LabelDisturbances(obj,h)
+                    otherwise
+                        error([sprintf('Provide a valid argument value for DetailedLabels:\n') sprintf('-%s\n',opts{:})]) % update this to list valid arguments
+                end
+            end
+            
+            function LabelStates(obj,h)
+                labelnode(h,1:obj.graph.Nv,obj.OutputNames)
+            end
+
+            function LabelEdges(obj,h)
+                % Get state vector filled up with symbolic varialbes
+                x       = sym('x%d'      ,[obj.graph.v_tot        1]); % dynamic states
+                u       = sym('u%d'      ,[obj.graph.Nu           1]); % inputs
+                % Calculate power flows and capacitances
+                P = CalcP(obj,x,u); % calculates power flows
+                labeledge(h,obj.graph.E(:,1)',obj.graph.E(:,2)',string(P)) %label Edges
+            end
+            
+            function LabelDisturbances(obj,h)
+                labelnode(h,obj.graph.Nv+1:obj.graph.v_tot,obj.DisturbanceNames(1:obj.graph.Nev))
+                labeledge(h,obj.graph.Ne+1:obj.graph.Ne+obj.graph.Nee,obj.DisturbanceNames(obj.graph.Nev+1:end))  
+            end
+        
         end
 
           

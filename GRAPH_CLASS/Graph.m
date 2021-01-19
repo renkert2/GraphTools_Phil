@@ -178,7 +178,7 @@ classdef Graph < matlab.mixin.Copyable
             
         end
                
-        function plot(obj,varargin)
+        function h = plot(obj,varargin)
             % basic digraph plotting.
             E_Augmented = obj.E; % edge matrix
             try % try to augment the edge matrix to include external edges

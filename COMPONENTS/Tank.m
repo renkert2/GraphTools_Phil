@@ -19,7 +19,7 @@ classdef Tank < Component
         T_init(1,1) double {mustBeNumeric} = 25;
         % Fluid Specific Heat [J/kg]
         cp_f (1,1) double {mustBeNumeric} = 2000;
-        
+
     end
     
     methods
@@ -36,11 +36,12 @@ classdef Tank < Component
                  1 4; ...
                  1 5; ...
                  5 2];
+             
             % Capacitance Types
             C(1) = Type_Capacitance("1"); 
              
             % Power Flow Types
-            P(1) = Type_PowerFlow("u1*xt");
+            P(1) = Type_PowerFlow("u1*xt"); 
             P(2) = Type_PowerFlow("(u1-u2)*xt");
             P(3) = Type_PowerFlow("(u1-u2)");
           
@@ -63,7 +64,7 @@ classdef Tank < Component
             Edge(5) = GraphEdge_External('HeadVertex',Vertex(1),'Description','Heat Load');
             
             % special lookup functions
-            T = Type([sym('p1')],{sym('p1')},'p1');
+            T = Type([sym('x1')],{sym('x1')},'x1'); 
             Vertex(1).CapFunction = LookupFunction('Function',T,'Breakpoints',[Vertex(2)]);
              
             % Build Graph
