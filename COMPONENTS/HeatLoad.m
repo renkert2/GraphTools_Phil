@@ -26,7 +26,7 @@ classdef HeatLoad < Component
     end
     
     methods (Access = protected)
-        function g = DefineGraph(obj)
+        function DefineComponent(obj)
             % Edge Matrix
             E = [2 1; ...
                  1 3];
@@ -50,7 +50,7 @@ classdef HeatLoad < Component
             Edge(2) = GraphEdge_Internal('PowerFlow',P(1),'Input',I(1),'Port',3,'Coefficient',obj.cp_f,'TailVertex',Vertex(E(2,1)),'HeadVertex',Vertex(E(2,2)));
             Edge(3) = GraphEdge_External('HeadVertex',Vertex(1),'Description','Heat Load');
 
-             g = Graph(Vertex,Edge);
+             obj.graph = Graph(Vertex,Edge);
             
         end
     end
