@@ -29,7 +29,7 @@ classdef Tank < Component
     end
     
     methods (Access = protected)
-        function g = DefineGraph(obj)
+        function DefineComponent(obj)
             
             % edge matrix
             E = [3 1; ...
@@ -65,7 +65,7 @@ classdef Tank < Component
             % special lookup functions
             T = Type([sym('p1')],{sym('p1')},'p1');
             Vertex(1).CapFunction = LookupFunction('Function',T,'Breakpoints',[Vertex(2)]);
-             
+            
             % Build Graph
             g = Graph(Vertex,Edge);
             obj.graph = g;

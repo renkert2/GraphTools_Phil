@@ -323,14 +323,15 @@ classdef Graph < matlab.mixin.Copyable
             vertex_conn_map = ReformatSerialConnections(vertex_conn_map);
             
             %% Process input_conn_map
-            input_conn_map = unique(input_conn_map, 'rows','stable'); % remove duplicate mappings in input_conn_map
-            if length(input_conn_map(:,1)) ~= length(unique(input_conn_map(:,1)))
-                error('Inputs assigned to different primary inputs.');
+            if ~isempty(input_conn_map)
+                input_conn_map = unique(input_conn_map, 'rows','stable'); % remove duplicate mappings in input_conn_map
+                if length(input_conn_map(:,1)) ~= length(unique(input_conn_map(:,1)))
+                    error('Inputs assigned to different primary inputs.');
+                end
+                
+                % Reformat serial connections in input_conn_map
+                input_conn_map = ReformatSerialConnections(input_conn_map);
             end
-            
-            % Reformat serial connections in input_conn_map
-            input_conn_map = ReformatSerialConnections(input_conn_map);
-            
             %% Construct Vertex and Edge Vectors
             all_verts = vertcat(G.Vertices);
             all_edges = vertcat(G.Edges);
@@ -364,12 +365,14 @@ classdef Graph < matlab.mixin.Copyable
                     end
                     
                     % Replace inputs in system edges
-                    inputs = [sys_edges(i).Input];
-                    if ~isempty(inputs)
-                        for j = 1:numel(inputs)
-                            log_index = inputs(j) == input_conn_map(:,1);
-                            if any(log_index)
-                                sys_edges(i).Input(j) = input_conn_map(log_index,2);
+                    if ~isempty(input_conn_map)
+                        inputs = [sys_edges(i).Input];
+                        if ~isempty(inputs)
+                            for j = 1:numel(inputs)
+                                log_index = inputs(j) == input_conn_map(:,1);
+                                if any(log_index)
+                                    sys_edges(i).Input(j) = input_conn_map(log_index,2);
+                                end
                             end
                         end
                     end

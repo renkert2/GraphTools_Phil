@@ -26,7 +26,7 @@ classdef HeatLoad < Component
     end
     
     methods (Access = protected)
-        function g = DefineGraph(obj)
+        function DefineComponent(obj)
             % Edge Matrix
             E = [2 1; ...
                  1 3];

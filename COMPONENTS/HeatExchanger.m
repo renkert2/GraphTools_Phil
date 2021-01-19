@@ -34,7 +34,7 @@ classdef HeatExchanger < Component
     end
     
     methods (Access = protected)
-        function g = DefineGraph(obj)
+        function DefineComponent(obj)
             % edge matrix
             E = [3 1; ...
                  1 5; ...
