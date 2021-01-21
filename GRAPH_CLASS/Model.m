@@ -1,11 +1,8 @@
 classdef Model < matlab.mixin.Copyable
     %TYPE Summary of this class goes here
     %   Detailed explanation goes here
-   
-    
-        
-    properties (SetAccess = protected)
-        
+
+    properties (SetAccess = protected) 
         Nx % number of states
         Nu % number of inputs
         Nd % number of disturbances
@@ -27,21 +24,16 @@ classdef Model < matlab.mixin.Copyable
         StateNames (:,1) string
         InputNames (:,1) string
         DisturbanceNames (:,1) string
-        OutputNames (:,1) string
-        
+        OutputNames (:,1) string    
     end
     
     properties (SetAccess = protected)
-        
         LinModel LinearModel = LinearModel.empty() % this could be another object
         
         CalcF (1,1) function_handle = @(x)0 % calculates x_dot
-        CalcG (1,1) function_handle = @(x)0% calculates y
-        
+        CalcG (1,1) function_handle = @(x)0% calculates y  
     end
-    
-  
-    
+     
     methods
         function obj = Model(varargin)
             a = 1; 
@@ -56,8 +48,7 @@ classdef Model < matlab.mixin.Copyable
 %                 obj.f_sym = varargin{1};
 %                 obj.g_sym = varargin{2};
 %                 init(obj);
-%             end
-                
+%             end    
         end
 
         function init(obj)
@@ -104,21 +95,27 @@ classdef Model < matlab.mixin.Copyable
         end
         
         function x = get.StateNames(obj)
-            x = StateNames(obj);
+            x = defineStateNames(obj);
         end
         
         function x = get.InputNames(obj)
-            x = InputNames(obj);
+            x = defineInputNames(obj);
         end
         
         function x = get.DisturbanceNames(obj)
-            x = DisturbanceNames(obj);                       
+            x = defineDisturbanceNames(obj);                       
         end
         
         function x = get.OutputNames(obj)
-            x = OutputNames(obj);                       
-        end
-        
+            x = defineOutputNames(obj);                       
+        end   
+    end
+    
+    methods (Abstract)
+        defineStateNames
+        defineInputNames
+        defineDisturbanceNames
+        defineOutputNames
     end
 end
 

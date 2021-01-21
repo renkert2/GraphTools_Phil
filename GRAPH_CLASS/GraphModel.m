@@ -17,7 +17,7 @@ classdef GraphModel < Model
         D % capacitance coefficient matrix
         B (:,:,:)% input mapping matrix   
     end
-    
+
     methods
         function obj = GraphModel(varargin)
             if nargin == 1
@@ -28,8 +28,8 @@ classdef GraphModel < Model
 
         function init(obj)
             % make vertex matrices
-            obj.x_init  = vertcat(obj.graph.Vertices.Initial); 
-            obj.DynType = vertcat(obj.graph.Vertices.DynamicType); 
+            obj.x_init  = vertcat(obj.graph.InternalVertices.Initial); 
+            obj.DynType = vertcat(obj.graph.InternalVertices.DynamicType); 
             
             % D matrix
             Dmat = zeros(obj.graph.v_tot,obj.graph.Nee);
@@ -70,50 +70,121 @@ classdef GraphModel < Model
             obj.Nd = obj.graph.Nev + obj.graph.Nee;
             obj.SymbolicSolve
             
-            init@Model(obj);
-            
-            
+            init@Model(obj); 
         end
         
-        function Modify(obj)
-        
-        end
-        
-        function Simulate(obj)
-            
-        end
-        
-        function x = StateNames(obj)
+        function x = defineStateNames(obj)
             Desc = vertcat(obj.graph.DynamicVertices.Description);
             Blks = vertcat(vertcat(obj.graph.DynamicVertices.Parent).Name);
             x = join([Blks,repmat('\',length(Blks),1),Desc]);
         end
         
-        function x = InputNames(obj)
-            Desc = vertcat(obj.graph.Inputs.Description);
-            Blks = vertcat(vertcat(obj.graph.Inputs.Parent).Name);
+        function x = defineInputNames(obj)
+            if ~isempty(obj.graph.Inputs)
+                Desc = vertcat(obj.graph.Inputs.Description);
+                Blks = vertcat(vertcat(obj.graph.Inputs.Parent).Name);
+                x = join([Blks,repmat('\',length(Blks),1),Desc]);
+            else
+                x = string.empty();
+            end
+        end
+        
+        function x = defineDisturbanceNames(obj)
+            if ~isempty(obj.graph.ExternalVertices)
+                ext_verts_desc = vertcat(obj.graph.ExternalVertices.Description);
+                ext_verts_parents = vertcat(vertcat(obj.graph.ExternalVertices.Parent).Name);
+            else
+                ext_verts_desc = [];
+                ext_verts_parents = [];
+            end
+            
+            if ~isempty(obj.graph.ExternalEdges)
+                ext_edges_desc = vertcat(obj.graph.ExternalEdges.Description);
+                ext_edges_parents =  vertcat(vertcat(obj.graph.ExternalEdges.Parent).Name);
+            else
+                ext_edges_desc = [];
+                ext_edges_parents = [];
+            end
+                
+            Desc = [ext_verts_desc; ext_edges_desc];
+            Blks = [ext_verts_parents; ext_edges_parents];
             x = join([Blks,repmat('\',length(Blks),1),Desc]);
         end
         
-        function x = DisturbanceNames(obj)
-            Desc = [vertcat(obj.graph.ExternalVertices.Description);vertcat(obj.graph.ExternalEdges.Description)];
-            Blks = [vertcat(vertcat(obj.graph.ExternalVertices.Parent).Name); vertcat(vertcat(obj.graph.ExternalEdges.Parent).Name)];
-            x = join([Blks,repmat('\',length(Blks),1),Desc]);
-        end
-        
-        function x = OutputNames(obj)
+        function x = defineOutputNames(obj)
             Desc = vertcat(obj.graph.InternalVertices.Description);
             Blks = vertcat(vertcat(obj.graph.InternalVertices.Parent).Name);
             x = join([Blks,repmat('\',length(Blks),1),Desc]);
         end
         
+        function [t,x] = Simulate(obj, inputs, disturbances, t_range, opts)
+            arguments
+                obj
+                inputs
+                disturbances
+                t_range
+                opts.PlotStates logical = true
+                opts.PlotInputs logical = false
+                opts.PlotDisturbances logical = false
+            end
+            
+            input_function_flag = isa(inputs, 'function_handle');
+            disturbance_function_flag = isa(disturbances, 'function_handle');
+            
+            if input_function_flag && disturbance_function_flag
+                xdot = @(t,x) obj.CalcF(x, inputs(t), disturbances(t));
+                xfull = @(t,x) obj.CalcG(x, inputs(t), disturbances(t));
+            elseif input_function_flag
+                xdot = @(t,x) obj.CalcF(x, inputs(t), disturbances);
+                xfull = @(t,x) obj.CalcG(x, inputs(t), disturbances);
+            elseif disturbance_function_flag
+                xdot = @(t,x) obj.CalcF(x, inputs, disturbances(t));
+                xfull = @(t,x) obj.CalcG(x, inputs, disturbances(t));
+            else
+                xdot = @(t,x) obj.CalcF(x, inputs, disturbances);
+                xfull = @(t,x) obj.CalcG(x, inputs, disturbances);
+            end
+            
+            [t,xdyn] = ode23t(xdot, t_range, obj.x_init);
+            x = xfull(t',xdyn');
+            
+            if any([opts.PlotStates opts.PlotInputs opts.PlotDisturbances])
+                figure
+                hold on
+                lgnd = string.empty();
+                if opts.PlotStates
+                    plot(t,x)
+                    lgnd = vertcat(lgnd, obj.StateNames);
+                end
+                
+                if opts.PlotInputs && ~isempty(inputs)
+                    if input_function_flag
+                        plot(t,inputs(t))
+                    else
+                        plot(t,inputs*ones(size(t)));
+                    end
+                    lgnd = vertcat(lgnd,obj.InputNames);
+                end   
+                
+                if opts.PlotDisturbances && ~isempty(disturbances)
+                    if disturbance_function_flag
+                        plot(t,disturbances(t))
+                    else
+                        plot(t,(disturbances*ones(size(t))')');
+                    end
+                    lgnd = vertcat(lgnd,obj.DisturbanceNames);
+                end
+                legend(lgnd)
+                hold off
+            end
+        end
+                
         function plot(obj,varargin)
             plot(obj.graph,varargin{:})
         end
 
           
         function SymbolicSolve(obj) % this function will only work for symbolic expressions at the moment
-        
             idx_x_d = (sum(abs(obj.C_coeff(1:obj.graph.Nv,:)),2) ~= 0);
             idx_x_a = (sum(abs(obj.C_coeff(1:obj.graph.Nv,:)),2) == 0);
             idx_x_e = obj.graph.Nv+1:obj.graph.Nv+obj.graph.Nev;
@@ -139,13 +210,11 @@ classdef GraphModel < Model
             eqnD(1:sum(idx_x_d),1) = diag(C(idx_x_d))^-1*(-obj.graph.M(idx_x_d,:)*P + obj.D(idx_x_d,:)*P_e); % system of dynamic equations (
             [A,Bu] = equationsToMatrix(eqnA,x_a); % convert eqnA to the form Ax=B
             x_a_solution = linsolve(A,Bu); % find solution to the algebraic system
-            x_d_solution = subs(eqnD,x_a,x_a_solution); % plug in the algebraic system solution into the dynamic system equations
+            x_d_solution = simplifyFraction(subs(eqnD,x_a,x_a_solution)); % plug in the algebraic system solution into the dynamic system equations
                         
             % Store symbolic calculations
             obj.f_sym = x_d_solution; % system derivatives
             obj.g_sym = [x_full(idx_x_d);x_a_solution]; % all system states
-
-            
         end
             
         function [P] = CalcP(obj,x0,u0)
