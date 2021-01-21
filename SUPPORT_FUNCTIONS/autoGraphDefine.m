@@ -44,7 +44,9 @@ for i = 1:numel(Objects)
         params(end+1).Name = 'Name'; params(end).Value = GRAPH(i).Name;
         GRAPH(i).Comp = feval(GRAPH(i).Type,params);
     catch
-        
+        if ~(strcmp(GRAPH(i).Type,'Source') || strcmp(GRAPH(i).Type,'Sink'))
+            warning(sprintf('Problem extracting and assigning parameters for model %s.\n',GRAPH(i).Name))
+        end
     end
         
 end

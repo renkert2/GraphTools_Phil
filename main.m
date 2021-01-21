@@ -33,7 +33,7 @@ ConnectP{7} = [Comps(4).Ports(3) Comps(6).Ports(1)];
 figure
 for i = 1:length(Comps)
     subplot(3,2,i)
-    plot(Comps(i).graph)
+    plot(Comps(i).graph);
     title(Comps(i).Name)
 end
 
@@ -41,5 +41,5 @@ end
 %%
 Sys = GraphModel(Combine(Comps,ConnectP'));
 figure
-plot(Sys,'NodeColor','r','EdgeColor','b')
+plot(Sys,'NodeColor','r','EdgeColor','b');
 
