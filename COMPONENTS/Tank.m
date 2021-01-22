@@ -38,7 +38,7 @@ classdef Tank < Component
                  5 2];
              
             % Capacitance Types
-            C(1) = Type_Capacitance("1"); 
+            C(1) = Type_Capacitance("1");
              
             % Power Flow Types
             P(1) = Type_PowerFlow("u1*xt"); 

@@ -144,6 +144,8 @@ classdef GraphModel < Model
                 end
             end
             
+            set(gcf,'WindowButtonDownFcn',@(f,~)edit_graph(f,h))
+            
             function LabelStates(obj,h)
                 labelnode(h,1:obj.graph.Nv,obj.OutputNames)
             end

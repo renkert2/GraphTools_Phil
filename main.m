@@ -41,5 +41,5 @@ end
 %%
 Sys = GraphModel(Combine(Comps,ConnectP'));
 figure
-plot(Sys,'NodeColor','r','EdgeColor','b');
+plot(Sys,'NodeColor','r','EdgeColor','b','DetailedLabels','All');
 
