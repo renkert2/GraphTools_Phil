@@ -146,7 +146,7 @@ classdef GraphModel < Model
             end
             
             [t,xdyn] = ode23t(xdot, t_range, obj.x_init);
-            x = xfull(t',xdyn');
+            x = xfull(t',xdyn')';
             
             if any([opts.PlotStates opts.PlotInputs opts.PlotDisturbances])
                 figure
@@ -168,7 +168,7 @@ classdef GraphModel < Model
                 
                 if opts.PlotDisturbances && ~isempty(disturbances)
                     if disturbance_function_flag
-                        plot(t,disturbances(t))
+                        plot(t,disturbances(t')')
                     else
                         plot(t,(disturbances*ones(size(t))')');
                     end
