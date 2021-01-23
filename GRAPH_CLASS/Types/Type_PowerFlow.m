@@ -17,12 +17,10 @@ classdef Type_PowerFlow < Type
         function val = calcVal(obj, xt, xh, u) % Calculates type value with symbolic 'vars' substituted with numeric 'vars_'
             num_args = nargin-1; % Matlab counts obj as an input arguments
             num_inputs_array = [obj.num_inputs];
+            
             if num_args == 3 && ~isempty(u)
-                if isvector(u)
-                    if iscolumn(u)
-                        u = u'; % Vector of inputs u must be a row vector
-                    end
-                end
+                assert(iscolumn(xt), 'xt must be column vector')
+                assert(size(xt,1) == size(xh,1) &&  size(xt,1) == size(u,1), 'Dimension 1 of xt, xh, and u must be equivalent')
                 if any(num_inputs_array)
                     assert(length(u) >= max(num_inputs_array), 'Invalid number of inputs. Number of columns of u must be greater than or equal to the maximum number of inputs');
                     val = calcVal@Type(obj, xt, xh, u);
@@ -30,6 +28,8 @@ classdef Type_PowerFlow < Type
                     val = calcVal@Type(obj,xt,xh);
                 end
             elseif num_args == 2 || isempty(u)
+                assert(iscolumn(xt), 'xt must be column vector')
+                assert(size(xt,1) == size(xh,1), 'Dimension 1 of xt and xh must be equivalent')
                 assert(all(num_inputs_array == 0), "Input argument 'u' required'");
                 val = calcVal@Type(obj, xt, xh);
             else
@@ -40,14 +40,10 @@ classdef Type_PowerFlow < Type
         function val = calcJac(obj, xt, xh, u) % Calculates type Jacobian with symbolic 'vars' substituted with numeric 'vars_'
             num_args = nargin-1; % Matlab counts obj as an input arguments
             num_inputs_array = [obj.num_inputs];
+            
             if num_args == 3 && ~isempty(u)
-                if isvector(u)
-                    if iscolumn(u)
-                        u = u'; % Vector of inputs u must be a row vector
-                    end
-                else
-                    error('u must be a vector of inputs')
-                end
+                assert(iscolumn(xt), 'xt must be column vector')
+                assert(size(xt,1) == size(xh,1) &&  size(xt,1) == size(u,1), 'Dimension 1 of xt, xh, and u must be equivalent')
                 if any(num_inputs_array)
                     assert(length(u) >= max(num_inputs_array), 'Invalid number of inputs. Number of columns of u must be greater than or equal to the maximum number of inputs');
                     val = calcJac@Type(obj, xt, xh, u);
@@ -55,6 +51,8 @@ classdef Type_PowerFlow < Type
                     val = calcJac@Type(obj,xt,xh);
                 end
             elseif num_args == 2 || isempty(u)
+                assert(iscolumn(xt), 'xt must be column vector')
+                assert(size(xt,1) == size(xh,1), 'Dimension 1 of xt and xh must be equivalent')
                 assert(all(num_inputs_array == 0), "Input argument 'u' required'");
                 val = calcJac@Type(obj, xt, xh);
             else

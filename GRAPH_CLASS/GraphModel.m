@@ -4,6 +4,7 @@ classdef GraphModel < Model
     %   Detailed explanation goes here
     properties
         graph Graph = Graph.empty()
+        AutomaticModify logical = true
     end
     
     properties (SetAccess = private)
@@ -28,8 +29,8 @@ classdef GraphModel < Model
 
         function init(obj)
             % make vertex matrices
-            obj.x_init  = vertcat(obj.graph.InternalVertices.Initial); 
-            obj.DynType = vertcat(obj.graph.InternalVertices.DynamicType); 
+            obj.x_init  = vertcat(obj.graph.DynamicVertices.Initial); 
+            obj.DynType = vertcat(obj.graph.DynamicVertices.DynamicType); 
             
             % D matrix
             Dmat = zeros(obj.graph.v_tot,obj.graph.Nee);
@@ -74,8 +75,8 @@ classdef GraphModel < Model
         end
         
         function x = defineStateNames(obj)
-            Desc = vertcat(obj.graph.DynamicVertices.Description);
-            Blks = vertcat(vertcat(obj.graph.DynamicVertices.Parent).Name);
+            Desc = vertcat(obj.graph.InternalVertices.Description);
+            Blks = vertcat(vertcat(obj.graph.InternalVertices.Parent).Name);
             x = join([Blks,repmat('\',length(Blks),1),Desc]);
         end
         
@@ -257,9 +258,22 @@ classdef GraphModel < Model
             P = CalcP(obj,x_full,u); % calculates power flows
             C = CalcC(obj,x_full); % calcualtes capacitance
             
-            % Solve system dynamics           
-            eqnA(1:sum(idx_x_a),1) = -obj.graph.M(idx_x_a,:)*P + obj.D(idx_x_a,:)*P_e == 0; % system of algebraic equations
+            % Solve system dynamics
+            % Process Algebraic States
+            eqnA_temp = -obj.graph.M(idx_x_a,:)*P + obj.D(idx_x_a,:)*P_e;
+            if obj.AutomaticModify
+                for i = 1:length(eqnA_temp)
+                    eqn = eqnA_temp(i);
+                    factors = factor(eqn);
+                    if ismember(x_a(i), factors)
+                        eqn = simplify(eqn/x_a(i));
+                    end
+                    eqnA_temp(i,1) = eqn;
+                end
+            end
+            eqnA(1:sum(idx_x_a),1) = eqnA_temp == 0; % system of algebraic equations
             eqnD(1:sum(idx_x_d),1) = diag(C(idx_x_d))^-1*(-obj.graph.M(idx_x_d,:)*P + obj.D(idx_x_d,:)*P_e); % system of dynamic equations (
+            
             [A,Bu] = equationsToMatrix(eqnA,x_a); % convert eqnA to the form Ax=B
             x_a_solution = linsolve(A,Bu); % find solution to the algebraic system
             x_d_solution = simplifyFraction(subs(eqnD,x_a,x_a_solution)); % plug in the algebraic system solution into the dynamic system equations
