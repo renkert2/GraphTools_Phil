@@ -18,6 +18,10 @@ classdef GraphModel < Model
         D % capacitance coefficient matrix
         B (:,:,:)% input mapping matrix   
     end
+    
+    properties (Dependent)
+        P_sym % Symbolic Representation of Power Flows
+    end
 
     methods
         function obj = GraphModel(varargin)
@@ -118,6 +122,14 @@ classdef GraphModel < Model
             x = join([Blks,repmat('\',length(Blks),1),Desc]);
         end
         
+        function P = get.P_sym(obj)
+            % Get state vector filled up with symbolic varialbes
+            x       = sym('x%d'      ,[obj.graph.v_tot        1]); % dynamic states
+            u       = sym('u%d'      ,[obj.graph.Nu           1]); % inputs
+            % Calculate power flows and capacitances
+            P = CalcP(obj,x,u); % calculates power flows
+        end
+        
         function [t,x] = Simulate(obj, inputs, disturbances, t_range, opts)
             arguments
                 obj
@@ -127,35 +139,41 @@ classdef GraphModel < Model
                 opts.PlotStates logical = true
                 opts.PlotInputs logical = false
                 opts.PlotDisturbances logical = false
+                opts.StateSelect = []
             end
             
             input_function_flag = isa(inputs, 'function_handle');
             disturbance_function_flag = isa(disturbances, 'function_handle');
             
-            if input_function_flag && disturbance_function_flag
-                xdot = @(t,x) obj.CalcF(x, inputs(t), disturbances(t));
-                xfull = @(t,x) obj.CalcG(x, inputs(t), disturbances(t));
-            elseif input_function_flag
-                xdot = @(t,x) obj.CalcF(x, inputs(t), disturbances);
-                xfull = @(t,x) obj.CalcG(x, inputs(t), disturbances);
-            elseif disturbance_function_flag
-                xdot = @(t,x) obj.CalcF(x, inputs, disturbances(t));
-                xfull = @(t,x) obj.CalcG(x, inputs, disturbances(t));
+            if ~isempty(obj.graph.DynamicVertices)
+                % Dynamic states exist
+                xdot = processArgs(obj.CalcF, inputs, disturbances);
+                [t,xdyn] = ode23t(xdot, t_range, obj.x_init);
+                if ~isempty(obj.graph.AlgebraicVertices)
+                    xfull = processArgs(obj.CalcG, inputs, disturbances);
+                    x = xfull(t',xdyn')';
+                else
+                    x = xdyn;
+                end
             else
-                xdot = @(t,x) obj.CalcF(x, inputs, disturbances);
-                xfull = @(t,x) obj.CalcG(x, inputs, disturbances);
+                % Internal States are all constant
+                xfull = processArgs(obj.CalcG, inputs, disturbances);
+                t = t_range;
+                x = repmat(xfull([],[]),1,2)';    
             end
             
-            [t,xdyn] = ode23t(xdot, t_range, obj.x_init);
-            x = xfull(t',xdyn')';
-            
             if any([opts.PlotStates opts.PlotInputs opts.PlotDisturbances])
-                figure
                 hold on
                 lgnd = string.empty();
                 if opts.PlotStates
+                    if opts.StateSelect
+                        x = x(:,opts.StateSelect);
+                        names = obj.StateNames(opts.StateSelect);
+                    else
+                        names = obj.StateNames;
+                    end
                     plot(t,x)
-                    lgnd = vertcat(lgnd, obj.StateNames);
+                    lgnd = vertcat(lgnd, names);
                 end
                 
                 if opts.PlotInputs && ~isempty(inputs)
@@ -177,6 +195,18 @@ classdef GraphModel < Model
                 end
                 legend(lgnd)
                 hold off
+            end
+            
+            function xfunc = processArgs(func, inputs_arg, disturbances_arg)               
+                if input_function_flag && disturbance_function_flag
+                    xfunc = @(t,x) func(x, inputs_arg(t), disturbances_arg(t));
+                elseif input_function_flag
+                    xfunc = @(t,x) func(x, inputs_arg(t), disturbances_arg);
+                elseif disturbance_function_flag
+                    xfunc = @(t,x) func(x, inputs_arg, disturbances_arg(t));
+                else
+                    xfunc = @(t,x) func(x, inputs_arg, disturbances_arg);
+                end
             end
         end
 
@@ -235,7 +265,6 @@ classdef GraphModel < Model
                 labeledge(h,obj.graph.Ne+1:obj.graph.Ne+obj.graph.Nee,obj.DisturbanceNames(obj.graph.Nev+1:end))  
             end
         end
-
           
         function SymbolicSolve(obj) % this function will only work for symbolic expressions at the moment
             idx_x_d = (sum(abs(obj.C_coeff(1:obj.graph.Nv,:)),2) ~= 0);
@@ -260,23 +289,35 @@ classdef GraphModel < Model
             
             % Solve system dynamics
             % Process Algebraic States
-            eqnA_temp = -obj.graph.M(idx_x_a,:)*P + obj.D(idx_x_a,:)*P_e;
-            if obj.AutomaticModify
-                for i = 1:length(eqnA_temp)
-                    eqn = eqnA_temp(i);
-                    factors = factor(eqn);
-                    if ismember(x_a(i), factors)
-                        eqn = simplify(eqn/x_a(i));
+            if any(idx_x_a)
+                eqnA_temp = -obj.graph.M(idx_x_a,:)*P + obj.D(idx_x_a,:)*P_e;
+                if obj.AutomaticModify
+                    for i = 1:length(eqnA_temp)
+                        eqn = eqnA_temp(i);
+                        factors = factor(eqn);
+                        if ismember(x_a(i), factors)
+                            eqn = simplify(eqn/x_a(i));
+                        end
+                        eqnA_temp(i,1) = eqn;
                     end
-                    eqnA_temp(i,1) = eqn;
                 end
+                eqnA(1:sum(idx_x_a),1) = eqnA_temp == 0; % system of algebraic equations
+                [A,Bu] = equationsToMatrix(eqnA,x_a); % convert eqnA to the form Ax=B
+                x_a_solution = linsolve(A,Bu); % find solution to the algebraic system
+            else
+                x_a_solution = sym.empty();
             end
-            eqnA(1:sum(idx_x_a),1) = eqnA_temp == 0; % system of algebraic equations
-            eqnD(1:sum(idx_x_d),1) = diag(C(idx_x_d))^-1*(-obj.graph.M(idx_x_d,:)*P + obj.D(idx_x_d,:)*P_e); % system of dynamic equations (
             
-            [A,Bu] = equationsToMatrix(eqnA,x_a); % convert eqnA to the form Ax=B
-            x_a_solution = linsolve(A,Bu); % find solution to the algebraic system
-            x_d_solution = simplifyFraction(subs(eqnD,x_a,x_a_solution)); % plug in the algebraic system solution into the dynamic system equations
+            if any(idx_x_d)
+                eqnD(1:sum(idx_x_d),1) = diag(C(idx_x_d))^-1*(-obj.graph.M(idx_x_d,:)*P + obj.D(idx_x_d,:)*P_e); % system of dynamic equations (
+                if any(idx_x_a)
+                    x_d_solution = simplifyFraction(subs(eqnD,x_a,x_a_solution)); % plug in the algebraic system solution into the dynamic system equations
+                else
+                    x_d_solution = simplifyFraction(eqnD);
+                end
+            else
+                x_d_solution = sym.empty();
+            end
                         
             % Store symbolic calculations
             obj.f_sym = x_d_solution; % system derivatives
