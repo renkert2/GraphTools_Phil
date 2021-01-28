@@ -131,6 +131,12 @@ classdef GraphModel < Model
         end
         
         function [t,x] = Simulate(obj, inputs, disturbances, t_range, opts)
+            % SIMULATE(GraphModel, inputs, disturbances, t_range, opts)
+            % inputs and disturbances must be column vectors of appropriate size.
+            % Inputs and disturbances can be anonymous functions of time or constant values
+            % Simulate usees the first and last entries of t_range if dynamic states are calculated
+            % with ODC23t, or the entire t_range vector if only algebraic states are calculated
+            
             arguments
                 obj
                 inputs
@@ -147,8 +153,8 @@ classdef GraphModel < Model
             
             if ~isempty(obj.graph.DynamicVertices)
                 % Dynamic states exist
-                xdot = processArgs(obj.CalcF, inputs, disturbances);
-                [t,xdyn] = ode23t(xdot, t_range, obj.x_init);
+                xdot = processArgs(obj.CalcF, inputs, disturbances); % Might need to change processArgs so things run faster
+                [t,xdyn] = ode23t(xdot, [t_range(1) t_range(end)], obj.x_init);
                 if ~isempty(obj.graph.AlgebraicVertices)
                     xfull = processArgs(obj.CalcG, inputs, disturbances);
                     x = xfull(t',xdyn')';
@@ -159,7 +165,7 @@ classdef GraphModel < Model
                 % Internal States are all constant
                 xfull = processArgs(obj.CalcG, inputs, disturbances);
                 t = t_range;
-                x = repmat(xfull([],[]),1,2)';    
+                x = xfull(t,[])';    
             end
             
             if any([opts.PlotStates opts.PlotInputs opts.PlotDisturbances])
@@ -201,11 +207,11 @@ classdef GraphModel < Model
                 if input_function_flag && disturbance_function_flag
                     xfunc = @(t,x) func(x, inputs_arg(t), disturbances_arg(t));
                 elseif input_function_flag
-                    xfunc = @(t,x) func(x, inputs_arg(t), disturbances_arg);
+                    xfunc = @(t,x) func(x, inputs_arg(t), repmat(disturbances_arg,1,numel(t)));
                 elseif disturbance_function_flag
-                    xfunc = @(t,x) func(x, inputs_arg, disturbances_arg(t));
+                    xfunc = @(t,x) func(x, repmat(inputs_arg,1,numel(t)), disturbances_arg(t));
                 else
-                    xfunc = @(t,x) func(x, inputs_arg, disturbances_arg);
+                    xfunc = @(t,x) func(x, repmat(inputs_arg,1,numel(t)), repmat(disturbances_arg,1,numel(t)));
                 end
             end
         end
