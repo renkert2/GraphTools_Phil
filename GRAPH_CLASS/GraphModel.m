@@ -146,6 +146,7 @@ classdef GraphModel < Model
                 opts.PlotInputs logical = false
                 opts.PlotDisturbances logical = false
                 opts.StateSelect = []
+                opts.Solver = @ode23t
             end
             
             input_function_flag = isa(inputs, 'function_handle');
@@ -154,7 +155,7 @@ classdef GraphModel < Model
             if ~isempty(obj.graph.DynamicVertices)
                 % Dynamic states exist
                 xdot = processArgs(obj.CalcF, inputs, disturbances); % Might need to change processArgs so things run faster
-                [t,xdyn] = ode23t(xdot, [t_range(1) t_range(end)], obj.x_init);
+                [t,xdyn] = opts.Solver(xdot, [t_range(1) t_range(end)], obj.x_init);
                 if ~isempty(obj.graph.AlgebraicVertices)
                     xfull = processArgs(obj.CalcG, inputs, disturbances);
                     x = xfull(t',xdyn')';
