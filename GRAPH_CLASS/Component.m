@@ -35,15 +35,38 @@ classdef Component < matlab.mixin.Heterogeneous & handle
         function set.Name(obj, name)
             obj.Name = string(name);
         end
-        
+    end
+    
+    methods (Sealed, Access = protected)
         function init_super(obj)
+            obj.init(); % Concrete method that can be overriden by subclasses
             obj.DefineComponent();
             obj.DefineChildren();
         end
-       
+        
+        function DefineChildren(obj)
+            try
+                obj.graph.Parent = obj;
+                graph_children = ["Vertices", "Edges", "Inputs"];
+                for child = graph_children
+                    for i = 1:numel(obj.graph.(child))
+                        obj.graph.(child)(i).Parent = obj;
+                    end
+                end
+            catch
+                warning('Error defining component as parent object')
+            end
+        end
     end
     
-    methods (Sealed)
+        
+    methods (Access = protected)        
+        function init(obj)
+            % Placeholder - Optionally modified in subclasses
+        end
+    end
+    
+    methods (Sealed) 
         function gSys = Combine(C, ConnectP, varargin)
             arguments
                 C (:,1) Component % Array of components to be connected in a system
@@ -77,29 +100,12 @@ classdef Component < matlab.mixin.Heterogeneous & handle
             G = [C.graph];
             
             % Generate System Graph with Combine(G, ConnectE)
-            gSys = Combine(G, ConnectE, ConnectV, varargin{:});
-            
-        end
-    end
-    
-    methods (Access = protected)        
-        function DefineChildren(obj)
-            try
-                obj.graph.Parent = obj;
-                graph_children = ["Vertices", "Edges", "Inputs"];
-                for child = graph_children
-                    for i = 1:numel(obj.graph.(child))
-                        obj.graph.(child)(i).Parent = obj;
-                    end
-                end
-            catch
-                warning('Error defining component as parent object')
-            end
+            gSys = Combine(G, ConnectE, ConnectV, varargin{:});  
         end
     end
     
     methods (Abstract, Access = protected)
-        DefineComponent(obj)
+        DefineComponent(obj) % Required in subclasses
     end
 end
 
