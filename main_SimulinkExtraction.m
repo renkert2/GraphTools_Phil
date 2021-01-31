@@ -18,4 +18,4 @@ SysModel = GraphModel(SystemGraph);
 
 %% Plot System Graph and Model
 figure
-plot(SysModel,'NodeColor','r','EdgeColor','b','DetailedLabels','States');
+plot(SysModel,'NodeColor','r','EdgeColor','b','DetailedLabels','States','DetailedLabels','Disturbances');
