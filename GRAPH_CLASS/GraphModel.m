@@ -12,7 +12,7 @@ classdef GraphModel < Model
         CType Type_Capacitance = Type_Capacitance.empty()
         P_coeff % capacitance coefficient matrix
         PType Type_PowerFlow = Type_PowerFlow.empty()
-        CapFunction (:,1) LookupFunction = LookupFunction.empty()
+        %CapFunction (:,1) LookupFunction = LookupFunction.empty()
         x_init % capacitance coefficient matrix
         DynType DynamicTypes = DynamicTypes.EnergyFlow
         D % capacitance coefficient matrix
@@ -66,9 +66,7 @@ classdef GraphModel < Model
             [obj.P_coeff,obj.PType] = MakeCoeffMatrix(Eint,PTypeAll,numPType);
             
             % Lookup Functions
-            obj.CapFunction = vertcat(obj.graph.InternalVertices(:).CapFunction);
-%             Functions = vertcat(obj.graph.InternalVertices(:).CapFunction);
-%             obj.CapFunction = Functions(~arrayfun(@(x) isempty(x.Breakpoints),Functions));
+            %obj.CapFunction = vertcat(obj.graph.InternalVertices(:).CapFunction);
          
             obj.Nx = sum(any(obj.C_coeff ~= 0,2));
             obj.Nu = obj.graph.Nu;
@@ -412,10 +410,11 @@ classdef GraphModel < Model
             % function lookups
             LF = sym(ones(obj.graph.Nv,1));
             for i = 1:length(LF)
-                if ~isempty(obj.CapFunction(i).Breakpoints)
-                    [~,idx] = ismember(obj.CapFunction(i).Breakpoints(:),obj.graph.Vertices);
+                cf = obj.graph.Vertices(i).CapFunction;
+                if ~isempty(cf)
+                    [~,idx] = ismember(cf.Breakpoints(:),obj.graph.Vertices);
                     input = num2cell(x0(idx));
-                    LF(i) = obj.CapFunction(i).Function.calcVal(input{:});
+                    LF(i) = cf.Function.calcVal(input{:});
                 end
             end
             
