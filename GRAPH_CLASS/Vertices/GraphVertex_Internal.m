@@ -3,6 +3,9 @@ classdef GraphVertex_Internal < GraphVertex
     %   Detailed explanation goes here  
     properties
         CapFunction (1,1) LookupFunction
+        Capacitance (:,1) Type_Capacitance = Type_Capacitance.empty();
+        Coefficient (:,1) {mustBeNonnegative} = 0
+        Initial (1,1) double = 0
     end
     
     methods

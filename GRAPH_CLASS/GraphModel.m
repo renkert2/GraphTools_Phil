@@ -56,9 +56,9 @@ classdef GraphModel < Model
             end
             
             % C matrix
-            CTypeAll = vertcat(obj.graph.Vertices(:).Capacitance);
-            numCType = arrayfun(@(x) length(x.Capacitance),obj.graph.Vertices);
-            [obj.C_coeff,obj.CType] = MakeCoeffMatrix(obj.graph.Vertices,CTypeAll,numCType);
+            CTypeAll = vertcat(obj.graph.InternalVertices(:).Capacitance);
+            numCType = arrayfun(@(x) length(x.Capacitance),obj.graph.InternalVertices);
+            [obj.C_coeff,obj.CType] = MakeCoeffMatrix(obj.graph.InternalVertices,CTypeAll,numCType);
 
             % P matrix
             PTypeAll = vertcat(Eint(:).PowerFlow); % list of all capacitance types

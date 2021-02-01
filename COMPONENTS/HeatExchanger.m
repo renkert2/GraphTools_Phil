@@ -54,11 +54,15 @@ classdef HeatExchanger < Component
             % Define Vertices
             Vertex(1) = GraphVertex_Internal('Description','Temp S1','Capacitance',C(1),'Coefficient',10,'Initial',25, 'VertexType', 'Temperature');
             Vertex(2) = GraphVertex_Internal('Description','Temp S2','Capacitance',C(1),'Coefficient',10,'Initial',25, 'VertexType', 'Temperature');
-            Vertex(3) = GraphVertex_External('Description','Inlet S1','Capacitance',C(1));
-            Vertex(4) = GraphVertex_External('Description','Inlet S2','Capacitance',C(1));
-            Vertex(5) = GraphVertex_External('Description','Outlet S1','Capacitance',C(1));
-            Vertex(6) = GraphVertex_External('Description','Outlet S2','Capacitance',C(1));
-            
+            Vertex(3) = GraphVertex_External('Description','Inlet S1');
+            Vertex(4) = GraphVertex_External('Description','Inlet S2');
+            Vertex(5) = GraphVertex_External('Description','Outlet S1');
+            Vertex(6) = GraphVertex_External('Description','Outlet S2');
+%             Vertex(3) = GraphVertex_External('Description','Inlet S1','Capacitance',C(1));
+%             Vertex(4) = GraphVertex_External('Description','Inlet S2','Capacitance',C(1));
+%             Vertex(5) = GraphVertex_External('Description','Outlet S1','Capacitance',C(1));
+%             Vertex(6) = GraphVertex_External('Description','Outlet S2','Capacitance',C(1));
+%             
             % Define Inputs
             I(1) = GraphInput('Side 1 Flow');
             I(2) = GraphInput('Side 2 Flow');

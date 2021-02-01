@@ -44,10 +44,12 @@ classdef SplitJunction < Component
             % define vertices
             Vertex(1) = GraphVertex_Internal('Description','Junction Temp','Capacitance',C(1),'Capacitance',C(1), 'VertexType', 'Temperature');
             for i = 1:obj.n_in
-                Vertex(i+1) = GraphVertex_External('Description',['Inlet' num2str(i)],'Capacitance',C(1));
+                Vertex(i+1) = GraphVertex_External('Description',['Inlet' num2str(i)]);
+%                 Vertex(i+1) = GraphVertex_External('Description',['Inlet' num2str(i)],'Capacitance',C(1));
             end      
             for i = obj.n_in+1:obj.n_in+obj.n_out
-                Vertex(i+1) = GraphVertex_External('Description',['Outlet' num2str(i-obj.n_in)],'Capacitance',C(1));
+                Vertex(i+1) = GraphVertex_External('Description',['Outlet' num2str(i-obj.n_in)]);
+%                 Vertex(i+1) = GraphVertex_External('Description',['Outlet' num2str(i-obj.n_in)],'Capacitance',C(1));
             end 
             
             % define edges
