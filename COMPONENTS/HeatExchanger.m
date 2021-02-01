@@ -64,8 +64,8 @@ classdef HeatExchanger < Component
 %             Vertex(6) = GraphVertex_External('Description','Outlet S2','Capacitance',C(1));
 %             
             % Define Inputs
-            I(1) = GraphInput('Side 1 Flow');
-            I(2) = GraphInput('Side 2 Flow');
+            I(1) = GraphInput('Description','Side 1 Flow','Bounds',Limits(0,1));
+            I(2) = GraphInput('Description','Side 2 Flow','Bounds',Limits(0,1));
             
             % Define Edges
             Edge(1) = GraphEdge_Internal('PowerFlow',P(1),'Input',I(1),'Coefficient',obj.cp_f1,'TailVertex',Vertex(E(1,1)),'HeadVertex',Vertex(E(1,2)));

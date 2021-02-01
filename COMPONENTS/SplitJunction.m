@@ -60,7 +60,7 @@ classdef SplitJunction < Component
                 else
                     desc = sprintf("Outflow %d", i-obj.n_in);
                 end
-                I(i) = GraphInput(desc);
+                I(i) = GraphInput('Description',desc,'Bounds',Limits(0,1));
                 Edge(i) = GraphEdge_Internal('PowerFlow',P(1),'Input',I(i),'Coefficient',obj.cp_f,'TailVertex',Vertex(E(i,1)),'HeadVertex',Vertex(E(i,2)));
             end
                                 

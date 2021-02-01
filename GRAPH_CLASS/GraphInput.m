@@ -3,6 +3,7 @@ classdef GraphInput < handle
     
     properties
         Description string = string.empty() 
+        Bounds Limits = Limits() 
     end
     
     properties (SetAccess = ?Component)

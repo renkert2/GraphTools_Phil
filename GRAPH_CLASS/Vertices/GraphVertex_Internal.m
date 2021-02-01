@@ -6,6 +6,7 @@ classdef GraphVertex_Internal < GraphVertex
         Capacitance (:,1) Type_Capacitance = Type_Capacitance.empty();
         Coefficient (:,1) {mustBeNonnegative} = 0
         Initial (1,1) double = 0
+        Bounds Limits = Limits()
     end
     
     methods

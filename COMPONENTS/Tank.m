@@ -55,8 +55,8 @@ classdef Tank < Component
 %             Vertex(4) = GraphVertex_External('Description','Outlet','Capacitance',C(1));
 %             Vertex(5) = GraphVertex_External('Description','Sink','Capacitance',C(1));            
             % define Inputs
-            I(1) = GraphInput("Inflow");
-            I(2) = GraphInput("Outflow");
+            I(1) = GraphInput('Description',"Inflow",'Bounds',Limits(0,1));
+            I(2) = GraphInput('Description',"Outflow",'Bounds',Limits(0,1));
             
             % define edges
             Edge(1) = GraphEdge_Internal('PowerFlow',P(1),'Input',I(1),'Coefficient',obj.cp_f,'TailVertex',Vertex(E(1,1)),'HeadVertex',Vertex(E(1,2)));
