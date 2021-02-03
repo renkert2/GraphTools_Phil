@@ -2,7 +2,7 @@ classdef GraphVertex_Internal < GraphVertex
     %GRAPHVERTEX_INTERNAL Summary of this class goes here
     %   Detailed explanation goes here  
     properties
-        CapFunction (1,1) LookupFunction
+        CapFunction (:,1) LookupFunction = LookupFunction.empty()
     end
     
     methods

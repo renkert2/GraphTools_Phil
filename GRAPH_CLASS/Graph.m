@@ -77,12 +77,12 @@ classdef Graph < matlab.mixin.Copyable
     end
     
     properties (Dependent) % make this hidden at some point
-        InternalVertices  (:,1) GraphVertex = GraphVertex.empty()
-        DynamicVertices   (:,1) GraphVertex = GraphVertex.empty()
-        AlgebraicVertices (:,1) GraphVertex = GraphVertex.empty()
-        ExternalVertices  (:,1) GraphVertex = GraphVertex.empty()
-        InternalEdges     (:,1) GraphEdge   = GraphEdge.empty() 
-        ExternalEdges     (:,1) GraphEdge   = GraphEdge.empty() 
+        InternalVertices  (:,1) GraphVertex
+        DynamicVertices   (:,1) GraphVertex
+        AlgebraicVertices (:,1) GraphVertex
+        ExternalVertices  (:,1) GraphVertex
+        InternalEdges     (:,1) GraphEdge
+        ExternalEdges     (:,1) GraphEdge 
     end
     
     properties (SetAccess = ?Component)
@@ -203,7 +203,7 @@ classdef Graph < matlab.mixin.Copyable
             hold on; scatter(xLoc,yLoc,5*h.MarkerSize,'MarkerEdgeColor',h.EdgeColor(1,:)); hold off; % plot external edge tail vertices
         end
         
-        function [G_sys, ConnectE, ConnectV] = Combine(G, ConnectE, ConnectV, opts) % Input is vector of GraphClass elements
+        function [obj, ConnectE, ConnectV] = Combine(G, ConnectE, ConnectV, opts) % Input is vector of GraphClass elements
             % G - GraphClass Class Array
             % ConnectX - Cell vector with first list containing component
             % indices; second list containing equivalent properties (edges
@@ -380,7 +380,7 @@ classdef Graph < matlab.mixin.Copyable
             end
             
             % Instantiate and Return the Graph Object
-            G_sys = Graph(sys_verts, sys_edges);
+            obj = Graph(sys_verts, sys_edges);
             
             function ConnectX = formatConnectX(ConnectX, class, prop)
                 if all(cellfun(@(x) isa(x, class), ConnectX),'all') % Connect X Already given as lists of equivalent GraphVertices or GraphEdges with dominant element in front of list
