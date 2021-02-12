@@ -5,7 +5,7 @@ classdef Component < matlab.mixin.Heterogeneous & handle
     
     properties %(SetAccess = protected)        
         % Block Name
-        Name string = string.empty()
+        Name string = "Component"
         graph Graph = Graph.empty()
         Ports ComponentPort = ComponentPort.empty()
     end

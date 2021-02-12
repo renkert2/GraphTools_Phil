@@ -33,7 +33,12 @@ classdef GraphModel < Model
 
         function init(obj)
             % make vertex matrices
-            obj.x_init  = vertcat(obj.graph.DynamicVertices.Initial); 
+            if ~isempty(obj.graph.DynamicVertices)
+                obj.x_init = vertcat(obj.graph.DynamicVertices.Initial);
+            else
+                obj.x_init = [];
+            end
+%             obj.x_init  = vertcat(obj.graph.DynamicVertices.Initial); 
             obj.DynType = vertcat(obj.graph.DynamicVertices.DynamicType); 
             
             % D matrix
@@ -79,9 +84,14 @@ classdef GraphModel < Model
         end
         
         function x = defineStateNames(obj)
-            Desc = vertcat(obj.graph.InternalVertices.Description);
-            Blks = vertcat(vertcat(obj.graph.InternalVertices.Parent).Name);
-            x = join([Blks,repmat('\',length(Blks),1),Desc]);
+            if ~isempty(obj.graph.DynamicVertices)
+                Desc = vertcat(obj.graph.DynamicVertices.Description);
+                Blks = vertcat(vertcat(obj.graph.DynamicVertices.Parent).Name);
+                x = join([Blks,repmat('\',length(Blks),1),Desc]);
+            else
+                x = string.empty();
+            end
+            
         end
         
         function x = defineInputNames(obj)
