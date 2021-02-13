@@ -8,7 +8,7 @@ classdef GraphVertex < handle & matlab.mixin.Heterogeneous & matlab.mixin.Copyab
         VertexType VertexTypes = "Abstract"
         DynamicType DynamicTypes = "EnergyFlow" % Dynamic Type: 1 - Energy Flow, 2 - State Flow
         Capacitance (:,1) Type_Capacitance = Type_Capacitance.empty();
-        Coefficient (:,1) {mustBeNonnegative} = 0
+        Coefficient (:,1) = 0
         Initial = 0
     end
     

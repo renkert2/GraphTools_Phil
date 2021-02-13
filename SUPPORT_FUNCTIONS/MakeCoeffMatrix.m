@@ -26,6 +26,10 @@ function [Coeff,TypeSys] = MakeCoeffMatrix (All,TypeAll,numType)
 
     [~, IB, IC] = unique(vertcat(TypeAll(:).Val_Sym)); % get unique capactitance types
     Coeff = zeros(length(All),max(IC)); % initialize stacked capacitance coefficient matrix
+    if any(arrayfun(@(x) isa(x.Coefficient, 'sym'), All))
+        Coeff = sym(Coeff);
+    end
+    
     j = 0;
     for i = 1:length(All) % loop through all vertices and assign coefficients
         Coeff(i,IC(i+j:i-1+numType(i)+j)) = All(i).Coefficient; % assign values

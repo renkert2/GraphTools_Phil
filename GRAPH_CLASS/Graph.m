@@ -35,6 +35,10 @@ classdef Graph < matlab.mixin.Copyable
         Edges (:,1) GraphEdge = GraphEdge.empty()
         % Allow Reordering of Vertices in graph.init()
         ReorderElements logical = true
+        
+                
+        SymParams (:,1) sym = sym.empty
+        SymParams_Vals (:,1) double = [];
     end
     
     properties (SetAccess = private)
@@ -42,6 +46,9 @@ classdef Graph < matlab.mixin.Copyable
     
         % Number of vertices
         Nv (1,1) double %{mustBeInteger,mustBeNonnegative}
+        
+        % Number of dynamic states / vertices
+        Nx (1,1) double
         
         % Number of edges
         Ne (1,1) double %{mustBeInteger,mustBeNonnegative}
@@ -60,8 +67,6 @@ classdef Graph < matlab.mixin.Copyable
         
         % Incidence Matrix
         M (:,:) double %{mustBeInteger,mustBeMember({-1,1,0,[]})}; requires default value for Validation Functions
-
-      
     end
     
     properties (Dependent)
@@ -127,10 +132,40 @@ classdef Graph < matlab.mixin.Copyable
             x = obj.Vertices(arrayfun(@(x) isa(x,'GraphVertex_Internal'),obj.Vertices));
         end 
         function x = get.DynamicVertices(obj) % these should be functions of the vertex and edge objects
-            x = obj.Vertices(arrayfun(@(x) (isa(x,'GraphVertex_Internal') && (sum(abs(x.Coefficient))>0)),obj.Vertices));
+            x = obj.Vertices(arrayfun(@DynTest,obj.Vertices));
+            
+            function l = DynTest(x)
+                coeff = x.Coefficient;
+                if isa(x,'GraphVertex_Internal')
+                    if isa(coeff, 'sym')
+                        l = ~ all(arrayfun(@(x) isequal(x, sym(0)), coeff));
+                    elseif isa(coeff, 'double')
+                        l = sum(abs(coeff))>0;
+                    else
+                        error('Invalid coefficient type')
+                    end
+                else
+                    l = false;
+                end
+            end
         end
         function x = get.AlgebraicVertices(obj) % these should be functions of the vertex and edge objects
-            x = obj.Vertices(arrayfun(@(x) (isa(x,'GraphVertex_Internal') && (sum(abs(x.Coefficient))==0)),obj.Vertices));
+            x = obj.Vertices(arrayfun(@AlgTest,obj.Vertices));
+            
+            function l = AlgTest(x)
+                coeff = x.Coefficient;
+                if isa(x,'GraphVertex_Internal')
+                    if isa(coeff, 'sym')
+                        l = all(arrayfun(@(x) isequal(x, sym(0)), coeff));
+                    elseif isa(coeff, 'double')
+                        l = sum(abs(coeff))==0;
+                    else
+                        error('Invalid coefficient type')
+                    end
+                else
+                    l = false;
+                end
+            end
         end
         function x = get.InternalEdges(obj) % these should be functions of the vertex and edge objects
             x = obj.Edges(arrayfun(@(x) isa(x,'GraphEdge_Internal'),obj.Edges));
@@ -154,6 +189,7 @@ classdef Graph < matlab.mixin.Copyable
 
             % calculate graph size, order, etc
             obj.Nv  = length(obj.InternalVertices);
+            obj.Nx  = length(obj.DynamicVertices);
             obj.Ne  = length(obj.InternalEdges);
             obj.Nu  = length(obj.Inputs);
             obj.Nev = length(obj.Vertices)-obj.Nv;
@@ -382,6 +418,14 @@ classdef Graph < matlab.mixin.Copyable
             % Instantiate and Return the Graph Object
             obj = Graph(sys_verts, sys_edges);
             
+            %% Assign SymParams and SymParams_Vals
+            sym_params = vertcat(G.SymParams);
+            %unique(sym_params);
+            sym_vals = vertcat(G.SymParams_Vals);
+            
+            obj.SymParams = sym_params;
+            obj.SymParams_Vals = sym_vals;
+            %% Helper Functions
             function ConnectX = formatConnectX(ConnectX, class, prop)
                 if all(cellfun(@(x) isa(x, class), ConnectX),'all') % Connect X Already given as lists of equivalent GraphVertices or GraphEdges with dominant element in front of list
                     return

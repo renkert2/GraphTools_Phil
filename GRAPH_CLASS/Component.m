@@ -3,11 +3,13 @@ classdef Component < matlab.mixin.Heterogeneous & handle
     %Battery, Motor, Heat Exchanger, etc...
     %   Detailed explanation goes here
     
-    properties %(SetAccess = protected)        
-        % Block Name
+    properties       
         Name string = string.empty()
         graph Graph = Graph.empty()
         Ports ComponentPort = ComponentPort.empty()
+        
+        SymParams (:,1) sym = sym.empty
+        SymParams_Vals (:,1) double = [];
     end
     
     methods
@@ -37,13 +39,16 @@ classdef Component < matlab.mixin.Heterogeneous & handle
         end
     end
     
-    methods (Sealed, Access = protected)
+    methods (Sealed)
         function init_super(obj)
             obj.init(); % Concrete method that can be overriden by subclasses
             obj.DefineComponent();
             obj.DefineChildren();
+            obj.DefineSymParams();
         end
-        
+    end
+    
+    methods (Sealed, Access = protected)
         function DefineChildren(obj)
             try
                 obj.graph.Parent = obj;
@@ -57,6 +62,27 @@ classdef Component < matlab.mixin.Heterogeneous & handle
                 warning('Error defining component as parent object')
             end
         end
+        
+        function DefineSymParams(obj)
+            props = properties(obj);
+            
+            sym_params = sym.empty();
+            sym_params_vals = [];
+            
+            for i = 1:numel(props)
+                prop = obj.(props{i});
+                if isa(prop, 'symParam')
+                    sym_params(end+1,1) = prop;
+                    sym_params_vals(end+1,1) = double(prop);
+                end
+            end
+            
+            obj.SymParams = sym_params;
+            obj.SymParams_Vals = sym_params_vals;
+            
+            obj.graph.SymParams = sym_params;
+            obj.graph.SymParams_Vals = sym_params_vals;
+        end          
     end
     
         
