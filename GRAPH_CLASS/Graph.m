@@ -35,6 +35,9 @@ classdef Graph < matlab.mixin.Copyable
         Edges (:,1) GraphEdge = GraphEdge.empty()
         % Allow Reordering of Vertices in graph.init()
         ReorderElements logical = true
+        % Graph Outputs
+        Outputs GraphOutput = GraphOutput.empty()
+
     end
     
     properties (SetAccess = private)
@@ -335,7 +338,8 @@ classdef Graph < matlab.mixin.Copyable
             %% Construct Vertex and Edge Vectors
             all_verts = vertcat(G.Vertices);
             all_edges = vertcat(G.Edges);
-            
+            all_outputs = vertcat(G.Outputs);
+           
             sys_verts = all_verts(~ismember(all_verts, vertex_conn_map(:,1)));
             sys_edges = all_edges(~ismember(all_edges, edge_conn_map(:,1)));
             
@@ -379,8 +383,32 @@ classdef Graph < matlab.mixin.Copyable
                 end
             end
             
+            for i = 1:numel(all_outputs)                    
+                    % Replace inputs in system outputs
+                    if ~isempty(input_conn_map)
+                        inputs = [];
+                        idx = [];
+                        for j = 1:length(all_outputs(i).Breakpoints)
+                            if isa(all_outputs(i).Breakpoints{j},'GraphInput')
+                                inputs = [inputs all_outputs(i).Breakpoints{j}];
+                                idx = [ idx j];
+                            end
+                        end
+                        if ~isempty(inputs)
+                            for j = 1:numel(inputs)
+                                log_index = inputs(j) == input_conn_map(:,1);
+                                if any(log_index)
+                                    all_outputs(i).Breakpoints{idx(j)} = input_conn_map(log_index,2);
+                                end
+                            end
+                        end
+                    end
+            end
+            
+            
             % Instantiate and Return the Graph Object
             obj = Graph(sys_verts, sys_edges);
+            obj.Outputs = all_outputs;
             
             function ConnectX = formatConnectX(ConnectX, class, prop)
                 if all(cellfun(@(x) isa(x, class), ConnectX),'all') % Connect X Already given as lists of equivalent GraphVertices or GraphEdges with dominant element in front of list

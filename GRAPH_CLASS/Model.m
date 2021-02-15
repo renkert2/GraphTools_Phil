@@ -5,9 +5,8 @@ classdef Model < matlab.mixin.Copyable
     properties (SetAccess = protected) 
         Nx % number of states
         Nu % number of inputs
-        Nd % number of disturbances
-        
-%         Ny % number of outputs
+        Nd % number of disturbances      
+        Ny % number of outputs
 
     end
     

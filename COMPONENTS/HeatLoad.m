@@ -62,6 +62,11 @@ classdef HeatLoad < Component
             p(3) = ComponentPort('Description','Outflow','Element',Edge(2));
             obj.Ports = p;
             
+            % Define Additional Outputs
+            O = Type([sym('b1') sym('b2')],{sym('b1') sym('b2')},'b1*b2');
+            o = GraphOutput('Description','Test','Function',O,'Breakpoints',{Vertex(1) I(1)});
+            obj.graph.Outputs = o;
+            
         end
     end
 end

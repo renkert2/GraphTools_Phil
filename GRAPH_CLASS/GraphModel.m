@@ -81,6 +81,7 @@ classdef GraphModel < Model
             obj.Nx = sum(any(obj.C_coeff ~= 0,2));
             obj.Nu = obj.graph.Nu;
             obj.Nd = obj.graph.Nev + obj.graph.Nee;
+            obj.Ny = obj.graph.Nv + numel(obj.graph.Outputs);
             obj.SymbolicSolve
             
             init@Model(obj); 
@@ -130,8 +131,15 @@ classdef GraphModel < Model
         end
         
         function x = defineOutputNames(obj)
-            Desc = vertcat(obj.graph.InternalVertices.Description);
-            Blks = vertcat(vertcat(obj.graph.InternalVertices.Parent).Name);
+            DescX = vertcat(obj.graph.InternalVertices.Description);
+            BlksX = vertcat(vertcat(obj.graph.InternalVertices.Parent).Name);
+            
+            if ~isempty(obj.graph.Outputs)
+                DescY = vertcat(obj.graph.Outputs.Description);
+                BlksY = vertcat(vertcat(obj.graph.Outputs.Parent).Name);
+            end
+            Desc = [DescX; DescY];
+            Blks = [BlksX; BlksY];
             x = join([Blks,repmat('\',length(Blks),1),Desc]);
         end
         
@@ -288,7 +296,7 @@ classdef GraphModel < Model
             set(gcf,'WindowButtonDownFcn',@(f,~)edit_graph(f,h))
             
             function LabelStates(obj,h)
-                labelnode(h,1:obj.graph.Nv,obj.OutputNames)
+                labelnode(h,1:obj.graph.Nv,obj.OutputNames(1:obj.graph.Nv))
             end
 
             function LabelEdges(obj,h)
@@ -373,10 +381,21 @@ classdef GraphModel < Model
             else
                 x_d_solution = sym.empty();
             end
+            
+            if ~isempty(obj.graph.Outputs)
+                Y = CalcY_Sym(obj,x_full,u);
+                if any(idx_x_a)
+                    Y = simplifyFraction(subs(Y,x_a,x_a_solution)); % plug in the algebraic system solution
+                else
+                    Y = simplifyFraction(Y);
+                end   
+            else
+                Y = [];
+            end
                         
             % Store symbolic calculations
             obj.f_sym = x_d_solution; % system derivatives
-            obj.g_sym = [x_full(idx_x_d);x_a_solution]; % all system states       
+            obj.g_sym = [x_full(idx_x_d);x_a_solution;Y]; % all system states       
         end
             
         function [P] = CalcP_Sym(obj,x0,u0)
@@ -486,6 +505,36 @@ classdef GraphModel < Model
             
             
             C = LF.*c(1:obj.graph.Nv); % solve for the capacitance of each vertex  
+        end
+        
+        function [Y] = CalcY_Sym(obj,x0,u0)
+            % CalcY_Sym calculates the outputs of a graph model.              
+                    
+            % function lookups
+            OF = sym(ones(length(obj.graph.Outputs),1));
+            for i = 1:length(OF)
+                of = obj.graph.Outputs(i);
+                input = [];
+                if ~isempty(of)
+                    for j = 1:length(of.Breakpoints)
+                        if isa(of.Breakpoints{j},'GraphVertex')                           
+                            [~,idx] = ismember(of.Breakpoints{j},obj.graph.Vertices); 
+                            input = [input x0(idx)];
+                        elseif isa(of.Breakpoints{j},'GraphInput')     
+                            [~,idx] = ismember(of.Breakpoints{j},obj.graph.Inputs);
+                            input = [input u0(idx)];
+                        else
+                            error('Breakpoint not Vertex or Input object.')
+                        end
+                    
+                    end
+                    input = num2cell(input);
+                    OF(i) = of.Function.calcVal(input{:});
+                end
+            end
+            
+            
+            Y = OF; % solve for the capacitance of each vertex  
         end
         
         function P = CalcP(obj,x,u)

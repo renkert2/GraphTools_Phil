@@ -47,7 +47,7 @@ classdef Component < matlab.mixin.Heterogeneous & handle
         function DefineChildren(obj)
             try
                 obj.graph.Parent = obj;
-                graph_children = ["Vertices", "Edges", "Inputs"];
+                graph_children = ["Vertices", "Edges", "Inputs","Outputs"];
                 for child = graph_children
                     for i = 1:numel(obj.graph.(child))
                         obj.graph.(child)(i).Parent = obj;

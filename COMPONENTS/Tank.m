@@ -79,6 +79,11 @@ classdef Tank < Component
             p(3) = ComponentPort('Description','Outflow','Element',Edge(2));
             obj.Ports = p;
             
+            % Define Additional Outputs
+            O = Type([sym('b1') sym('b2') sym('b3')],{sym('b1') sym('b2') sym('b3')},'b1*b2+b3');
+            o = GraphOutput('Description','Test','Function',O,'Breakpoints',{Vertex(1) I(2) Vertex(2)});
+            obj.graph.Outputs = o;
+            
         end
     end
 end
