@@ -39,11 +39,13 @@ classdef HeatLoad < Component
             
             % Define Vertices
             Vertex(1) = GraphVertex_Internal('Description','Load Temp','Capacitance',C(1), 'VertexType', 'Temperature');
-            Vertex(2) = GraphVertex_External('Description','Inlet','Capacitance',C(1));
-            Vertex(3) = GraphVertex_External('Description','Outlet','Capacitance',C(1));
+            Vertex(2) = GraphVertex_External('Description','Inlet');
+            Vertex(3) = GraphVertex_External('Description','Outlet');
+%                         Vertex(2) = GraphVertex_External('Description','Inlet','Capacitance',C(1));
+%             Vertex(3) = GraphVertex_External('Description','Outlet','Capacitance',C(1));
             
             % Define Inputs
-            I(1) = GraphInput("HeatLoad Input 1");
+            I(1) = GraphInput('Description',"HeatLoad Input 1",'Bounds',Limits(0,1));
              
             % Define Edges
             Edge(1) = GraphEdge_Internal('PowerFlow',P(1),'Input',I(1),'Coefficient',obj.cp_f,'TailVertex',Vertex(E(1,1)),'HeadVertex',Vertex(E(1,2)));

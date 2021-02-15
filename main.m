@@ -39,7 +39,8 @@ end
 
 
 %%
-Sys = GraphModel(Combine(Comps,ConnectP'));
+SysGraph = Combine(Comps,ConnectP');
+Sys = GraphModel(SysGraph);
 figure
 plot(Sys,'NodeColor','r','EdgeColor','b','DetailedLabels','All');
 
