@@ -30,8 +30,8 @@ classdef Model < matlab.mixin.Copyable
     properties (SetAccess = protected)
         LinModel LinearModel = LinearModel.empty() % this could be another object
         
-        CalcF (1,1) function_handle = @(x)0 % calculates x_dot
-        CalcG (1,1) function_handle = @(x)0% calculates y  
+        CalcF_func (1,1) function_handle = @(x)0 % calculates x_dot
+        CalcG_func (1,1) function_handle = @(x)0% calculates y  
     end
      
     methods
@@ -52,9 +52,12 @@ classdef Model < matlab.mixin.Copyable
         end
 
         function init(obj)
-            x1       = sym('x%d'    ,[obj.Nx    1]); % dynamic states
-            u1       = sym('u%d'    ,[obj.Nu    1]); % inputs
-            d1       = sym('d%d'    ,[obj.Nd    1]); % disturbances
+            %x1       = sym('x%d'    ,[obj.Nx    1]); % dynamic states
+            x1 = genSymVars('x%d', obj.Nx);
+            %u1       = sym('u%d'    ,[obj.Nu    1]); % inputs
+            u1 = genSymVars('u%d', obj.Nu);
+            %d1       = sym('d%d'    ,[obj.Nd    1]); % disturbances
+            d1 = genSymVars('d%d', obj.Nd);
             
             A = jacobian(obj.f_sym,x1);
             B = jacobian(obj.f_sym,u1);
@@ -66,8 +69,8 @@ classdef Model < matlab.mixin.Copyable
             
             obj.LinModel = LinearModel(A,B,E,C,D,H);
             
-            obj.CalcF = matlabFunction(obj.f_sym,'Vars',[{[x1], [u1], [d1]}]);
-            obj.CalcG = matlabFunction(obj.g_sym,'Vars',[{[x1], [u1], [d1]}]);
+            obj.CalcF_func = matlabFunction(obj.f_sym,'Vars',[{[x1], [u1], [d1]}]);
+            obj.CalcG_func = matlabFunction(obj.g_sym,'Vars',[{[x1], [u1], [d1]}]);
 
             obj.LinModel.CalcState  = matlabFunction(obj.LinModel.A_sym,obj.LinModel.B_sym,obj.LinModel.E_sym,'Vars',[{[x1], [u1], [d1]}]);
             obj.LinModel.CalcOutput = matlabFunction(obj.LinModel.C_sym,obj.LinModel.D_sym,obj.LinModel.H_sym,'Vars',[{[x1], [u1], [d1]}]);
@@ -79,18 +82,36 @@ classdef Model < matlab.mixin.Copyable
                      
         end
         
+        function F = CalcF(obj,x,u,d)
+            assert((size(x,2) == size(u,2)) && (size(x,2) == size(d,2)),"x, u, and d require equivalent number of columns")
+            if size(x,2) == 1
+                F = obj.CalcF_func(x,u,d);
+            else
+                F = splitapply(obj.CalcF_func,x,u,d,1:size(x,2));
+            end
+        end
+         
+        function G = CalcG(obj,x,u,d)
+            assert((size(x,2) == size(u,2)) && (size(x,2) == size(d,2)),"x, u, and d require equivalent number of columns")
+            if size(x,2) == 1
+                G = obj.CalcG_func(x,u,d);
+            else
+                G = splitapply(obj.CalcG_func,x,u,d,1:size(x,2));
+            end
+        end
+        
         function [A,B,E,F0,C,D,H,G0] = Linearize(obj,x0,u0,d0)
             
             % 
             [A,B,E] = obj.LinModel.CalcState(x0,u0,d0);
 %             B  = obj.LinearModel.CalcB(x0,u0,d0);
 %             E  = obj.LinearModel.CalcE(x0,u0,d0);
-            F0 = obj.CalcF(x0,u0,d0) - A*x0 - B*u0 - E*d0;
+            F0 = obj.CalcF_func(x0,u0,d0) - A*x0 - B*u0 - E*d0;
             
             [C,D,E]  = obj.LinModel.CalcOutput(x0,u0,d0);
 %             D  = obj.LinearModel.CalcD(x0,u0,d0);
-%             G  = obj.LinearModel.CalcG(x0,u0,d0);
-            G0 = obj.CalcG(x0,u0,d0) - C*x0 - D*u0 - G*d0;
+%             G  = obj.LinearModel.CalcG_func(x0,u0,d0);
+            G0 = obj.CalcG_func(x0,u0,d0) - C*x0 - D*u0 - G*d0;
                
         end
         
