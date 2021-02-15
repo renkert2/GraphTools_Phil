@@ -7,7 +7,6 @@ classdef GraphVertex < handle & matlab.mixin.Heterogeneous & matlab.mixin.Copyab
         Description string = string.empty()
         VertexType VertexTypes = "Abstract"
         DynamicType DynamicTypes = "EnergyFlow" % Dynamic Type: 1 - Energy Flow, 2 - State Flow
-        
     end
     
     properties (SetAccess = ?Component)

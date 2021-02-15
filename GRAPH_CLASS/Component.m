@@ -8,18 +8,29 @@ classdef Component < matlab.mixin.Heterogeneous & handle
         Name string = "Component"
         graph Graph = Graph.empty()
         Ports ComponentPort = ComponentPort.empty()
+        
+        extrinsicProps (:,1) extrinsicProp
     end
     
     methods
         function obj = Component(varargin)
             if nargin == 1
                 if isstruct(varargin{1})
-                    for i = 1:numel(varargin{1})
-                        try
-                            obj.(varargin{1}(i).Name) = varargin{1}(i).Value;
-                        catch
-                            % eventually update this to indicate that no
-                            % property for this class exists.
+                    if isequal(fields(varargin{1}),{'Name';'Value'})
+                        for i = 1:numel(varargin{1})
+                            try
+                                obj.(varargin{1}(i).Name) = varargin{1}(i).Value;
+                            catch
+                                % eventually update this to indicate that no
+                                % property for this class exists.
+                            end
+                        end
+                    else
+                        fnames = fieldnames(varargin{1});
+                        for i = 1:numel(fnames)
+                            try
+                                obj.(fnames{i}) = varargin{1}.(fnames{i});
+                            end
                         end
                     end
                 else
@@ -28,7 +39,7 @@ classdef Component < matlab.mixin.Heterogeneous & handle
             elseif nargin > 1
                 my_inputparser(obj,varargin{:}); % input parser component models
             end
-            obj.init_super(); % I don't know why we need this and can't just call ConstructGraph - CTA
+            obj.init_super();
 
         end
         
@@ -37,13 +48,16 @@ classdef Component < matlab.mixin.Heterogeneous & handle
         end
     end
     
-    methods (Sealed, Access = protected)
+    methods (Sealed)
         function init_super(obj)
             obj.init(); % Concrete method that can be overriden by subclasses
             obj.DefineComponent();
             obj.DefineChildren();
+            obj.DefineSymParams();
         end
-        
+    end
+    
+    methods (Sealed, Access = protected)
         function DefineChildren(obj)
             try
                 obj.graph.Parent = obj;
@@ -57,6 +71,24 @@ classdef Component < matlab.mixin.Heterogeneous & handle
                 warning('Error defining component as parent object')
             end
         end
+        
+        function DefineSymParams(obj)
+            props = properties(obj);
+            
+            sym_params = sym.empty();
+            sym_params_vals = [];
+            
+            for i = 1:numel(props)
+                prop = obj.(props{i});
+                if isa(prop, 'symParam')
+                    sym_params(end+1,1) = prop;
+                    sym_params_vals(end+1,1) = double(prop);
+                end
+            end
+            
+            obj.graph.SymParams = sym_params;
+            obj.graph.SymParams_Vals = sym_params_vals;
+        end          
     end
     
         
@@ -67,7 +99,7 @@ classdef Component < matlab.mixin.Heterogeneous & handle
     end
     
     methods (Sealed) 
-        function gSys = Combine(C, ConnectP, varargin)
+        function [gSys, extProps] = Combine(C, ConnectP, varargin)
             arguments
                 C (:,1) Component % Array of components to be connected in a system
                 ConnectP (:,1) cell % vector of Component Ports to be connected.  Connections along dimension 1, equivalent ports along dimension 2
@@ -96,11 +128,35 @@ classdef Component < matlab.mixin.Heterogeneous & handle
                 end 
             end
             
-            % Construct G
-            G = [C.graph];
-            
             % Generate System Graph with Combine(G, ConnectE)
-            gSys = Combine(G, ConnectE, ConnectV, varargin{:});  
+            G = [C.graph];
+            gSys = Combine(G, ConnectE, ConnectV, varargin{:});
+            
+            if nargout == 2
+                props = vertcat(C.extrinsicProps);
+                extProps = Combine(props);
+            end
+        end
+        
+        function comp_arrays = Replicate(obj_array, N)
+            comp_arrays = cell(size(obj_array));
+            for i = 1:numel(obj_array)
+                comp = obj_array(i);
+                unique_props = setdiff(properties(comp), properties('Component'));
+                prop_struct = struct();
+                for j = 1:numel(unique_props)
+                    prop_struct.(unique_props{j}) = comp.(unique_props{j});
+                end
+                
+                constructFun = str2func(class(comp)); % Get the class constructor specific to the component
+                
+                for j = 1:N
+                    prop_struct.Name = join([comp.Name,string(j)]);
+                    comp_array(j) = constructFun(prop_struct); % Call the constructor N times to get N independent objects.
+                end
+                
+                comp_arrays{i} = comp_array;
+            end
         end
     end
     

@@ -4,7 +4,7 @@ classdef GraphEdge_Internal < GraphEdge
     properties
         PowerFlow Type_PowerFlow = Type_PowerFlow.empty()
         Input GraphInput = GraphInput.empty()
-        Coefficient (:,1) double = 0
+        Coefficient (:,1) = 0
         TailVertex GraphVertex = GraphVertex.empty()
         HeadVertex GraphVertex = GraphVertex.empty()
     end

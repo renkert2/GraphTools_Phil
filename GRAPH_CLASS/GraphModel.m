@@ -5,6 +5,7 @@ classdef GraphModel < Model
     properties
         graph Graph = Graph.empty()
         AutomaticModify logical = true
+        CalcPMethod CalcPMethods = CalcPMethods.Default
     end
     
     properties (SetAccess = private)
@@ -15,12 +16,13 @@ classdef GraphModel < Model
         x_init % capacitance coefficient matrix
         DynType DynamicTypes = DynamicTypes.EnergyFlow
         D % capacitance coefficient matrix
-        B (:,:,:)% input mapping matrix  
+        B (:,:,:)% input mapping matrix
         
-        P_sym % Symbolic Representation of Power Flows
+        P_sym (:,1) sym % Symbolic Representation of Power Flows
+    end
+    
+    properties (SetAccess = protected, GetAccess = protected)
         CalcP_func % Matlab function of Power Flows
-        
-        CalcPMethod CalcPMethods = CalcPMethods.Default
     end
     
     properties (Dependent)
@@ -29,17 +31,41 @@ classdef GraphModel < Model
     end
 
     methods
-        function obj = GraphModel(graph, opts)
+        function obj = GraphModel(arg1, opts)
             arguments 
-                graph (1,1) Graph
-                opts.CalcPMethod = CalcPMethods.Default
+                arg1 (1,1)
+                opts.Linearize logical = true
+                opts.CalcPMethod CalcPMethods = "Default"
+                opts.SymParams_HandleMethod SymParams_HandleMethods = SymParams_HandleMethods.AugmentMatlabFunctions
             end
-            obj.graph = graph;
+            
+            if isa(arg1,'Graph')
+                obj.graph = arg1;
+            elseif isa(arg1,'Component')
+                obj.graph = arg1.graph;
+            else
+                error('Invalid argument to GraphModel.  Must be of type Graph or Component')
+            end
+            
             obj.CalcPMethod = opts.CalcPMethod;
+            obj.LinearizeFlag = opts.Linearize;
+            obj.SymParams_HandleMethod = opts.SymParams_HandleMethod;
+            
             init(obj);
         end      
 
         function init(obj)
+            init@Model(obj); 
+        end
+        
+        function initSymbolic(obj)
+            obj.Nx = obj.graph.Nx;
+            obj.Nu = obj.graph.Nu;
+            obj.Nd = obj.graph.Nev + obj.graph.Nee;
+            
+            obj.SymParams = obj.graph.SymParams;
+            obj.SymParams_Vals = obj.graph.SymParams_Vals;
+            
             % make vertex matrices
             if ~isempty(obj.graph.DynamicVertices)
                 obj.x_init = vertcat(obj.graph.DynamicVertices.Initial);
@@ -69,6 +95,7 @@ classdef GraphModel < Model
             end
             
             % C matrix
+            % Merge Note - May need to change from x.InternalVertices to x.Vertices
             CTypeAll = vertcat(obj.graph.InternalVertices(:).Capacitance);
             numCType = arrayfun(@(x) length(x.Capacitance),obj.graph.InternalVertices);
             [obj.C_coeff,obj.CType] = MakeCoeffMatrix(obj.graph.InternalVertices,CTypeAll,numCType);
@@ -82,9 +109,18 @@ classdef GraphModel < Model
             obj.Nu = obj.graph.Nu;
             obj.Nd = obj.graph.Nev + obj.graph.Nee;
             obj.Ny = obj.graph.Nv + numel(obj.graph.Outputs);
-            obj.SymbolicSolve
+
+            initSymbolic@Model(obj);
             
-            init@Model(obj); 
+            obj.SymbolicSolve;
+        end
+        
+        function initNumerical(obj)                
+            u_mod = genSymVars('u%d',max([obj.graph.Nu,2])); % inputs - modified from SymVars.u to force MATLAB to vectorize CalcP_func even if there's a single input
+            vars = {[obj.SymVars.x_full], [u_mod]};
+            obj.CalcP_func = genMatlabFunctions(obj, obj.P_sym, vars);
+            
+            initNumerical@Model(obj);
         end
         
         function x = defineStateNames(obj)
@@ -161,10 +197,11 @@ classdef GraphModel < Model
             edge_table = table((1:(obj.graph.Ne - obj.graph.Nee))',parents, pflows_strings, 'VariableNames', ["Edges", "Component", "PowerFlows"]);
         end
         
-        function [t,x, pf] = Simulate(obj, inputs, disturbances, t_range, opts)
+        function [t,x, pf] = Simulate(obj, inputs, disturbances, params, t_range, opts)
             % SIMULATE(GraphModel, inputs, disturbances, t_range, opts)
             % inputs and disturbances must be column vectors of appropriate size.
             % Inputs and disturbances can be anonymous functions of time or constant values
+            % If the graph includes symbolic parameters, pass numerical values to the params argument as a column vector.  Leave as an empty double [] if no symbolic parameters exist
             % Simulate usees the first and last entries of t_range if dynamic states are calculated
             % with ODC23t, or the entire t_range vector if only algebraic states are calculated
             
@@ -172,12 +209,14 @@ classdef GraphModel < Model
                 obj
                 inputs
                 disturbances
+                params
                 t_range
                 opts.PlotStates logical = true
                 opts.PlotInputs logical = false
                 opts.PlotDisturbances logical = false
                 opts.StateSelect = []
                 opts.Solver = @ode23t
+                opts.SolverOpts struct = struct.empty()
             end
             
             input_function_flag = isa(inputs, 'function_handle');
@@ -185,10 +224,10 @@ classdef GraphModel < Model
             
             if ~isempty(obj.graph.DynamicVertices)
                 % Dynamic states exist
-                xdot = processArgs(@CalcF, inputs, disturbances); % Might need to change processArgs so things run faster
-                [t,xdyn] = opts.Solver(xdot, [t_range(1) t_range(end)], obj.x_init);
+                xdot = processArgs(@CalcF, inputs, disturbances, params); % Might need to change processArgs so things run faster
+                [t,xdyn] = opts.Solver(xdot, [t_range(1) t_range(end)], obj.x_init, opts.SolverOpts);
                 if ~isempty(obj.graph.AlgebraicVertices)
-                    xfull = processArgs(@CalcG, inputs, disturbances);
+                    xfull = processArgs(@CalcG, inputs, disturbances, params);
                     x = xfull(t',xdyn')';
                 else
                     x = xdyn;
@@ -202,9 +241,9 @@ classdef GraphModel < Model
             
             if nargout == 3
                 if input_function_flag
-                    pf = CalcP(obj, x', inputs(t)')';
+                    pf = CalcP(obj, x', inputs(t)', repmat(params,1,numel(t)))';
                 else
-                    pf = CalcP(obj, x', repmat(inputs,1,numel(t)))';
+                    pf = CalcP(obj, x', repmat(inputs,1,numel(t)), repmat(params,1,numel(t)))';
                 end
             end
             
@@ -243,15 +282,15 @@ classdef GraphModel < Model
                 hold off
             end
             
-            function xfunc = processArgs(func, inputs_arg, disturbances_arg)               
+            function xfunc = processArgs(func, inputs_arg, disturbances_arg, params_arg)               
                 if input_function_flag && disturbance_function_flag
-                    xfunc = @(t,x) func(obj, x, inputs_arg(t), disturbances_arg(t));
+                    xfunc = @(t,x) func(obj, x, inputs_arg(t), disturbances_arg(t),repmat(params_arg,1,numel(t)));
                 elseif input_function_flag
-                    xfunc = @(t,x) func(obj, x, inputs_arg(t), repmat(disturbances_arg,1,numel(t)));
+                    xfunc = @(t,x) func(obj, x, inputs_arg(t), repmat(disturbances_arg,1,numel(t)),repmat(params_arg,1,numel(t)));
                 elseif disturbance_function_flag
-                    xfunc = @(t,x) func(obj, x, repmat(inputs_arg,1,numel(t)), disturbances_arg(t));
+                    xfunc = @(t,x) func(obj, x, repmat(inputs_arg,1,numel(t)), disturbances_arg(t),repmat(params_arg,1,numel(t)));
                 else
-                    xfunc = @(t,x) func(obj, x, repmat(inputs_arg,1,numel(t)), repmat(disturbances_arg,1,numel(t)));
+                    xfunc = @(t,x) func(obj, x, repmat(inputs_arg,1,numel(t)), repmat(disturbances_arg,1,numel(t)),repmat(params_arg,1,numel(t)));
                 end
             end
         end
@@ -315,18 +354,21 @@ classdef GraphModel < Model
         end
           
         function SymbolicSolve(obj) % this function will only work for symbolic expressions at the moment
-            idx_x_d = (sum(abs(obj.C_coeff(1:obj.graph.Nv,:)),2) ~= 0);
-            idx_x_a = (sum(abs(obj.C_coeff(1:obj.graph.Nv,:)),2) == 0);
+            if ~isa(obj.C_coeff, 'sym')
+                idx_x_d = (sum(abs(obj.C_coeff(1:obj.graph.Nv,:)),2) ~= 0);
+                idx_x_a = (sum(abs(obj.C_coeff(1:obj.graph.Nv,:)),2) == 0);
+            else
+                C_sum = sum(abs(obj.C_coeff(1:obj.graph.Nv,:)),2);
+                idx_x_a = arrayfun(@(x) isequal(x,sym(0)), C_sum);
+                idx_x_d = ~idx_x_a;
+            end
             idx_x_e = obj.graph.Nv+1:obj.graph.Nv+obj.graph.Nev;
+ 
+            x = obj.SymVars.x; % Dynamic States 
+            x_a = genSymVars('x_a%d', sum(idx_x_a)); % Algebraic States
+            u = obj.SymVars.u; % Inputs
+            d = obj.SymVars.d; % Disturbances
             
-            %x       = sym('x%d'      ,[sum(idx_x_d)        1]); % dynamic states
-            x = genSymVars('x%d',sum(idx_x_d));
-            %x_a     = sym('x_a%d'    ,[sum(idx_x_a)        1]); % algebraic states
-            x_a = genSymVars('x_a%d', sum(idx_x_a));
-            %u       = sym('u%d'      ,[obj.graph.Nu              1]); % inputs
-            u = genSymVars('u%d', obj.graph.Nu);
-            %d       = sym('d%d'      ,[obj.graph.Nev+obj.graph.Nee 1]);
-            d = genSymVars('d%d', obj.graph.Nev+obj.graph.Nee);
             x_e     = d(1:obj.graph.Nev); % external states
             P_e     = d(obj.graph.Nev+1:end);
             
@@ -341,12 +383,11 @@ classdef GraphModel < Model
                 x_full(idx_x_e,1) = x_e;
             end
             
+            obj.SymVars.x_full = x_full; % Add full list of symbolic state variables, used later in initNumerical()
+            
             % Calculate power flows and capacitances
             P = CalcP_Sym(obj,x_full,u); % calculates power flows
             obj.P_sym = P;
-            
-            u_mod = sym('u%d',[max(obj.graph.Nu,2),1]); % inputs
-            obj.CalcP_func = matlabFunction(P,'Vars',[{[x_full], [u_mod]}]);
             
             C = CalcC_Sym(obj,x_full); % calcualtes capacitance
             
@@ -455,7 +496,7 @@ classdef GraphModel < Model
                     coeffs = edge.Coefficient;
                     u = squeeze(obj.B(i,:,:)).'*u0; % Column vector of inputs corresponding to this edge
                     types_sym = arrayfun(@(x) x.calcVal(xt(i),xh(i),u.'),types);
-                    pflows = coeffs'*types_sym;
+                    pflows = coeffs.'*types_sym;
                     P(i,1) = pflows;
                 end      
             end
@@ -537,16 +578,30 @@ classdef GraphModel < Model
             Y = OF; % solve for the capacitance of each vertex  
         end
         
-        function P = CalcP(obj,x,u)
-            assert(size(x,2) == size(u,2),"x and u require equivalent number of columns")
-            if size(x,2) == 1
-                P = obj.CalcP_func(x,u);
-            else
-                P = splitapply(obj.CalcP_func, x,u,1:size(x,2));
+%         function P = CalcP(obj,x,u)
+%             assert(size(x,2) == size(u,2),"x and u require equivalent number of columns")
+%             if size(x,2) == 1
+%                 P = obj.CalcP_func(x,u);
+%             else
+%                 P = splitapply(obj.CalcP_func, x,u,1:size(x,2));
+        function P = CalcP(obj, x_full, u, params)
+            param_lengths = [obj.graph.Nv, obj.Nu, numel(obj.SymParams)];
+            
+            if nargin == 3 || isempty(obj.SymParams)
+                vars = {x_full, u};
+            elseif nargin == 4
+                vars = {x_full, u, params};
             end
+            
+            for i = 1:numel(vars)
+                assert(size(vars{i},1) >= param_lengths(i), "Argument %d requires %d entries", i, param_lengths(i));
+            end
+            
+            P = CalcX(obj, obj.CalcP_func, vars);
         end
         
     end
+        
         
 end
 
