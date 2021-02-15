@@ -135,8 +135,9 @@ classdef Graph < matlab.mixin.Copyable
             x = obj.Vertices(arrayfun(@DynTest,obj.Vertices));
             
             function l = DynTest(x)
-                coeff = x.Coefficient;
                 if isa(x,'GraphVertex_Internal')
+                    coeff = x.Coefficient;
+
                     if isa(coeff, 'sym')
                         l = ~ all(arrayfun(@(x) isequal(x, sym(0)), coeff));
                     elseif isa(coeff, 'double')
@@ -153,8 +154,8 @@ classdef Graph < matlab.mixin.Copyable
             x = obj.Vertices(arrayfun(@AlgTest,obj.Vertices));
             
             function l = AlgTest(x)
-                coeff = x.Coefficient;
                 if isa(x,'GraphVertex_Internal')
+                    coeff = x.Coefficient;
                     if isa(coeff, 'sym')
                         l = all(arrayfun(@(x) isequal(x, sym(0)), coeff));
                     elseif isa(coeff, 'double')
