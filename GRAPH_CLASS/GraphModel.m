@@ -389,7 +389,7 @@ classdef GraphModel < Model
             P = CalcP_Sym(obj,x_full,u); % calculates power flows
             obj.P_sym = P;
             
-            C = CalcC_Sym(obj,x); % calcualtes capacitance
+            C = CalcC_Sym(obj,[x;x_a]); % calcualtes capacitance
             
             % Solve system dynamics
             % Process Algebraic States
