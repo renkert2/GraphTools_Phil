@@ -76,7 +76,7 @@ classdef HeatExchanger < Component
             
             % Build Graph
             g = Graph(Vertex,Edge);
-            obj.graph = g;
+            obj.Graph = g;
             
             % Define Ports
             p(1) = ComponentPort('Description','Side 1 Inflow','Element',Edge(1));
