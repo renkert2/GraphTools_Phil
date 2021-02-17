@@ -62,6 +62,7 @@ classdef GraphModel < Model
             obj.Nx = obj.Graph.Nx;
             obj.Nu = obj.Graph.Nu;
             obj.Nd = obj.Graph.Nev + obj.Graph.Nee;
+            obj.Ny = obj.Graph.Nv + numel(obj.Graph.Outputs);
             
             obj.SymParams = obj.Graph.SymParams;
             obj.SymParams_Vals = obj.Graph.SymParams_Vals;
@@ -72,8 +73,8 @@ classdef GraphModel < Model
             else
                 obj.x_init = [];
             end
-%             obj.x_init  = vertcat(obj.Graph.DynamicVertices.Initial); 
-            obj.DynType = vertcat(obj.Graph.DynamicVertices.DynamicType); 
+ 
+            obj.DynType = vertcat(obj.Graph.Vertices.DynamicType); 
             
             % D matrix
             Dmat = zeros(obj.Graph.v_tot,obj.Graph.Nee);
@@ -104,12 +105,7 @@ classdef GraphModel < Model
             PTypeAll = vertcat(Eint(:).PowerFlow); % list of all capacitance types
             numPType = arrayfun(@(x) length(x.PowerFlow),Eint); % find number of capacitance types per vertex
             [obj.P_coeff,obj.PType] = MakeCoeffMatrix(Eint,PTypeAll,numPType);
-         
-            obj.Nx = sum(any(obj.C_coeff ~= 0,2));
-            obj.Nu = obj.Graph.Nu;
-            obj.Nd = obj.Graph.Nev + obj.Graph.Nee;
-            obj.Ny = obj.Graph.Nv + numel(obj.Graph.Outputs);
-
+            
             initSymbolic@Model(obj);
             
             obj.SymbolicSolve;
@@ -356,32 +352,31 @@ classdef GraphModel < Model
         function SymbolicSolve(obj) % this function will only work for symbolic expressions at the moment
             if ~isa(obj.C_coeff, 'sym')
                 idx_x_d = (sum(abs(obj.C_coeff(1:obj.Graph.Nv,:)),2) ~= 0);
-                idx_x_a = (sum(abs(obj.C_coeff(1:obj.Graph.Nv,:)),2) == 0);
+                idx_x_a = ~idx_x_d;
             else
                 C_sum = sum(abs(obj.C_coeff(1:obj.Graph.Nv,:)),2);
                 idx_x_a = arrayfun(@(x) isequal(x,sym(0)), C_sum);
                 idx_x_d = ~idx_x_a;
             end
-            idx_x_e = obj.Graph.Nv+1:obj.Graph.Nv+obj.Graph.Nev;
+            %idx_x_e = obj.Graph.Nv+1:obj.Graph.Nv+obj.Graph.Nev;
  
             x = obj.SymVars.x; % Dynamic States 
             x_a = genSymVars('x_a%d', sum(idx_x_a)); % Algebraic States
             u = obj.SymVars.u; % Inputs
             d = obj.SymVars.d; % Disturbances
-            
             x_e     = d(1:obj.Graph.Nev); % external states
+            
             P_e     = d(obj.Graph.Nev+1:end);
             
-            % Get state vector filled up with symbolic varialbes
-            if ~isempty(x)
-                x_full(idx_x_d,1) = x;
+            %Get state vector filled up with symbolic varialbes
+            if any(idx_x_d)
+                x_internal(idx_x_d,1) = x;
             end
-            if ~isempty(x_a)
-                x_full(idx_x_a,1) = x_a;
+            if any(idx_x_a)
+                x_internal(idx_x_a,1) = x_a;
             end
-            if ~isempty(x_e)
-                x_full(idx_x_e,1) = x_e;
-            end
+            
+            x_full = vertcat(x_internal, x_e);
             
             obj.SymVars.x_full = x_full; % Add full list of symbolic state variables, used later in initNumerical()
             
@@ -389,7 +384,7 @@ classdef GraphModel < Model
             P = CalcP_Sym(obj,x_full,u); % calculates power flows
             obj.P_sym = P;
             
-            C = CalcC_Sym(obj,[x;x_a]); % calcualtes capacitance
+            C = CalcC_Sym(obj,x_full, x_internal); % calcualtes capacitance
             
             % Solve system dynamics
             % Process Algebraic States
@@ -502,7 +497,7 @@ classdef GraphModel < Model
             end
         end
         
-        function [C] = CalcC_Sym(obj,x0)
+        function [C] = CalcC_Sym(obj,x_full, x_internal)
             % CalcC_Sym calculates the capacitance values of a graph model.
             
             %%% INPUTS
@@ -529,7 +524,7 @@ classdef GraphModel < Model
             c   = sym(zeros(size(obj.C_coeff)));
             % caculate the capacitance of each vertex for each coefficient
             for i = 1:size(obj.C_coeff,2)
-                c(:,i) = obj.C_coeff(:,i).*obj.CType(i).calcVal(x0); % the 1 and 0 in these lines will need to be changed
+                c(:,i) = obj.C_coeff(:,i).*obj.CType(i).calcVal(x_internal); % the 1 and 0 in these lines will need to be changed
             end
             c = sum(c,2); % sum across capacitance coefficients
             
@@ -539,7 +534,7 @@ classdef GraphModel < Model
                 cf = obj.Graph.Vertices(i).CapFunction;
                 if ~isempty(cf)
                     [~,idx] = ismember(cf.Breakpoints(:),obj.Graph.Vertices);
-                    input = num2cell(x0(idx));
+                    input = num2cell(x_full(idx));
                     LF(i) = cf.Function.calcVal(input{:});
                 end
             end
@@ -578,12 +573,6 @@ classdef GraphModel < Model
             Y = OF; % solve for the capacitance of each vertex  
         end
         
-%         function P = CalcP(obj,x,u)
-%             assert(size(x,2) == size(u,2),"x and u require equivalent number of columns")
-%             if size(x,2) == 1
-%                 P = obj.CalcP_func(x,u);
-%             else
-%                 P = splitapply(obj.CalcP_func, x,u,1:size(x,2));
         function P = CalcP(obj, x_full, u, params)
             param_lengths = [obj.Graph.Nv, obj.Nu, numel(obj.SymParams)];
             
