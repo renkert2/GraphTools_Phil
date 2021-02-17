@@ -4,7 +4,7 @@ classdef GraphVertex_Internal < GraphVertex
     properties
         CapFunction (:,1) LookupFunction = LookupFunction.empty();
         Capacitance (:,1) Type_Capacitance = Type_Capacitance.empty();
-        Coefficient (:,1) {mustBeNonnegative} = 0
+        Coefficient (:,1) {mustBeNonnegativeOrSym} = 0
         Initial (1,1) double = 0
         Bounds Limits = Limits()
     end
