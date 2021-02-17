@@ -54,7 +54,7 @@ classdef HeatLoad < Component
 
             % Build Graph
             g = Graph(Vertex,Edge);
-            obj.graph = g;
+            obj.Graph = g;
             
             % Define Ports
             p(1) = ComponentPort('Description','Inflow','Element',Edge(1));
@@ -65,7 +65,7 @@ classdef HeatLoad < Component
             % Define Additional Outputs
             O = Type([sym('b1') sym('b2')],{sym('b1') sym('b2')},'b1*b2');
             o = GraphOutput('Description','Test','Function',O,'Breakpoints',{Vertex(1) I(1)});
-            obj.graph.Outputs = o;
+            obj.Graph.Outputs = o;
             
         end
     end
