@@ -27,7 +27,6 @@ classdef Limits < handle
         b % H-rep such that {x|Ax<=b}
     end
     
-    
     methods
         
         function obj = Limits(varargin)

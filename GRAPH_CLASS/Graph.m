@@ -4,7 +4,7 @@ classdef Graph < matlab.mixin.Copyable
     %   Connection Matrix / Incidence Matrix
         
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % Author: Christopher T. Aksland and Phil Renkert
+    % Contributors: Christopher T. Aksland and Phil Renkert
     % Association: University of Illionis at Urbana-Champaign
     % Contact: aksland2@illinois.edu
     % Revision History:

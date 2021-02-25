@@ -173,6 +173,10 @@ classdef GraphModel < Model
             if ~isempty(obj.graph.Outputs)
                 DescY = vertcat(obj.graph.Outputs.Description);
                 BlksY = vertcat(vertcat(obj.graph.Outputs.Parent).Name);
+                
+            else
+                DescY = [];
+                BlksY = [];
             end
             Desc = [DescX; DescY];
             Blks = [BlksX; BlksY];
@@ -194,7 +198,7 @@ classdef GraphModel < Model
             
             parents = vertcat(vertcat(obj.graph.InternalEdges.Parent).Name);
             
-            edge_table = table((1:(obj.graph.Ne - obj.graph.Nee))',parents, pflows_strings, 'VariableNames', ["Edges", "Component", "PowerFlows"]);
+            edge_table = table((1:(obj.graph.Ne))',parents, pflows_strings, 'VariableNames', ["Edges", "Component", "PowerFlows"]);
         end
         
         function [t,x, pf] = Simulate(obj, inputs, disturbances, params, t_range, opts)

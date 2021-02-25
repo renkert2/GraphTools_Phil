@@ -143,7 +143,7 @@ classdef Model < matlab.mixin.Copyable
 %             E  = obj.LinearModel.CalcE(x0,u0,d0);
             F0 = obj.CalcF_func(x0,u0,d0) - A*x0 - B*u0 - E*d0;
             
-            [C,D,E]  = obj.LinModel.CalcOutput(x0,u0,d0);
+            [C,D,G]  = obj.LinModel.CalcOutput(x0,u0,d0);
 %             D  = obj.LinearModel.CalcD(x0,u0,d0);
 %             G  = obj.LinearModel.CalcG_func(x0,u0,d0);
             G0 = obj.CalcG_func(x0,u0,d0) - C*x0 - D*u0 - G*d0;

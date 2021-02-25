@@ -1,5 +1,5 @@
 classdef HeatLoad < Component
-    % HeatLoad is a class the defines a heat load model
+    % HeatLoad is a class the defines a heat load model.
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Author: Christopher T. Aksland
@@ -8,6 +8,7 @@ classdef HeatLoad < Component
     % Revision History:
     % 7/6/2020 - Class creation
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
     
     properties
 
