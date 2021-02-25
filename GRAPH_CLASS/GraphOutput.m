@@ -21,7 +21,7 @@ classdef GraphOutput < handle
         
         function set.Function(obj, val)
             assert(isa(val, 'Type') || isa(val, 'symfun'), 'Function must be a Type object or symfun');
-            obj.Function = val
+            obj.Function = val;
         end
         
         function set.Breakpoints(obj,val)
