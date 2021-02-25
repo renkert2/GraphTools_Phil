@@ -18,7 +18,7 @@ tank2 = Tank('Name','Tank 2','T_init',50);
 
 % don't change the order of the components
 Comps = [load1; HX1; SJ1; SJ2; tank1; tank2];
-Graphs = [Comps(:).graph];
+Graphs = [Comps(:).Graph];
 
 % define port connections
 ConnectP{1} = [Comps(1).Ports(1) Comps(5).Ports(3)];
@@ -33,7 +33,7 @@ ConnectP{7} = [Comps(4).Ports(3) Comps(6).Ports(1)];
 figure
 for i = 1:length(Comps)
     subplot(3,2,i)
-    plot(Comps(i).graph);
+    plot(Comps(i).Graph);
     title(Comps(i).Name)
 end
 

@@ -6,7 +6,7 @@ classdef Component < matlab.mixin.Heterogeneous & handle
     properties %(SetAccess = protected)        
         % Block Name
         Name string = "Component"
-        graph Graph = Graph.empty()
+        Graph Graph = Graph.empty()
         Ports ComponentPort = ComponentPort.empty()
         
         extrinsicProps (:,1) extrinsicProp
@@ -60,11 +60,11 @@ classdef Component < matlab.mixin.Heterogeneous & handle
     methods (Sealed, Access = protected)
         function DefineChildren(obj)
             try
-                obj.graph.Parent = obj;
+                obj.Graph.Parent = obj;
                 graph_children = ["Vertices", "Edges", "Inputs","Outputs"];
                 for child = graph_children
-                    for i = 1:numel(obj.graph.(child))
-                        obj.graph.(child)(i).Parent = obj;
+                    for i = 1:numel(obj.Graph.(child))
+                        obj.Graph.(child)(i).Parent = obj;
                     end
                 end
             catch
@@ -86,8 +86,8 @@ classdef Component < matlab.mixin.Heterogeneous & handle
                 end
             end
             
-            obj.graph.SymParams = sym_params;
-            obj.graph.SymParams_Vals = sym_params_vals;
+            obj.Graph.SymParams = sym_params;
+            obj.Graph.SymParams_Vals = sym_params_vals;
         end          
     end
     
@@ -129,7 +129,7 @@ classdef Component < matlab.mixin.Heterogeneous & handle
             end
             
             % Generate System Graph with Combine(G, ConnectE)
-            G = [C.graph];
+            G = [C.Graph];
             gSys = Combine(G, ConnectE, ConnectV, varargin{:});
             
             if nargout == 2

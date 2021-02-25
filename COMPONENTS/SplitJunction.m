@@ -66,7 +66,7 @@ classdef SplitJunction < Component
                                 
             % Build Graph
             g = Graph(Vertex,Edge);
-            obj.graph = g;
+            obj.Graph = g;
             
             % Define Ports
             

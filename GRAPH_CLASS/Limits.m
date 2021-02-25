@@ -65,6 +65,4 @@ classdef Limits < handle
         
     end
     
-    
-    
 end

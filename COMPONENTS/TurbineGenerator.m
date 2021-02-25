@@ -1,12 +1,10 @@
-classdef HeatExchanger < Component
-    % HeatExchanger is a class the defines a heat exchanger model
+classdef TurbineGenerator < Component
+    % TurbineGenerator is a class the defines a turbine engine/generator model
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % Author: Christopher T. Aksland
+    % Author: Reid Smith
     % Association: University of Illionis at Urbana-Champaign
-    % Contact: aksland2@illinois.edu
-    % Revision History:
-    % 7/6/2020 - Class creation
+    % Contact: reidds2@illinois.edu
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
     properties
@@ -28,7 +26,7 @@ classdef HeatExchanger < Component
     end
     
     methods
-        function obj = HeatExchanger(varargin)          
+        function obj = TurbineGenerator(varargin)          
             obj@Component(varargin{:}); % calls the superclass constructor
         end
     end
@@ -76,7 +74,7 @@ classdef HeatExchanger < Component
             
             % Build Graph
             g = Graph(Vertex,Edge);
-            obj.Graph = g;
+            obj.graph = g;
             
             % Define Ports
             p(1) = ComponentPort('Description','Side 1 Inflow','Element',Edge(1));
