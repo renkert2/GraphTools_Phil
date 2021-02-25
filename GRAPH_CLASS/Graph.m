@@ -256,14 +256,29 @@ classdef Graph < matlab.mixin.Copyable
             
             % Format ConnectV and ConnectE as {:,1} cell array containing list of
             % equivalent vertices and edges, respectively
-            ConnectE = formatConnectX(ConnectE, 'GraphEdge', 'Edges');
-            Nce = length(ConnectE); % Number of edge connections
-            Neconn_delta = cellfun(@length, ConnectE);% Number of edges involved in each connection
-            Neconn = sum(Neconn_delta); % Total edges involved in connections
+            
+            if ~isempty(ConnectE)
+                ConnectE = formatConnectX(ConnectE, 'GraphEdge', 'Edges');
+                Nce = length(ConnectE); % Number of edge connections
+                Neconn_delta = cellfun(@length, ConnectE);% Number of edges involved in each connection
+                Neconn = sum(Neconn_delta); % Total edges involved in connections
+                
+                ConnectV_E = cell(2*Nce, 1);
+                edge_conn_map(Nce,2) = GraphEdge();
+            else
+                Nce = 0;
+                Neconn_delta = 0;
+                Neconn = 0;
+                
+                ConnectV_E = {};
+                edge_conn_map = GraphEdge.empty();
+            end
             
             if nargin == 3 % If ConnectV is specified
                 ConnectV = formatConnectX(ConnectV, 'GraphVertex', 'Vertices');
             end
+            
+            input_conn_map = GraphInput.empty();
             
             %% Parse ConnectE for necessary Vertex Connections, create edge_conn_map, and create input_conn_map:
             % - Appends ConnectV with necessary vertex connections resulting from edge connections
@@ -275,11 +290,7 @@ classdef Graph < matlab.mixin.Copyable
             % - First column contains inputs replaced in connection that will be modified in the connection,
             % - Second column contains primary inputs resulting from connection
             % - s.t. input_conn_map(:,1) becomes input_conn_map(:,2)
-            
-            ConnectV_E = cell(2*Nce, 1);
-            edge_conn_map(Nce,2) = GraphEdge();
-            input_conn_map = GraphInput.empty();
-
+           
             for ce = 1:Nce
                 edges = fliplr(ConnectE{ce});
                 edge_conn_map(ce, :) = edges;
@@ -312,6 +323,7 @@ classdef Graph < matlab.mixin.Copyable
             else
                 ConnectV = [ConnectV; ConnectV_E];
             end
+            
             %% Create vertex_conn_map:
             % - First column contains all vertices that will be modified in the connection,
             % - Second column contains primary vertices that verts in the first column will map to
@@ -376,7 +388,12 @@ classdef Graph < matlab.mixin.Copyable
             all_outputs = vertcat(G.Outputs);
            
             sys_verts = all_verts(~ismember(all_verts, vertex_conn_map(:,1)));
-            sys_edges = all_edges(~ismember(all_edges, edge_conn_map(:,1)));
+            
+            if ~isempty(edge_conn_map)
+                sys_edges = all_edges(~ismember(all_edges, edge_conn_map(:,1)));
+            else
+                sys_edges = all_edges;
+            end
             
             if opts.CopyEdges
                 sys_edges = copy(sys_edges);
@@ -447,11 +464,14 @@ classdef Graph < matlab.mixin.Copyable
             
             %% Assign SymParams and SymParams_Vals
             sym_params = vertcat(G.SymParams);
-            %unique(sym_params);
+            [sym_params, ia, ~] = unique(sym_params);
+            
             sym_vals = vertcat(G.SymParams_Vals);
+            sym_vals = sym_vals(ia);
             
             obj.SymParams = sym_params;
             obj.SymParams_Vals = sym_vals;
+            
             %% Helper Functions
             function ConnectX = formatConnectX(ConnectX, class, prop)
                 if all(cellfun(@(x) isa(x, class), ConnectX),'all') % Connect X Already given as lists of equivalent GraphVertices or GraphEdges with dominant element in front of list
