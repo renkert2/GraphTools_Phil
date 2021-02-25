@@ -565,11 +565,16 @@ classdef GraphModel < Model
                     
                     end
                     input = num2cell(input);
-                    OF(i) = of.Function.calcVal(input{:});
+                    func = of.Function;
+                    if isa(func, 'Type')
+                        OF(i) = func.calcVal(input{:});
+                    elseif isa(func, 'symfun')
+                        OF(i) = func(input{:});
+                    else
+                        error('Invalid Output Function Type')
+                    end
                 end
             end
-            
-            
             Y = OF; % solve for the capacitance of each vertex  
         end
         

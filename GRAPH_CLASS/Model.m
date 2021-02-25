@@ -22,6 +22,7 @@ classdef Model < matlab.mixin.Copyable
 
         SymParams sym = sym.empty()
         SymParams_Vals double = []
+        N_SymParams double = [] % It takes a bunch of time to count symbolic variables
         
         LinModel LinearModel = LinearModel.empty() % this could be another object
     end
@@ -58,6 +59,7 @@ classdef Model < matlab.mixin.Copyable
         function init(obj)
             initSymbolic(obj);
             initNumerical(obj);
+            obj.N_SymParams = numel(obj.SymParams);
         end
 
         function initSymbolic(obj)
@@ -104,9 +106,9 @@ classdef Model < matlab.mixin.Copyable
         end
         
         function F = CalcF(obj,x,u,d,params)
-            param_lengths = [obj.Nx, obj.Nu, obj.Nd, numel(obj.SymParams)];
+            param_lengths = [obj.Nx, obj.Nu, obj.Nd, obj.N_SymParams];
             
-            if nargin == 4 || isempty(obj.SymParams)
+            if nargin == 4 || obj.N_SymParams == 0
                 vars = {x,u,d};
             elseif nargin == 5
                 vars = {x,u,d,params};
@@ -120,9 +122,9 @@ classdef Model < matlab.mixin.Copyable
         end
          
         function G = CalcG(obj,x,u,d,params)
-            param_lengths = [obj.Nx, obj.Nu, obj.Nd, numel(obj.SymParams)];
+            param_lengths = [obj.Nx, obj.Nu, obj.Nd, obj.N_SymParams];
             
-            if nargin == 4 || isempty(obj.SymParams)
+            if nargin == 4 || obj.N_SymParams == 0
                 vars = {x,u,d};
             elseif nargin == 5
                 vars = {x,u,d,params};

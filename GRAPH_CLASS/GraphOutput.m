@@ -4,8 +4,8 @@ classdef GraphOutput < handle
     
     properties
         Description (1,1) string = "Default"
-        Function (1,1) Type
-        Breakpoints 
+        Function % Must be symfun or Type, asserted in set method
+        Breakpoints cell % Must be cell array of GraphVertices or GraphInputs, asserted in set method
     end
     
     properties (SetAccess = ?Component)
@@ -19,7 +19,12 @@ classdef GraphOutput < handle
             end
         end
         
-        function obj = set.Breakpoints(obj,val)
+        function set.Function(obj, val)
+            assert(isa(val, 'Type') || isa(val, 'symfun'), 'Function must be a Type object or symfun');
+            obj.Function = val
+        end
+        
+        function set.Breakpoints(obj,val)
             for i = 1:length(val)
                 if ~isa(val{i},'GraphVertex') && ~isa(val{i},'GraphInput')
                     error('Breakpoints must be of type GraphVertex or GraphInput')

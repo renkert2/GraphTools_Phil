@@ -47,8 +47,8 @@ classdef Type < matlab.mixin.Copyable
                 error("Type must be 'string', 'char', or 'sym'")
             end
                      
-            error_msg = sprintf("Type must be function of vars: %s", join(string(obj.vars), ", "));
-            assert(all(ismember(symvar(Val_Sym_temp), obj.vars)), error_msg)
+%             error_msg = sprintf("Type must be function of vars: %s", join(string(obj.vars), ", "));
+%             assert(all(ismember(symvar(Val_Sym_temp), obj.vars)), error_msg)
             
             obj.set_method_flag = false; % Prevents infinite loop in set method
             
