@@ -1,8 +1,23 @@
 classdef GraphEdge_External < GraphEdge
-    %GRAPHEDGE_External Summary of this class goes here
-    %   Detailed explanation goes here
+    % GraphEdge_External defines the properties of external edges in a
+    % graph object in the Graph Modeling Toolbox
+    % Instatiate an empty object or use an input parser
+    % Definable properties (with class) include:
+    % - Description (string)
+    % - HeadVertex (GraphVertex)
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % Contributors: Christopher T. Aksland and Phil Renkert
+    % Association: University of Illionis at Urbana-Champaign
+    % Contact: aksland2@illinois.edu and renkert2@illinois.edu
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % potential improvements:
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
     properties
-        HeadVertex GraphVertex = GraphVertex.empty()
+        HeadVertex (1,1) GraphVertex %= GraphVertex.empty() % edge head vertex
     end
     
     methods
@@ -10,10 +25,6 @@ classdef GraphEdge_External < GraphEdge
             obj@GraphEdge(varargin{:}); % calls the superclass constructor
         end
                
-        function set.HeadVertex(obj, head_vertex)
-            assert(numel(head_vertex)<=1, 'Edge can have only one head vertex');
-            obj.HeadVertex = head_vertex;
-        end
     end
     
 end

@@ -1,22 +1,46 @@
 classdef GraphModel < Model
-    %GRAPHMODEL Contains all of the operations useful for working with the
-    %graph models.  Most of the code will go here.  
-    %   Detailed explanation goes here
+    % GraphModel converts a Graph object to a model that can be simulated
+    % or used in other supported tools. GraphModel subclasses Model as a
+    % specific type of model within the Graph Modeling Toolbox. 
+    % A graph model is represented in the form
+    % 
+    % C*x_dot = -M_ubar*P + DP_in
+    %
+    % A GraphModel can be instatiated as an empty object or as:
+    % 
+    % gm = GraphModel(comp) where comp is a Graph or Component object
+    %   ot
+    % gm = GraphModel(comp,opts) where opts has optional settings
+    %       opts.Linearize = {true or false}
+    %       opts.CalcPMethod = {Default or Edges}
+    %       opts.SymParams_HandleMethod = ?????? @ Phil
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % Contributors: Christopher T. Aksland and Phil Renkert
+    % Association: University of Illionis at Urbana-Champaign
+    % Contact: aksland2@illinois.edu and renkert2@illinois.edu
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % potential improvements:
+    % split this class into multiple files for organizational purposes
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
     properties
-        Graph Graph = Graph.empty()
-        AutomaticModify logical = true
-        CalcPMethod CalcPMethods = CalcPMethods.Default
+        Graph (1,1) Graph
+        AutomaticModify (1,1) logical = true
+        CalcPMethod (1,1) CalcPMethods = CalcPMethods.Default
     end
     
     properties (SetAccess = private)
-        C_coeff % capacitance coefficient matrix
-        CType Type_Capacitance = Type_Capacitance.empty()
-        P_coeff % capacitance coefficient matrix
-        PType Type_PowerFlow = Type_PowerFlow.empty()
-        x_init % capacitance coefficient matrix
-        DynType DynamicTypes = DynamicTypes.EnergyFlow
-        D % capacitance coefficient matrix
-        B (:,:,:)% input mapping matrix
+        C_coeff (:,:) double % capacitance coefficient matrix
+        CType (:,1) Type_Capacitance = Type_Capacitance.empty()
+        P_coeff (:,:) % powerflow coefficient matrix
+        PType (:,1) Type_PowerFlow = Type_PowerFlow.empty()
+        x_init (:,1) double % initial condition vector
+        DynType (:,1) DynamicTypes = DynamicTypes.EnergyFlow
+        D (:,:) double % external edge mapping matrix
+        B (:,:,:) double % input mapping matrix
         
         P_sym (:,1) sym % Symbolic Representation of Power Flows
     end
@@ -31,14 +55,16 @@ classdef GraphModel < Model
     end
 
     methods
-        function obj = GraphModel(arg1, opts)
+        function obj = GraphModel(arg1, opts) % graph model constructor
             arguments 
                 arg1 (1,1)
+                % set default opts setting
                 opts.Linearize logical = true
                 opts.CalcPMethod CalcPMethods = "Default"
                 opts.SymParams_HandleMethod SymParams_HandleMethods = SymParams_HandleMethods.AugmentMatlabFunctions
             end
             
+            % build model from Graph or Component object
             if isa(arg1,'Graph')
                 obj.Graph = arg1;
             elseif isa(arg1,'Component')
@@ -55,28 +81,29 @@ classdef GraphModel < Model
         end      
 
         function init(obj)
-            init@Model(obj); 
+            init@Model(obj); % call superclass constructor
         end
         
-        function initSymbolic(obj)
-            obj.Nx = obj.Graph.Nx;
-            obj.Nu = obj.Graph.Nu;
-            obj.Nd = obj.Graph.Nev + obj.Graph.Nee;
-            obj.Ny = obj.Graph.Nv + numel(obj.Graph.Outputs);
+        function initSymbolic(obj) % symbolic variation of the init function
+            obj.Nx = obj.Graph.Nx; % number of states
+            obj.Nu = obj.Graph.Nu; % number of inputs
+            obj.Nd = obj.Graph.Nev + obj.Graph.Nee; % number of disturbances
+            obj.Ny = obj.Graph.Nv + numel(obj.Graph.Outputs); % number of outputs
             
-            obj.SymParams = obj.Graph.SymParams;
-            obj.SymParams_Vals = obj.Graph.SymParams_Vals;
+            obj.SymParams = obj.Graph.SymParams; % list of symbolic parametes
+            obj.SymParams_Vals = obj.Graph.SymParams_Vals; % symbolic parameter default values
             
-            % make vertex matrices
-            if ~isempty(obj.Graph.DynamicVertices)
+            % get state initial conditions
+            if ~isempty(obj.Graph.DynamicVertices) 
                 obj.x_init = vertcat(obj.Graph.DynamicVertices.Initial);
             else
                 obj.x_init = [];
             end
  
+            % vertex dynamic type (energy or state flow)
             obj.DynType = vertcat(obj.Graph.Vertices.DynamicType); 
             
-            % D matrix
+            % create the D matrix
             Dmat = zeros(obj.Graph.v_tot,obj.Graph.Nee);
             E_idx = arrayfun(@(x) find(x==obj.Graph.InternalVertices),vertcat(obj.Graph.ExternalEdges.HeadVertex));            
             for i  = 1:length(E_idx)
@@ -84,10 +111,12 @@ classdef GraphModel < Model
             end
             obj.D = Dmat;
             
-            % B matrix
+            % create B matrix
+            % dim 1: affected edge
+            % dim 2: inputs
+            % dim 3: used if multiple inputs affect the same edge
             Eint = obj.Graph.InternalEdges;
             numU = max(arrayfun(@(x) length(x.Input),Eint));
-
             obj.B = zeros(obj.Graph.Ne, obj.Graph.Nu, numU); % Inputs added along second dimensions; separate inputs along third dimension
             for i = 1:numel(Eint)
                 for j = 1:numel(Eint(i).Input)
@@ -95,23 +124,27 @@ classdef GraphModel < Model
                 end
             end
             
-            % C matrix
-            % Merge Note - May need to change from x.InternalVertices to x.Vertices
-            CTypeAll = vertcat(obj.Graph.InternalVertices(:).Capacitance);
-            numCType = arrayfun(@(x) length(x.Capacitance),obj.Graph.InternalVertices);
+            % create C matrix
+            CTypeAll = vertcat(obj.Graph.InternalVertices(:).Capacitance); % get list of all capacitance types
+            numCType = arrayfun(@(x) length(x.Capacitance),obj.Graph.InternalVertices); % number of capacitance types thtat affect each vertex
+            % build the graph Capacitance Coefficient matrix and figure out minimum number of unique capacitance types 
             [obj.C_coeff,obj.CType] = MakeCoeffMatrix(obj.Graph.InternalVertices,CTypeAll,numCType);
 
             % P matrix
-            PTypeAll = vertcat(Eint(:).PowerFlow); % list of all capacitance types
-            numPType = arrayfun(@(x) length(x.PowerFlow),Eint); % find number of capacitance types per vertex
+            PTypeAll = vertcat(Eint(:).PowerFlow); % get list of all powerflow types
+            numPType = arrayfun(@(x) length(x.PowerFlow),Eint); % number of powerflow types thtat affect each edge
+            % build the graph powerflow Coefficient matrix and figure out minimum number of unique powerflow types
             [obj.P_coeff,obj.PType] = MakeCoeffMatrix(Eint,PTypeAll,numPType);
             
+            % call superclass initSymbolic
             initSymbolic@Model(obj);
             
+            % call the symbolic solver
             obj.SymbolicSolve;
         end
         
-        function initNumerical(obj)                
+        function initNumerical(obj)  
+            % @Phil
             u_mod = genSymVars('u%d',max([obj.Graph.Nu,2])); % inputs - modified from SymVars.u to force MATLAB to vectorize CalcP_func even if there's a single input
             vars = {[obj.SymVars.x_full], [u_mod]};
             obj.CalcP_func = genMatlabFunctions(obj, obj.P_sym, vars);
@@ -120,66 +153,75 @@ classdef GraphModel < Model
         end
         
         function x = defineStateNames(obj)
+            % figure out the state names for a graph model
             if ~isempty(obj.Graph.DynamicVertices)
-                Desc = vertcat(obj.Graph.DynamicVertices.Description);
-                Blks = vertcat(vertcat(obj.Graph.DynamicVertices.Parent).Name);
-                x = join([Blks,repmat('\',length(Blks),1),Desc]);
+                Desc = vertcat(obj.Graph.DynamicVertices.Description); % state description
+                Blks = vertcat(vertcat(obj.Graph.DynamicVertices.Parent).Name); % state's parent object
+                x = join([Blks,repmat('\',length(Blks),1),Desc]); %format [component \ state desc]
             else
                 x = string.empty();
-            end
-            
+            end            
         end
         
         function x = defineInputNames(obj)
+            % figure out the input names for a graph model
             if ~isempty(obj.Graph.Inputs)
-                Desc = vertcat(obj.Graph.Inputs.Description);
-                Blks = vertcat(vertcat(obj.Graph.Inputs.Parent).Name);
-                x = join([Blks,repmat('\',length(Blks),1),Desc]);
+                Desc = vertcat(obj.Graph.Inputs.Description); % input description
+                Blks = vertcat(vertcat(obj.Graph.Inputs.Parent).Name); % input's parent object
+                x = join([Blks,repmat('\',length(Blks),1),Desc]); %format [component \ input desc]
             else
                 x = string.empty();
             end
         end
         
         function x = defineDisturbanceNames(obj)
+            % figure out the disturbance names for a graph model
+            
+            % external vertex disturbance info 
             if ~isempty(obj.Graph.ExternalVertices)
-                ext_verts_desc = vertcat(obj.Graph.ExternalVertices.Description);
-                ext_verts_parents = vertcat(vertcat(obj.Graph.ExternalVertices.Parent).Name);
+                ext_verts_desc = vertcat(obj.Graph.ExternalVertices.Description); % disturbance description
+                ext_verts_parents = vertcat(vertcat(obj.Graph.ExternalVertices.Parent).Name); % disturbance's parent object 
             else
                 ext_verts_desc = [];
                 ext_verts_parents = [];
             end
             
+            % external edge disturbance info
             if ~isempty(obj.Graph.ExternalEdges)
-                ext_edges_desc = vertcat(obj.Graph.ExternalEdges.Description);
-                ext_edges_parents =  vertcat(vertcat(obj.Graph.ExternalEdges.Parent).Name);
+                ext_edges_desc = vertcat(obj.Graph.ExternalEdges.Description); % disturbance description
+                ext_edges_parents =  vertcat(vertcat(obj.Graph.ExternalEdges.Parent).Name); % disturbance's parent object 
             else
                 ext_edges_desc = [];
                 ext_edges_parents = [];
             end
                 
-            Desc = [ext_verts_desc; ext_edges_desc];
-            Blks = [ext_verts_parents; ext_edges_parents];
-            x = join([Blks,repmat('\',length(Blks),1),Desc]);
+            Desc = [ext_verts_desc; ext_edges_desc]; % concatenate descriptions into single list
+            Blks = [ext_verts_parents; ext_edges_parents]; % concatenate parent objects into single list
+            x = join([Blks,repmat('\',length(Blks),1),Desc]); %format [component \ disturbance desc]
         end
         
         function x = defineOutputNames(obj)
-            DescX = vertcat(obj.Graph.InternalVertices.Description);
-            BlksX = vertcat(vertcat(obj.Graph.InternalVertices.Parent).Name);
+            % figure out the output names for a graph model
+            % graph outputs default to include all vertex state values
             
-            if ~isempty(obj.Graph.Outputs)
+            DescX = vertcat(obj.Graph.InternalVertices.Description); % internal vertex desc
+            BlksX = vertcat(vertcat(obj.Graph.InternalVertices.Parent).Name); % internal vertex parent object
+            
+            if ~isempty(obj.Graph.Outputs) % if additional model outputs are defined, include those
                 DescY = vertcat(obj.Graph.Outputs.Description);
                 BlksY = vertcat(vertcat(obj.Graph.Outputs.Parent).Name);
-                
             else
                 DescY = [];
                 BlksY = [];
             end
-            Desc = [DescX; DescY];
-            Blks = [BlksX; BlksY];
-            x = join([Blks,repmat('\',length(Blks),1),Desc]);
+            Desc = [DescX; DescY]; % concatentate descriptions
+            Blks = [BlksX; BlksY]; % concatenate parent object names
+            x = join([Blks,repmat('\',length(Blks),1),Desc]); %format [component \ output desc]
         end
         
         function vertex_table = get.VertexTable(obj)
+            % compile the vertex information into a table for improved
+            % usability
             names = vertcat(obj.Graph.Vertices.Description);
             parents = vertcat(vertcat(obj.Graph.Vertices.Parent).Name);
             types = vertcat(obj.Graph.Vertices.VertexType);
@@ -187,6 +229,8 @@ classdef GraphModel < Model
         end
         
         function edge_table = get.EdgeTable(obj)
+            % compile the edge information into a table for improved
+            % usability
             digits(4)
             pflows = vpa(obj.P_sym);
             pflows_strings = arrayfun(@string, pflows);
@@ -334,11 +378,11 @@ classdef GraphModel < Model
             
             set(gcf,'WindowButtonDownFcn',@(f,~)edit_graph(f,h))
             
-            function LabelStates(obj,h)
+            function LabelStates(obj,h) % label graph model vertices with state information
                 labelnode(h,1:obj.Graph.Nv,obj.OutputNames(1:obj.Graph.Nv))
             end
 
-            function LabelEdges(obj,h)
+            function LabelEdges(obj,h) % label graph model edges with powerflow information
                 % Get state vector filled up with symbolic varialbes
                 x       = sym('x%d'      ,[obj.Graph.v_tot        1]); % dynamic states
                 u       = sym('u%d'      ,[obj.Graph.Nu           1]); % inputs
@@ -347,19 +391,23 @@ classdef GraphModel < Model
                 labeledge(h,obj.Graph.E(:,1)',obj.Graph.E(:,2)',string(P)) %label Edges
             end
             
-            function LabelDisturbances(obj,h)
+            function LabelDisturbances(obj,h) % label graph model with disturbance information
                 labelnode(h,obj.Graph.Nv+1:obj.Graph.v_tot,obj.DisturbanceNames(1:obj.Graph.Nev))
                 labeledge(h,obj.Graph.Ne+1:obj.Graph.Ne+obj.Graph.Nee,obj.DisturbanceNames(obj.Graph.Nev+1:end))  
             end
         end
           
-        function SymbolicSolve(obj) % this function will only work for symbolic expressions at the moment
+        function SymbolicSolve(obj) 
+            % this function will only work for symbolic expressions at the moment
+            % symbolically solve the dynamics for a graph model
+            
+            % get index of dynamic and algebraic states
             if ~isa(obj.C_coeff, 'sym')
                 idx_x_d = (sum(abs(obj.C_coeff(1:obj.Graph.Nv,:)),2) ~= 0);
                 idx_x_a = ~idx_x_d;
             else
                 C_sum = sum(abs(obj.C_coeff(1:obj.Graph.Nv,:)),2);
-                idx_x_a = arrayfun(@(x) isequal(x,sym(0)), C_sum);
+                idx_x_a = arrayfun(@(x) isequal(x,sym(0)), C_sum); 
                 idx_x_d = ~idx_x_a;
             end
             %idx_x_e = obj.Graph.Nv+1:obj.Graph.Nv+obj.Graph.Nev;
@@ -368,11 +416,10 @@ classdef GraphModel < Model
             x_a = genSymVars('x_a%d', sum(idx_x_a)); % Algebraic States
             u = obj.SymVars.u; % Inputs
             d = obj.SymVars.d; % Disturbances
-            x_e     = d(1:obj.Graph.Nev); % external states
+            x_e     = d(1:obj.Graph.Nev); % external state
+            P_e     = d(obj.Graph.Nev+1:end); % external edges
             
-            P_e     = d(obj.Graph.Nev+1:end);
-            
-            %Get state vector filled up with symbolic varialbes
+            % fill state vector with symbolic varialbes
             if any(idx_x_d)
                 x_internal(idx_x_d,1) = x;
             end
@@ -380,7 +427,7 @@ classdef GraphModel < Model
                 x_internal(idx_x_a,1) = x_a;
             end
             
-            x_full = vertcat(x_internal, x_e);
+            x_full = vertcat(x_internal, x_e); % full state vector
             
             obj.SymVars.x_full = x_full; % Add full list of symbolic state variables, used later in initNumerical()
             
@@ -391,10 +438,10 @@ classdef GraphModel < Model
             C = CalcC_Sym(obj,x_full, x_internal); % calcualtes capacitance
             
             % Solve system dynamics
-            % Process Algebraic States
+            % Process Algebraic States first
             if any(idx_x_a)
-                eqnA_temp = -obj.Graph.M(idx_x_a,:)*P + obj.D(idx_x_a,:)*P_e;
-                if obj.AutomaticModify
+                eqnA_temp = -obj.Graph.M(idx_x_a,:)*P + obj.D(idx_x_a,:)*P_e; % algebraic state equations
+                if obj.AutomaticModify % created Modified graph powerflows (see C.T. Aksland M.S. Thesis Ch. 2)
                     for i = 1:length(eqnA_temp)
                         eqn = eqnA_temp(i);
                         factors = factor(eqn);
@@ -411,8 +458,9 @@ classdef GraphModel < Model
                 x_a_solution = sym.empty();
             end
             
+            % Process Dynamic States second
             if any(idx_x_d)
-                eqnD(1:sum(idx_x_d),1) = diag(C(idx_x_d))^-1*(-obj.Graph.M(idx_x_d,:)*P + obj.D(idx_x_d,:)*P_e); % system of dynamic equations (
+                eqnD(1:sum(idx_x_d),1) = diag(C(idx_x_d))^-1*(-obj.Graph.M(idx_x_d,:)*P + obj.D(idx_x_d,:)*P_e); % system of dynamic equations
                 if any(idx_x_a)
                     x_d_solution = simplifyFraction(subs(eqnD,x_a,x_a_solution)); % plug in the algebraic system solution into the dynamic system equations
                 else
@@ -422,6 +470,7 @@ classdef GraphModel < Model
                 x_d_solution = sym.empty();
             end
             
+            % caclulate additional model outputs
             if ~isempty(obj.Graph.Outputs)
                 Y = CalcY_Sym(obj,x_full,u);
                 if any(idx_x_a)
@@ -548,19 +597,27 @@ classdef GraphModel < Model
         end
         
         function [Y] = CalcY_Sym(obj,x0,u0)
-            % CalcY_Sym calculates the outputs of a graph model.              
-                    
+            % CalcY_Sym calculates the outputs of a Graph model.
+            
+            %%% INPUTS
+            % obj  - System Graph model object
+            % x0   - state vector
+            % u0   - input vector
+                        
+            %%% OUTPUTS
+            % Y - Outputs
+            
             % function lookups
             OF = sym(ones(length(obj.Graph.Outputs),1));
-            for i = 1:length(OF)
+            for i = 1:length(OF) % loop through each output function
                 of = obj.Graph.Outputs(i);
                 input = [];
                 if ~isempty(of)
-                    for j = 1:length(of.Breakpoints)
-                        if isa(of.Breakpoints{j},'GraphVertex')                           
+                    for j = 1:length(of.Breakpoints) % build the breakpoint vector for the output function
+                        if isa(of.Breakpoints{j},'GraphVertex') % if the breakpoint is a state
                             [~,idx] = ismember(of.Breakpoints{j},obj.Graph.Vertices); 
                             input = [input x0(idx)];
-                        elseif isa(of.Breakpoints{j},'GraphInput')     
+                        elseif isa(of.Breakpoints{j},'GraphInput') % if the breakpoint is an input
                             [~,idx] = ismember(of.Breakpoints{j},obj.Graph.Inputs);
                             input = [input u0(idx)];
                         else
@@ -568,8 +625,9 @@ classdef GraphModel < Model
                         end
                     
                     end
-                    input = num2cell(input);
+                    input = num2cell(input); % reformat the breakpoints into a cell
                     func = of.Function;
+                    % calculate the value of the output function
                     if isa(func, 'Type')
                         OF(i) = func.calcVal(input{:});
                     elseif isa(func, 'symfun')
@@ -583,6 +641,9 @@ classdef GraphModel < Model
         end
         
         function P = CalcP(obj, x_full, u, params)
+            % calculate the values of the power flows when simulating the
+            % graph
+            
             param_lengths = [obj.Graph.Nv, obj.Nu, numel(obj.SymParams)];
             
             if nargin == 3 || isempty(obj.SymParams)
@@ -591,6 +652,8 @@ classdef GraphModel < Model
                 vars = {x_full, u, params};
             end
             
+            % through an error if the user did not pass enough (or too
+            % much) information to the simulate function
             for i = 1:numel(vars)
                 assert(size(vars{i},1) >= param_lengths(i), "Argument %d requires %d entries", i, param_lengths(i));
             end

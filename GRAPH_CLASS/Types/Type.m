@@ -1,7 +1,32 @@
 classdef Type < matlab.mixin.Copyable
-    %TYPE Summary of this class goes here
-    %   Detailed explanation goes here
+    % Type is a Super Class for all mathmatical expressions in the the 
+    % Graph Modeling Toolbox. For example, objects of class Type can
+    % convert an expression, x1+2*x2, into a callable matlab function. Type
+    % objects are typically used to define graph powerflows and
+    % capacitances, but also have other more generic applications. 
+    % Instatiate an empty object or a filled object in the following form:
+    % 
+    % T = Type(vars,params,type) where type is a desired function defined
+    % as a string or symbolic expression, vars is a symbolic array of the
+    % symbolic variables used in type, and params is a symbolic cell array
+    % form of vars.
+    % ex: T = Type([sym('b1') sym('b2')],{sym('b1') sym('b2')},'b1*b2')
+      
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % Contributors: Christopher T. Aksland and Phil Renkert
+    % Association: University of Illionis at Urbana-Champaign
+    % Contact: aksland2@illinois.edu and renkert2@illinois.edu
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % potential improvements:
+    % - remove either vars or params since they are duplicates of each
+    % other. The redundancy may cause confusion.
+    % - add 'optimize' option to the matlabfunction calls to speed up
+    % processing?
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
+    % @Phil can you comment this since you're more familiar.
     
     properties  % User can set Val_Str or Val_Sym, the corresponding properties are updated automatically
         Val_Str string = string.empty()
@@ -23,7 +48,7 @@ classdef Type < matlab.mixin.Copyable
     end
     
     methods
-        function obj = Type(vars, params, type)
+        function obj = Type(vars, params, type) % Type class constructor
             if nargin ~= 0
                 obj.vars = vars;
                 obj.params = params;
@@ -46,10 +71,7 @@ classdef Type < matlab.mixin.Copyable
             else
                 error("Type must be 'string', 'char', or 'sym'")
             end
-                     
-%             error_msg = sprintf("Type must be function of vars: %s", join(string(obj.vars), ", "));
-%             assert(all(ismember(symvar(Val_Sym_temp), obj.vars)), error_msg)
-            
+                                 
             obj.set_method_flag = false; % Prevents infinite loop in set method
             
             if isempty(obj.Val_Sym) || obj.Val_Sym ~= Val_Sym_temp

@@ -1,20 +1,34 @@
 classdef GraphVertex < handle & matlab.mixin.Heterogeneous & matlab.mixin.Copyable
-    %GRAPHVERTEX Super Class for all vertex types (i.e. State,
-    %External)
-    %   The matlab.mixin.Heterogeneous type will allow us to create heterogeneous object
-    %   arrays of all the child classes.  
+    % GraphVertex Super Class for all vertex types (i.e. Internal, 
+    % External) in the Graph Modeling Toolbox.
+    % Instatiate an empty object or use an input parser
+    % Definable properties (with class) include:
+    % - Description (string)
+    % - VertexType (VertexTypes)
+    % - DynamicType (DynamicTypes)
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % Contributors: Christopher T. Aksland and Phil Renkert
+    % Association: University of Illionis at Urbana-Champaign
+    % Contact: aksland2@illinois.edu and renkert2@illinois.edu
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % potential improvements:
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
     properties
-        Description string = string.empty()
-        VertexType VertexTypes = "Abstract"
+        Description string = string.empty() % vertex state description
+        VertexType VertexTypes = "Abstract" % describes vertex type
         DynamicType DynamicTypes = "EnergyFlow" % Dynamic Type: 1 - Energy Flow, 2 - State Flow
     end
     
     properties (SetAccess = ?Component)
-        Parent Component = Component.empty()
+        Parent Component = Component.empty() % parent object for vertices
     end
     
     methods
-        function obj = GraphVertex(varargin)
+        function obj = GraphVertex(varargin) % Object constructor
             if nargin > 1
                 obj = my_inputparser(obj,varargin{:});
             end
@@ -22,6 +36,8 @@ classdef GraphVertex < handle & matlab.mixin.Heterogeneous & matlab.mixin.Copyab
     end
     
     methods (Sealed)
+        % custom GraphVertex object eq() function to compare a hetergeneous
+        % array of GraphVertices
         function x = eq(obj1,obj2)
             if numel(obj1)==numel(obj2)
                 x = false(size(obj1));
@@ -43,6 +59,7 @@ classdef GraphVertex < handle & matlab.mixin.Heterogeneous & matlab.mixin.Copyab
             end
         end
         
+        % Custom ne() function
         function x = ne(obj1, obj2)
             x = ~eq(obj1, obj2);
         end

@@ -1,7 +1,24 @@
 classdef Model < matlab.mixin.Copyable
-    %TYPE Summary of this class goes here
-    %   Detailed explanation goes here
+    % The Model class in the Graph Modeling Toolbox is used to generically
+    % define a model in nonlinear state space form.
+    %
+    % System Description
+    % x_dot = f_sym(x,u,d)
+    % y     = g_sym(x,u,d)
     
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % Contributors: Christopher T. Aksland and Phil Renkert
+    % Association: University of Illionis at Urbana-Champaign
+    % Contact: aksland2@illinois.edu and renkert2@illinois.edu
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % potential improvements:
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
+%     @ phil, you added a lot of code here to support the symbolic stuff so
+%     I'm going to let you comment this :) thanks.
+
     properties
         LinearizeFlag logical = true % Flag that determines whether to calculate the linear models
         SymParams_HandleMethod SymParams_HandleMethods = SymParams_HandleMethods.AugmentMatlabFunctions
@@ -12,9 +29,6 @@ classdef Model < matlab.mixin.Copyable
         Nu % number of inputs
         Nd % number of disturbances
         Ny % number of outputs
-        % System representation
-        %  - x_dot = f(x,u,d)
-        %  - y     = g(x,u,d)
         f_sym (:,1) sym % f(x,u,d), can contain symbolic parameters
         g_sym (:,1) sym % g(x,u,d), can contain symbolic parameters
 
