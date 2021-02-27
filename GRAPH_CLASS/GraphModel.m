@@ -597,9 +597,6 @@ classdef GraphModel < Model
             
             P = CalcX(obj, obj.CalcP_func, vars);
         end
-        
-    end
-        
-        
+    end       
 end
 
