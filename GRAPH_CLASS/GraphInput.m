@@ -1,9 +1,27 @@
 classdef GraphInput < handle
-    %GraphInput
+    % GraphInput is a class that describes an input in the Graph Model
+    % Toolbox. GraphInputs can be instatiated as an empty object, input
+    % parsing, or as:
+    % 
+    % u = GraphInput(desc) where desc is the input description
+    %
+    % Definable properties (with class) include:
+    % - Description (string)
+    % - Bounds (Limits)
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % Contributors: Christopher T. Aksland and Phil Renkert
+    % Association: University of Illionis at Urbana-Champaign
+    % Contact: aksland2@illinois.edu and renkert2@illinois.edu
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % potential improvements:
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
     properties
-        Description string = string.empty() 
-        Bounds Limits = Limits() 
+        Description (1,1) string = "Default"
+        Bounds (1,1) Limits = Limits() 
     end
     
     properties (SetAccess = ?Component)

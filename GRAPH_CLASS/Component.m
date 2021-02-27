@@ -1,13 +1,29 @@
 classdef Component < matlab.mixin.Heterogeneous & handle
-    %COMPONENT Super class to be inherited by Components (i.e.
-    %Battery, Motor, Heat Exchanger, etc...
-    %   Detailed explanation goes here
+    % Component is a super class for all specifc components (Ex: tank, 
+    % battery, etc) in the Graph Modeling Toolbox. The graph property of
+    % different components can be connected to generate a system model.
+    % Instatiate an empty object, use an input parser, or use a strcuture
+    % with "Name" and "Value" fields. Valid Name and Value pairs are
+    % dictated by the component subclasses.
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % Contributors: Christopher T. Aksland and Phil Renkert
+    % Association: University of Illionis at Urbana-Champaign
+    % Contact: aksland2@illinois.edu and renkert2@illinois.edu
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % potential improvements:
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
+    % @phil, I'm going to let you comment most of this since I don't want
+    % to decipher it.
     
     properties %(SetAccess = protected)        
-        % Block Name
-        Name string = "Component"
-        Graph Graph = Graph.empty()
-        Ports ComponentPort = ComponentPort.empty()
+        
+        Name (1,1) string = "Component"% Block Name
+        Graph (1,1) Graph
+        Ports (:,1) ComponentPort = ComponentPort.empty()
         
         extrinsicProps (:,1) extrinsicProp
     end
@@ -15,7 +31,7 @@ classdef Component < matlab.mixin.Heterogeneous & handle
     methods
         function obj = Component(varargin)
             if nargin == 1
-                if isstruct(varargin{1})
+                if isstruct(varargin{1}) % create a component using a strucutre
                     if isequal(fields(varargin{1}),{'Name';'Value'})
                         for i = 1:numel(varargin{1})
                             try
@@ -26,7 +42,7 @@ classdef Component < matlab.mixin.Heterogeneous & handle
                             end
                         end
                     else
-                        fnames = fieldnames(varargin{1});
+                        fnames = fieldnames(varargin{1}); % @phil, what is this doing?
                         for i = 1:numel(fnames)
                             try
                                 obj.(fnames{i}) = varargin{1}.(fnames{i});
@@ -34,7 +50,7 @@ classdef Component < matlab.mixin.Heterogeneous & handle
                         end
                     end
                 else
-                    error('Components must be defined using a structure of Name/Value fields or Name-Value pairs')
+                    error('Components must be defined using a structure of Name/Value fields or in Name-Value pairs')
                 end
             elseif nargin > 1
                 my_inputparser(obj,varargin{:}); % input parser component models
