@@ -38,9 +38,9 @@ classdef System < handle
             [obj.Graph, obj.extrinsicProps] = Combine(obj.Components, obj.ConnectP);
         end
         
-        function model = createModel(obj)
+        function model = createModel(obj, varargin)
             if isempty(obj.Model)
-                obj.Model = GraphModel(obj.Graph);
+                obj.Model = GraphModel(obj.Graph, varargin{:});
             end
             model = obj.Model;
         end
