@@ -2,6 +2,7 @@ classdef VertexTypes
     % VertexTypes is an enumeration class that combines Variable Type and 
     % Domain information in the Graph Modeling Toolbox. VertexTypes are 
     % used to check compatiabilty between component ports. 
+    % Combines Domain and VariableType information into single enumeration
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Contributors: Christopher T. Aksland and Phil Renkert
@@ -13,7 +14,6 @@ classdef VertexTypes
     % potential improvements:
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
-    % @Phil can you add additional comments this since you're more familiar.
     
     enumeration
         % Domains derived from: https://www.mathworks.com/help/physmod/simscape/ug/basic-principles-of-modeling-physical-networks.html#bq89sba-3
@@ -71,8 +71,16 @@ classdef VertexTypes
             x = obj.VariableType == VariableTypes.Flow;
         end
         
-        function x = isConnectable(varargin) % isConnectable = true -> Vertices can be connceted via an edge
-            obj_array = [varargin{:}];
+        function x = isConnectable(varargin) 
+            % isConnectable = true -> Vertices can be connceted via an edge
+            % Arguments are two VertexType arguments as comma separated list or array of two objects
+            
+            if nargin > 1
+                obj_array = [varargin{:}];
+            else
+                obj_array = varargin{1};
+            end
+            
             assert(numel(obj_array) == 2, 'isConnectable requires two VertexType arguments as comma separated list or array of two objects');
             obj1 = obj_array(1);
             obj2 = obj_array(2);
@@ -86,7 +94,10 @@ classdef VertexTypes
             end
         end
         
-        function x = isCompatible(varargin) % isCompatible = true -> Vertices can be combined in equivalence connection
+        function x = isCompatible(varargin) 
+            % isCompatible = true -> Vertices can be combined in equivalence connection
+             % Arguments are VertexTypes as comma separated list or array of VertexType objects
+             
             if nargin > 1
                 obj_array = [varargin{:}];
             else

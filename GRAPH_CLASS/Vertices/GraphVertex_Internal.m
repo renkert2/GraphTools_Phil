@@ -23,17 +23,11 @@ classdef GraphVertex_Internal < GraphVertex
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
     properties
-        CapFunction (:,1) LookupFunction = LookupFunction.empty();
-        Capacitance (:,1) Type_Capacitance = Type_Capacitance.empty();
+        CapFunction (:,1) LookupFunction
+        Capacitance (:,1) Type_Capacitance
         Coefficient (:,1) {mustBeNonnegativeOrSym} = 0
         Initial (1,1) double = 0
-        Bounds (1,1) Limits = Limits()
-    end
-    
-    methods
-        function obj = GraphVertex_Internal(varargin) % constructor method
-            obj@GraphVertex(varargin{:}); % calls the superclass constructor
-        end       
+        Bounds Limits {mustBeScalarOrEmpty}
     end
 end
 

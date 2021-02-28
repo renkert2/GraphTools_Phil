@@ -21,34 +21,10 @@ classdef GraphEdge_Internal < GraphEdge
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
     properties
-        PowerFlow (:,1) Type_PowerFlow %= Type_PowerFlow.empty() % powerflow representation for an edge
-        Input (:,1) GraphInput %= GraphInput.empty() % inputs incident on the edge 
-        Coefficient (:,1) double = 0 % the constant edge coefficient
-        TailVertex (1,1) GraphVertex %= GraphVertex.empty() % the edge tail vertex
-        HeadVertex (1,1) GraphVertex %= GraphVertex.empty() % the edge head vertex
-    end
-    
-    methods
-        function obj = GraphEdge_Internal(varargin) % constructor method
-            obj@GraphEdge(varargin{:}); % calls the superclass constructor
-        end
-        
-%         function set.TailVertex(obj, tail_vertex) % error check on whether two vertices can be connected by an edge
-%             if ~isempty(obj.HeadVertex)
-%                 if ~isConnectable(obj.HeadVertex.VertexType, tail_vertex.VertexType)
-%                     warning('Tail vertex is not connectable with existing head vertex')
-%                 end
-%             end
-%             obj.TailVertex = tail_vertex;
-%         end
-%         
-%         function set.HeadVertex(obj, head_vertex) % error check on whether two vertices can be connected by an edge
-%             if ~isempty(obj.TailVertex)
-%                 if ~isConnectable(obj.TailVertex.VertexType, head_vertex.VertexType)
-%                     warning('Head vertex is not connectable with existing tail vertex')
-%                 end
-%             end
-%             obj.HeadVertex = head_vertex;
-%         end
+        PowerFlow (:,1) Type_PowerFlow % PowerFlow representation for an edge
+        Input (:,1) GraphInput % inputs incident on the edge 
+        Coefficient (:,1) {mustBeParam} = 0 % the constant edge coefficient.  Must be a double() or symParam() object
+        TailVertex (:,1) GraphVertex {mustBeScalarOrEmpty} % the edge tail vertex
+        HeadVertex (:,1) GraphVertex {mustBeScalarOrEmpty} % the edge head vertex
     end
 end

@@ -9,11 +9,10 @@ classdef GraphModel < Model
     % A GraphModel can be instatiated as an empty object or as:
     % 
     % gm = GraphModel(comp) where comp is a Graph or Component object
-    %   ot
+    %   or
     % gm = GraphModel(comp,opts) where opts has optional settings
     %       opts.Linearize = {true or false}
     %       opts.CalcPMethod = {Default or Edges}
-    %       opts.SymParams_HandleMethod = ?????? @ Phil
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Contributors: Christopher T. Aksland and Phil Renkert
@@ -23,7 +22,12 @@ classdef GraphModel < Model
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % potential improvements:
-    % split this class into multiple files for organizational purposes
+    % - split this class into multiple files for organizational purposes
+    % - use VPA with abandon on symbolic calculations
+    % - Move 'StateNames', 'DisturbanceNames', 'InputNames', etc to dependent
+    %   table properties
+    % - Phil: Figure out more elegant solution for symParams
+    % - Remove DynType and DynamicType from GraphVertex, I don't think we're using them
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
     properties
@@ -55,36 +59,33 @@ classdef GraphModel < Model
     end
 
     methods
-        function obj = GraphModel(arg1, opts) % graph model constructor
+        function obj = GraphModel(arg1, opts)
             arguments 
-                arg1 (1,1)
-                % set default opts setting
+                arg1 (:,1) = []
+                
+                % Specify Default Options
                 opts.Linearize logical = true
                 opts.CalcPMethod CalcPMethods = "Default"
-                opts.SymParams_HandleMethod SymParams_HandleMethods = SymParams_HandleMethods.AugmentMatlabFunctions
             end
             
             % build model from Graph or Component object
-            if isa(arg1,'Graph')
-                obj.Graph = arg1;
-            elseif isa(arg1,'Component')
-                obj.Graph = arg1.Graph;
-            else
-                error('Invalid argument to GraphModel.  Must be of type Graph or Component')
+            if ~isempty(arg1)
+                if isa(arg1,'Graph')
+                    obj.Graph = arg1;
+                elseif isa(arg1,'Component')
+                    obj.Graph = arg1.Graph;
+                else
+                    error('Invalid argument to GraphModel.  Must be of type Graph or Component')
+                end
+                
+                obj.CalcPMethod = opts.CalcPMethod;
+                obj.LinearizeFlag = opts.Linearize;
+            
+                init(obj);
             end
-            
-            obj.CalcPMethod = opts.CalcPMethod;
-            obj.LinearizeFlag = opts.Linearize;
-            obj.SymParams_HandleMethod = opts.SymParams_HandleMethod;
-            
-            init(obj);
-        end      
-
-        function init(obj)
-            init@Model(obj); % call superclass constructor
         end
         
-        function initSymbolic(obj) % symbolic variation of the init function
+        function init(obj)
             obj.Nx = obj.Graph.Nx; % number of states
             obj.Nu = obj.Graph.Nu; % number of inputs
             obj.Nd = obj.Graph.Nev + obj.Graph.Nee; % number of disturbances
@@ -94,18 +95,19 @@ classdef GraphModel < Model
             obj.SymParams_Vals = obj.Graph.SymParams_Vals; % symbolic parameter default values
             
             % get state initial conditions
-            if ~isempty(obj.Graph.DynamicVertices) 
+            if ~isempty(obj.Graph.DynamicVertices)
                 obj.x_init = vertcat(obj.Graph.DynamicVertices.Initial);
             else
                 obj.x_init = [];
             end
- 
-            % vertex dynamic type (energy or state flow)
-            obj.DynType = vertcat(obj.Graph.Vertices.DynamicType); 
             
-            % create the D matrix
+            % vertex dynamic type (energy or state flow)
+            % Can we remove this?
+            obj.DynType = vertcat(obj.Graph.Vertices.DynamicType);
+            
+            % create the D matrix: External Edge Mapping Matrix
             Dmat = zeros(obj.Graph.v_tot,obj.Graph.Nee);
-            E_idx = arrayfun(@(x) find(x==obj.Graph.InternalVertices),vertcat(obj.Graph.ExternalEdges.HeadVertex));            
+            E_idx = arrayfun(@(x) find(x==obj.Graph.InternalVertices),vertcat(obj.Graph.ExternalEdges.HeadVertex));
             for i  = 1:length(E_idx)
                 Dmat(E_idx(i),i) = 1;
             end
@@ -127,29 +129,25 @@ classdef GraphModel < Model
             % create C matrix
             CTypeAll = vertcat(obj.Graph.InternalVertices(:).Capacitance); % get list of all capacitance types
             numCType = arrayfun(@(x) length(x.Capacitance),obj.Graph.InternalVertices); % number of capacitance types thtat affect each vertex
-            % build the graph Capacitance Coefficient matrix and figure out minimum number of unique capacitance types 
+            % build the graph Capacitance Coefficient matrix and figure out minimum number of unique capacitance types
             [obj.C_coeff,obj.CType] = MakeCoeffMatrix(obj.Graph.InternalVertices,CTypeAll,numCType);
-
+            
             % P matrix
             PTypeAll = vertcat(Eint(:).PowerFlow); % get list of all powerflow types
             numPType = arrayfun(@(x) length(x.PowerFlow),Eint); % number of powerflow types thtat affect each edge
             % build the graph powerflow Coefficient matrix and figure out minimum number of unique powerflow types
             [obj.P_coeff,obj.PType] = MakeCoeffMatrix(Eint,PTypeAll,numPType);
             
-            % call superclass initSymbolic
-            initSymbolic@Model(obj);
-            
-            % call the symbolic solver
-            obj.SymbolicSolve;
+            init@Model(obj); % Call init method of Model superclass
         end
         
-        function initNumerical(obj)  
-            % @Phil
+        function setCalcFuncs(obj)
+            % Modifies Model.setCalcFuncs to include CalcP_func for PowerFlow Calculations
             u_mod = genSymVars('u%d',max([obj.Graph.Nu,2])); % inputs - modified from SymVars.u to force MATLAB to vectorize CalcP_func even if there's a single input
             vars = {[obj.SymVars.x_full], [u_mod]};
             obj.CalcP_func = genMatlabFunctions(obj, obj.P_sym, vars);
             
-            initNumerical@Model(obj);
+            setCalcFuncs@Model(obj);
         end
         
         function x = defineStateNames(obj)
@@ -410,7 +408,6 @@ classdef GraphModel < Model
                 idx_x_a = arrayfun(@(x) isequal(x,sym(0)), C_sum); 
                 idx_x_d = ~idx_x_a;
             end
-            %idx_x_e = obj.Graph.Nv+1:obj.Graph.Nv+obj.Graph.Nev;
  
             x = obj.SymVars.x; % Dynamic States 
             x_a = genSymVars('x_a%d', sum(idx_x_a)); % Algebraic States

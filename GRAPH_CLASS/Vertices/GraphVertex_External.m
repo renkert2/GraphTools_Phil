@@ -17,14 +17,5 @@ classdef GraphVertex_External < GraphVertex
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % potential improvements:
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    
-    
-    methods
-        function obj = GraphVertex_External(varargin) % constructor method
-            obj@GraphVertex(varargin{:}); % calls the superclass constructor
-        end
-         
-    end
-
 end
 

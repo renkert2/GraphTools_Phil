@@ -14,14 +14,14 @@ classdef Model < matlab.mixin.Copyable
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % potential improvements:
+    % Phil: Figure out more elegant SymParam...
+    % Add Constructor
+    % Find better solution than splitapply() for calcX
+    % VPA all the things
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    
-%     @ phil, you added a lot of code here to support the symbolic stuff so
-%     I'm going to let you comment this :) thanks.
 
     properties
         LinearizeFlag logical = true % Flag that determines whether to calculate the linear models
-        SymParams_HandleMethod SymParams_HandleMethods = SymParams_HandleMethods.AugmentMatlabFunctions
     end
 
     properties (SetAccess = protected) 
@@ -42,8 +42,8 @@ classdef Model < matlab.mixin.Copyable
     end
     
     properties (SetAccess = protected, GetAccess = protected)
-        CalcF_func (1,1) function_handle = @(x)0 % calculates x_dot
-        CalcG_func (1,1) function_handle = @(x)0% calculates y   
+        CalcF_func function_handle {mustBeScalarOrEmpty} % calculates x_dot
+        CalcG_func function_handle {mustBeScalarOrEmpty} % calculates y   
     end
     
     properties (Dependent)
@@ -55,9 +55,7 @@ classdef Model < matlab.mixin.Copyable
      
     methods
         function obj = Model(varargin)
-            a = 1; 
             % add functionality here at some point
-            
 %             if nargin == 0
 %                 % do nothing
 %             elseif nargin == 1
@@ -71,52 +69,58 @@ classdef Model < matlab.mixin.Copyable
         end
         
         function init(obj)
-            initSymbolic(obj);
-            initNumerical(obj);
+            setSymVars(obj);
+            SymbolicSolve(obj);
+            setCalcFuncs(obj);
+
+            if obj.LinearizeFlag
+                obj.setLinearModel;
+            end
+            
             obj.N_SymParams = numel(obj.SymParams);
         end
 
-        function initSymbolic(obj)
-            %x1       = sym('x%d'    ,[obj.Nx    1]); % dynamic states
-            x1 = genSymVars('x%d', obj.Nx);
-            %u1       = sym('u%d'    ,[obj.Nu    1]); % inputs
-            u1 = genSymVars('u%d', obj.Nu);
-            %d1       = sym('d%d'    ,[obj.Nd    1]); % disturbances
-            d1 = genSymVars('d%d', obj.Nd);
+        function setSymVars(obj)
+            x1 = genSymVars('x%d', obj.Nx); % Symbolic Vars for Dynamic States
+            u1 = genSymVars('u%d', obj.Nu); % Symbolic Vars for Inputs
+            d1 = genSymVars('d%d', obj.Nd); % Symbolic Vars for Disturbances
             
             obj.SymVars.x = x1;
             obj.SymVars.u = u1;
             obj.SymVars.d = d1;           
         end
         
-        function initNumerical(obj)            
+        function setCalcFuncs(obj)
+            f = obj.f_sym;
+            g = obj.g_sym;
+            
             vars = {[obj.SymVars.x], [obj.SymVars.u], [obj.SymVars.d]};
-            [CalcFuncs_Cell, nums_Cell] = genMatlabFunctions(obj, {obj.f_sym, obj.g_sym},vars);
+            CalcFuncs_Cell = genMatlabFunctions(obj, {f, g},vars);
             obj.CalcF_func = CalcFuncs_Cell{1};
             obj.CalcG_func = CalcFuncs_Cell{2};
+        end
+        
+        function setLinearModel(obj)   
+            f = obj.f_sym;
+            g = obj.g_sym;
             
-            f_num = nums_Cell{1};
-            g_num = nums_Cell{2};
+            A = jacobian(f,obj.SymVars.x);
+            B = jacobian(f,obj.SymVars.u);
+            E = jacobian(f,obj.SymVars.d);
             
-            if obj.LinearizeFlag
-                A = jacobian(f_num,obj.SymVars.x);
-                B = jacobian(f_num,obj.SymVars.u);
-                E = jacobian(f_num,obj.SymVars.d);
-                
-                C = jacobian(g_num,obj.SymVars.x);
-                D = jacobian(g_num,obj.SymVars.u);
-                H = jacobian(g_num,obj.SymVars.d);
-                
-                obj.LinModel = LinearModel(A,B,E,C,D,H);
-                
-                % obj.LinModel.CalcState  = matlabFunction(obj.LinModel.A_sym,obj.LinModel.B_sym,obj.LinModel.E_sym,'Vars',vars); - This should go in LinModel
-                % obj.LinModel.CalcOutput = matlabFunction(obj.LinModel.C_sym,obj.LinModel.D_sym,obj.LinModel.H_sym,'Vars',vars);
-                %             obj.LinearModel.CalcOutput = matlabFunction(obj.LinearModel.B_sym,'Vars',[{[x1] [u1], [d1]}]);
-                %             obj.LinearModel.CalcE = matlabFunction(obj.LinearModel.E_sym,'Vars',[{[x1] [u1], [d1]}]);
-                %             obj.LinearModel.CalcC = matlabFunction(obj.LinearModel.C_sym,'Vars',[{[x1] [u1], [d1]}]);
-                %             obj.LinearModel.CalcD = matlabFunction(obj.LinearModel.D_sym,'Vars',[{[x1] [u1], [d1]}]);
-                %             obj.LinearModel.CalcH = matlabFunction(obj.LinearModel.H_sym,'Vars',[{[x1] [u1], [d1]}]);
-            end
+            C = jacobian(g,obj.SymVars.x);
+            D = jacobian(g,obj.SymVars.u);
+            H = jacobian(g,obj.SymVars.d);
+            
+            obj.LinModel = LinearModel(A,B,E,C,D,H);
+            
+            % obj.LinModel.CalcState  = matlabFunction(obj.LinModel.A_sym,obj.LinModel.B_sym,obj.LinModel.E_sym,'Vars',vars); - This should go in LinModel
+            % obj.LinModel.CalcOutput = matlabFunction(obj.LinModel.C_sym,obj.LinModel.D_sym,obj.LinModel.H_sym,'Vars',vars);
+            %             obj.LinearModel.CalcOutput = matlabFunction(obj.LinearModel.B_sym,'Vars',[{[x1] [u1], [d1]}]);
+            %             obj.LinearModel.CalcE = matlabFunction(obj.LinearModel.E_sym,'Vars',[{[x1] [u1], [d1]}]);
+            %             obj.LinearModel.CalcC = matlabFunction(obj.LinearModel.C_sym,'Vars',[{[x1] [u1], [d1]}]);
+            %             obj.LinearModel.CalcD = matlabFunction(obj.LinearModel.D_sym,'Vars',[{[x1] [u1], [d1]}]);
+            %             obj.LinearModel.CalcH = matlabFunction(obj.LinearModel.H_sym,'Vars',[{[x1] [u1], [d1]}]);
         end
         
         function F = CalcF(obj,x,u,d,params)
@@ -152,52 +156,12 @@ classdef Model < matlab.mixin.Copyable
         end
         
         function [A,B,E,F0,C,D,H,G0] = Linearize(obj,x0,u0,d0)
-            
-            % 
             [A,B,E] = obj.LinModel.CalcState(x0,u0,d0);
-%             B  = obj.LinearModel.CalcB(x0,u0,d0);
-%             E  = obj.LinearModel.CalcE(x0,u0,d0);
             F0 = obj.CalcF_func(x0,u0,d0) - A*x0 - B*u0 - E*d0;
             
             [C,D,G]  = obj.LinModel.CalcOutput(x0,u0,d0);
-%             D  = obj.LinearModel.CalcD(x0,u0,d0);
-%             G  = obj.LinearModel.CalcG_func(x0,u0,d0);
-            G0 = obj.CalcG_func(x0,u0,d0) - C*x0 - D*u0 - G*d0;
-               
+            G0 = obj.CalcG_func(x0,u0,d0) - C*x0 - D*u0 - G*d0;     
         end
-        
-        function num = replaceSymParams(obj, sym)
-            num = subs(sym, obj.SymParams, obj.SymParams_Vals);
-        end
-        
-        function setParamVals(obj, varargin)
-            nargs = numel(varargin);
-            if nargs == 1
-                vals = varargin{1};
-                assert(all(size(vals) == size(obj.SymParams)), "Single argument to setParamVal requires an array of size SymParams");
-                obj.SymParams_Vals = vals;
-            elseif nargs == 2
-                syms = varargin{1};
-                vals = varargin{2};
-               
-                assert(numel(syms) == numel(vals), "Each symbolic variable in arg1 must have a corresponding numerical value in arg2");
-                
-                if isa(syms, 'sym')
-                    % Do nothing and continue
-                elseif isa(syms, 'string')
-                    syms = sym(syms);
-                else
-                    error("First argument must be list of symbolic variables as strings or syms");
-                end
-                
-                indices = arrayfun(@(x) find(arrayfun(@(y) isequal(x,y), obj.SymParams)), syms);
-                obj.SymParams_Vals(indices) = vals;
-            else
-                error("Invalid args for setParamVals")
-            end
-            
-            obj.initNumerical();
-        end        
         
         function x = get.StateNames(obj)
             x = defineStateNames(obj);
@@ -213,38 +177,32 @@ classdef Model < matlab.mixin.Copyable
         
         function x = get.OutputNames(obj)
             x = defineOutputNames(obj);                       
-        end 
-        
+        end     
     end
     
     methods (Access = protected)
-        function [funcs, nums] = genMatlabFunctions(obj, syms, vars)
-            cell_flag = isa(syms, 'cell');
+        function funcs = genMatlabFunctions(obj, syms, vars)
+            % Generates matlabFunctions from symbolic arrays
+            % i.e. f_sym -> calcF_Func and g_sym -> calcG_Func in 
+            % setCalcFuncs().
             
             if ~isempty(obj.SymParams)
-                if obj.SymParams_HandleMethod == SymParams_HandleMethods.SubstituteNumericalValues
-                    if cell_flag
-                        nums = cellfun(@(x) replaceSymParams(obj,x), syms, 'UniformOutput', false);
-                    else
-                        nums = replaceSymParams(obj,syms);
-                    end
-                elseif obj.SymParams_HandleMethod == SymParams_HandleMethods.AugmentMatlabFunctions
-                    nums = syms;
-                    vars{end+1} = [obj.SymParams];
-                else
-                    error("Invalid Method")
-                end
-            else
-                nums = syms;
+                vars{end+1} = [obj.SymParams];
+                error("Invalid Method")
             end
             
+            cell_flag = isa(syms, 'cell');
             if cell_flag
-                funcs = cellfun(@(x) matlabFunction(x,'Vars',vars), nums, 'UniformOutput', false);
+                funcs = cellfun(@(x) matlabFunction(x,'Vars',vars), syms, 'UniformOutput', false);
             else
-                funcs = matlabFunction(nums,'Vars',vars);
+                funcs = matlabFunction(syms,'Vars',vars);
             end
         end
+        
         function X = CalcX(obj, func, vars)
+            % Wrapper for matlabFunction properties, does error checking 
+            % and assists with vectorizing the function
+            
             n_ins = nargin(func);
             assert(numel(vars) == n_ins, "Func Requires %d Arguments", n_ins);
                         
@@ -257,6 +215,10 @@ classdef Model < matlab.mixin.Copyable
     end
     
     methods (Abstract)
+        % The following abstract methods must be defined in 'Model's' subclasses
+        
+        SymbolicSolve % Required to calculate f_sym and g_sym
+  
         defineStateNames
         defineInputNames
         defineDisturbanceNames

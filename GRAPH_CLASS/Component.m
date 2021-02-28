@@ -2,8 +2,9 @@ classdef Component < matlab.mixin.Heterogeneous & handle
     % Component is a super class for all specifc components (Ex: tank, 
     % battery, etc) in the Graph Modeling Toolbox. The graph property of
     % different components can be connected to generate a system model.
-    % Instatiate an empty object, use an input parser, or use a strcuture
-    % with "Name" and "Value" fields. Valid Name and Value pairs are
+    % Instatiate an empty object, use an input parser, or use a strcuture array
+    % with "Name" and "Value" fields, or use a single structure with 
+    % fields corresponding to parameters. Valid Name and Value pairs are
     % dictated by the component subclasses.
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -14,14 +15,12 @@ classdef Component < matlab.mixin.Heterogeneous & handle
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % potential improvements:
+    % Move SymParam and extrinsicProps outside of GraphClass Core
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
-    % @phil, I'm going to let you comment most of this since I don't want
-    % to decipher it.
+    properties       
     
-    properties %(SetAccess = protected)        
-        
-        Name (1,1) string = "Component"% Block Name
+        Name (1,1) string = "Component" % Block Name
         Graph (1,1) Graph
         Ports (:,1) ComponentPort = ComponentPort.empty()
         
@@ -32,7 +31,8 @@ classdef Component < matlab.mixin.Heterogeneous & handle
         function obj = Component(varargin)
             if nargin == 1
                 if isstruct(varargin{1}) % create a component using a strucutre
-                    if isequal(fields(varargin{1}),{'Name';'Value'})
+                    
+                    if isequal(fields(varargin{1}),{'Name';'Value'}) % Structure passed as struct array with property 'Name' and 'Value' fields, e.x. s(1).Name = 'R', s(1).Value = 1
                         for i = 1:numel(varargin{1})
                             try
                                 obj.(varargin{1}(i).Name) = varargin{1}(i).Value;
@@ -41,8 +41,9 @@ classdef Component < matlab.mixin.Heterogeneous & handle
                                 % property for this class exists.
                             end
                         end
+                        
                     else
-                        fnames = fieldnames(varargin{1}); % @phil, what is this doing?
+                        fnames = fieldnames(varargin{1}); % Single structure passed with each field corresponding to a property, e.x. s.R = 1
                         for i = 1:numel(fnames)
                             try
                                 obj.(fnames{i}) = varargin{1}.(fnames{i});
@@ -50,7 +51,7 @@ classdef Component < matlab.mixin.Heterogeneous & handle
                         end
                     end
                 else
-                    error('Components must be defined using a structure of Name/Value fields or in Name-Value pairs')
+                    error('Components must be defined using a struct array with Name/Value fields or a single struct with fields corresponding to properties')
                 end
             elseif nargin > 1
                 my_inputparser(obj,varargin{:}); % input parser component models
@@ -75,9 +76,11 @@ classdef Component < matlab.mixin.Heterogeneous & handle
     
     methods (Sealed, Access = protected)
         function DefineChildren(obj)
+            % Dive into obj.Graph and set the Parent property of all objects with the Parent property
+            
             try
                 obj.Graph.Parent = obj;
-                graph_children = ["Vertices", "Edges", "Inputs","Outputs"];
+                graph_children = ["Vertices", "Edges", "Inputs", "Outputs"];
                 for child = graph_children
                     for i = 1:numel(obj.Graph.(child))
                         obj.Graph.(child)(i).Parent = obj;
@@ -89,16 +92,19 @@ classdef Component < matlab.mixin.Heterogeneous & handle
         end
         
         function DefineSymParams(obj)
+            % Pass symbolic parameters defined in the Component properties 
+            % to the Graph
+            
             props = properties(obj);
             
             sym_params = sym.empty();
             sym_params_vals = [];
             
-            for i = 1:numel(props)
+            for i = 1:numel(props) % Loop over all Component properties
                 prop = obj.(props{i});
-                if isa(prop, 'symParam')
-                    sym_params(end+1,1) = prop;
-                    sym_params_vals(end+1,1) = double(prop);
+                if isa(prop, 'symParam') % For each symParam property,
+                    sym_params(end+1,1) = prop; % Add the symParam to sym_params list
+                    sym_params_vals(end+1,1) = double(prop); % Add the default value of symParam to sym_params_vals list
                 end
             end
             
@@ -116,9 +122,16 @@ classdef Component < matlab.mixin.Heterogeneous & handle
     
     methods (Sealed) 
         function [gSys, extProps] = Combine(C, ConnectP, varargin)
+            % Component.Combine Connects components in Component array C according to Port connections defined in ConnectP
+            % - ConnectP: Each element of the cell array is a (1xn) Port array  of ports to be connected
+            % - varargin optional, passed to Graph.Combine.
+            % Returns:
+            % - gSys: System Graph
+            % - extProps: Combined system extrinsic properties related to the connections
+            
             arguments
                 C (:,1) Component % Array of components to be connected in a system
-                ConnectP (:,1) cell % vector of Component Ports to be connected.  Connections along dimension 1, equivalent ports along dimension 2
+                ConnectP (:,1) cell % Cell array of Component Ports to be connected.
             end
             arguments (Repeating)
                 varargin
@@ -136,10 +149,10 @@ classdef Component < matlab.mixin.Heterogeneous & handle
                 assert(all(type == [ports(2:end).Type]), 'Incompatible port types in connection %d', c);
                 assert(isCompatible([ports.Domain]), 'Incompatible port domains in connection %d', c);
                 
-                if type == 1 % Type 1 Connection
-                    assert(numel(ports) == 2, 'Type 1 Connection can only contain two edges');
+                if type == "EdgeConnection"
+                    assert(numel(ports) == 2, 'Edge Connection can only contain two equivalent edges');
                     ConnectE{end+1,1} = [ports.Element];
-                elseif type == 2 % Type 2 Connection
+                elseif type == "VertexConnection"
                     ConnectV{end+1,1} = [ports.Element];
                 end 
             end
@@ -148,6 +161,7 @@ classdef Component < matlab.mixin.Heterogeneous & handle
             G = [C.Graph];
             gSys = Combine(G, ConnectE, ConnectV, varargin{:});
             
+            % Use extrinsicProp.Combine if extProps output argument called
             if nargout == 2
                 props = vertcat(C.extrinsicProps);
                 extProps = Combine(props);
@@ -155,20 +169,24 @@ classdef Component < matlab.mixin.Heterogeneous & handle
         end
         
         function comp_arrays = Replicate(obj_array, N)
+            % Replicate is used to create N independent copies of all the components in obj_array
+            % Returns comp_arrays cell array containing the duplicate components.  
+            % - comp_arrays{i} is an 1xN Component array of copies corresponding to obj_array(i)
+            
             comp_arrays = cell(size(obj_array));
             for i = 1:numel(obj_array)
                 comp = obj_array(i);
-                unique_props = setdiff(properties(comp), properties('Component'));
+                unique_props = setdiff(properties(comp), properties('Component')); % Get properties unique to the specific component, i.e. remove properties in the Component superclass
                 prop_struct = struct();
                 for j = 1:numel(unique_props)
                     prop_struct.(unique_props{j}) = comp.(unique_props{j});
                 end
                 
-                constructFun = str2func(class(comp)); % Get the class constructor specific to the component
+                constructFun = str2func(class(comp)); % Get the class Constructor handle specific to the component.
                 
                 for j = 1:N
                     prop_struct.Name = join([comp.Name,string(j)]);
-                    comp_array(j) = constructFun(prop_struct); % Call the constructor N times to get N independent objects.
+                    comp_array(j) = constructFun(prop_struct); % Call the constructor N times to get N independent objects with identical property values.
                 end
                 
                 comp_arrays{i} = comp_array;

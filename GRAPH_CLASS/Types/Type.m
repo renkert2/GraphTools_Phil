@@ -6,11 +6,16 @@ classdef Type < matlab.mixin.Copyable
     % capacitances, but also have other more generic applications. 
     % Instatiate an empty object or a filled object in the following form:
     % 
-    % T = Type(vars,params,type) where type is a desired function defined
-    % as a string or symbolic expression, vars is a symbolic array of the
-    % symbolic variables used in type, and params is a symbolic cell array
-    % form of vars.
-    % ex: T = Type([sym('b1') sym('b2')],{sym('b1') sym('b2')},'b1*b2')
+    % T = Type(type, params) where 
+    % - type is a desired function defined as a string or symbolic expression
+    % - params is a cell array of symbolic variables in type used to define the argument structure, 
+    % -- When defining the internal matlabFunctions, the params property is used in
+    % -- matlabFunction(___, 'Vars', obj.params)
+    % EX: T = Type('b1*b2*c', {[sym('b1'); sym('b2')], sym('c')})
+    
+    % T = Type(type) 
+    % When only type is specified, arguments to calcVal are determined by symvar(type)
+    % ex: T = Type('b1*b2')
       
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Contributors: Christopher T. Aksland and Phil Renkert
@@ -26,21 +31,14 @@ classdef Type < matlab.mixin.Copyable
     % processing?
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
-    % @Phil can you comment this since you're more familiar.
-    
     properties  % User can set Val_Str or Val_Sym, the corresponding properties are updated automatically
         Val_Str string = string.empty()
         Val_Sym sym = sym.empty()
     end
     
     properties (SetAccess = protected)
-        vars sym = sym.empty % contains list of symbolic variables used in type definition.  This property is set by subclasses, i.e. Type_PowerFlow.vars = [x_t, x_h, u_j]
-        params cell = cell.empty % Cell array of variables used to define matlabFunction input arguments
-        
-        Val_Func function_handle = function_handle.empty() % Value calculation function
-        Jac_Func function_handle = function_handle.empty() % Jacobian calculation function
-        
-        Jac_Sym sym = sym.empty() % Symbolic Jacobian
+        params cell % Cell array of variables used to define matlabFunction input arguments
+        Val_Func function_handle % Value calculation function
     end
     
     properties (SetAccess = private, GetAccess = private)
@@ -48,11 +46,16 @@ classdef Type < matlab.mixin.Copyable
     end
     
     methods
-        function obj = Type(vars, params, type) % Type class constructor
+        function obj = Type(type, params)
             if nargin ~= 0
-                obj.vars = vars;
-                obj.params = params;
-                init(obj,type)
+                if nargin == 1 % Only type specified
+                    setType(obj, type);
+                    obj.params = sym2cell(symvar(obj.Val_Sym));
+                elseif nargin ==2
+                    setType(obj, type);
+                    obj.params = params;
+                end
+                setCalcProps(obj)
             end
         end
         
@@ -87,8 +90,6 @@ classdef Type < matlab.mixin.Copyable
         
         function setCalcProps(obj)
             obj.Val_Func = matlabFunction(obj.Val_Sym,'Vars',obj.params);
-            obj.Jac_Sym  = jacobian(obj.Val_Sym,obj.vars);
-            obj.Jac_Func = matlabFunction(obj.Jac_Sym,'Vars',obj.params);
         end
         
         % set the string value and update the symbolic definition
@@ -110,9 +111,14 @@ classdef Type < matlab.mixin.Copyable
         end
         
         
-        function val = calcVal(obj, varargin) % Calculates type value with symbolic 'vars' substituted with numeric 'vars_'
+        function val = calcVal(obj, varargin)
+            % Calculates type value by replacing symbolic vars with numerical vars.
+            % obj can be a single Type object or object array of Types with similar arguments
+            % Expects one argument for each element in obj.params.  
+            % E.X. if obj.params = {[x1;x2],y,z}, use obj.calcVal([x1;x2], y, z)
+            
             num_params = arrayfun(@(x) numel(x.params), obj);
-            assert(numel(varargin)==max(num_params), 'Arguments must match Parameter Structure.  For object array, ensure maximum number of inputs are given');
+            assert(numel(varargin) == max(num_params), 'Arguments must match Parameter Structure.  For object array, ensure maximum number of inputs are given');
             
             if numel(obj)==1
                 val = obj.Val_Func(varargin{1:num_params});
@@ -125,22 +131,6 @@ classdef Type < matlab.mixin.Copyable
                 end
             end
         end
-        
-        function val = calcJac(obj, varargin) % Calculates type Jacobian with symbolic 'vars' substituted with numeric 'vars_'
-            num_params = arrayfun(@(x) numel(x.params), obj);
-            assert(numel(varargin)==max(num_params), 'Arguments must match Parameter Structure.  For object array, ensure maximum number of inputs are given');
-            
-            if numel(obj) == 1
-                val = obj.JacFunc(varargin{1:num_params});
-            else
-                val = cell(size(obj));
-                for i = 1:size(obj,1)
-                    for j = 1:size(obj,2)
-                        val{i,j} = obj(i,j).Jac_Func(varargin{1:num_params(i,j)});
-                    end
-                end
-            end
-        end  
     end
 end
     

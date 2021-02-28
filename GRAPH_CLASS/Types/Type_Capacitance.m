@@ -29,9 +29,8 @@ classdef Type_Capacitance < Type
     
     methods
         function obj = Type_Capacitance(type) % object constructor
-            vars = [sym('x')]; % all types defined using 'x'
-            params = {vars}; 
-            obj = obj@Type(vars, params, type); % call parent constructor
+            params = {sym('x')}; 
+            obj = obj@Type(type, params); % call parent constructor
         end
     end
 end

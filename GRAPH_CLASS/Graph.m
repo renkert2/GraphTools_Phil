@@ -4,12 +4,7 @@ classdef Graph < matlab.mixin.Copyable
     %
     % g = Graph(Vertex,Edge) where Vertex is an array of GraphVertex 
     % elements and Edge is array of GraphEdge elements.
-    %   or
-    % g = Graph(Vertex,Edge,reorder) where Vertex is an array of 
-    % GraphVertex elements, Edge is array of GraphEdge elements, and 
-    % reorder ('true' or 'false') indicates if the verices should be
-    % ordered such that they are [dynamic; algebraic; external] 
-    
+    %
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Contributors: Christopher T. Aksland and Phil Renkert
     % Association: University of Illionis at Urbana-Champaign
@@ -18,77 +13,50 @@ classdef Graph < matlab.mixin.Copyable
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % potential improvements:
-    % Consider added Matlab "digraph" or adjcancy matrix as a propertey.
-    % Consider improving how we find the head and tail vertex indices.
-    % At some point, graph can be defined with only edges
-    % Move the Internal/External etc get functions into the GraphVertex and
+    % - Consider added Matlab "digraph" or adjcancy matrix as a propertey.
+    % - Consider improving how we find the head and tail vertex indices.
+    % - At some point, graph can be defined with only edges
+    % - Move the Internal/External etc get functions into the GraphVertex and
     %   GraphEdge classes. Since those functions only operate on vertices
     %   and edges, it seems they fit better there.
-    % I want to get rid of the ReorderElements property. - Chris. Why do we
-    %   have that?
-    % AlgTest is just ~DynTest right? Why have the two functions?
-    % The graph combination code should be moved to a separate files
-    % (files) since it's so long and complex.
+    % - The graph combination code should be moved to a separate file
+    %   (files) since it's so long and complex.
+    % - Phil: Figure out a more elegant solution for SymParams
+    % - Use VPA on all our symbolic calculations to save a ton of time
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
-    
-    
     properties
-        % set of vertices
-        Vertices (:,1) GraphVertex = GraphVertex.empty() 
-        % set of edges
-        Edges (:,1) GraphEdge = GraphEdge.empty()
-        % Allow Reordering of Vertices in graph.init()
-        ReorderElements (1,1) logical = true
-        % Graph Outputs
-        Outputs (:,1) GraphOutput = GraphOutput.empty()
+        Vertices (:,1) GraphVertex % set of vertices
+        Edges (:,1) GraphEdge % set of edges
+        
+        Outputs (:,1) GraphOutput % Graph Outputs
               
-        SymParams (:,1) sym = sym.empty
-        SymParams_Vals (:,1) double = [];
+        SymParams (:,1) sym 
+        SymParams_Vals (:,1) double
     end
     
     properties (SetAccess = private)
-        % graph Inputs
-        Inputs (:,1) GraphInput = GraphInput.empty()
+        Inputs (:,1) GraphInput % graph Inputs
+        
+        Nv (1,1) double % Number of Internal Vertices
+        Nx (1,1) double % Number of Dynamic States / Dynanic Vertices
+        Ne (1,1) double % Number of Edges
+        Nu (1,1) double % Number of Inputs 
+        Nev (1,1) double % Number of External Vertices
+        Nee (1,1) double % Number of External Edges
+          
+        E (:,2) double % Graph Edge Matrix
+        M (:,:) double % Incidence Matrix
+    end
     
-        % Number of vertices
-        Nv (1,1) double %{mustBeInteger,mustBeNonnegative}
-        
-        % Number of dynamic states / vertices
-        Nx (1,1) double
-        
-        % Number of edges
-        Ne (1,1) double %{mustBeInteger,mustBeNonnegative}
-        
-        % Number of inputs
-        Nu (1,1) double %{mustBeInteger,mustBeNonnegative}
-        
-        % Number of external vertices
-        Nev (1,1) double %{mustBeInteger,mustBeNonnegative}
-        
-        % Number of external edges
-        Nee (1,1) double %{mustBeInteger,mustBeNonnegative}
-        
-        % Graph Edge Matrix
-        E (:,2) double %{mustBeInteger,mustBePositive}; requires default value for Validation Functions
-        
-        % Incidence Matrix
-        M (:,:) double %{mustBeInteger,mustBeMember({-1,1,0,[]})}; requires default value for Validation Functions
+    properties (Dependent)  
+        v_tot (1,1) double % total number of vertices
+  
+        Tails (1,1) double 
+        Heads (1,1) double 
     end
     
     properties (Dependent)
-        % total number of vertices
-        v_tot (1,1) double %{mustBeInteger,mustBeNonnegative}
-        
-        % Tails
-        Tails (1,1) double 
-        
-        % Heads
-        Heads (1,1) double 
-        
-    end
-    
-    properties (Dependent) % make this hidden at some point
         InternalVertices  (:,1) GraphVertex
         DynamicVertices   (:,1) GraphVertex
         AlgebraicVertices (:,1) GraphVertex
@@ -102,7 +70,6 @@ classdef Graph < matlab.mixin.Copyable
     end
     
     methods
-        
         function obj = Graph(varargin) % constructor method
             % this function can be initialized with an edge matrix.
             % Immediately calculate the incidence matrix
@@ -112,11 +79,6 @@ classdef Graph < matlab.mixin.Copyable
                obj.Vertices = varargin{1};
                obj.Edges = varargin{2};
                obj.init()
-           elseif nargin == 3
-               obj.Vertices = varargin{1};
-               obj.Edges = varargin{2};
-               obj.ReorderElements = varargin{3};
-               obj.init()  
            else
               error('A Graph object must be initialized as an empty object or as Graph(Vertex_Set, Edge_Set ).') 
            end
@@ -136,63 +98,32 @@ classdef Graph < matlab.mixin.Copyable
         end
         
         function x = get.InternalVertices(obj) % get list of Internal Vertices
-            x = obj.Vertices(arrayfun(@(x) isa(x,'GraphVertex_Internal'),obj.Vertices));
-        end 
-        function x = get.DynamicVertices(obj) % get list of Dynamic Vertices
-            x = obj.Vertices(arrayfun(@DynTest,obj.Vertices)); % apply DynTest to each graph vertex
-            
-            function l = DynTest(x)
-                if isa(x,'GraphVertex_Internal')
-                    coeff = x.Coefficient;
-
-                    if isa(coeff, 'sym')
-                        l = ~ all(arrayfun(@(x) isequal(x, sym(0)), coeff));
-                    elseif isa(coeff, 'double')
-                        l = sum(abs(coeff))>0;
-                    else
-                        error('Invalid coefficient type')
-                    end
-                else
-                    l = false;
-                end
-            end
-        end
-        function x = get.AlgebraicVertices(obj) % get list of algebraic Vertices
-            x = obj.Vertices(arrayfun(@AlgTest,obj.Vertices)); % apply AlgTest to each graph vertex
-            
-            function l = AlgTest(x)
-                if isa(x,'GraphVertex_Internal')
-                    coeff = x.Coefficient;
-                    if isa(coeff, 'sym')
-                        l = all(arrayfun(@(x) isequal(x, sym(0)), coeff));
-                    elseif isa(coeff, 'double')
-                        l = sum(abs(coeff))==0;
-                    else
-                        error('Invalid coefficient type')
-                    end
-                else
-                    l = false;
-                end
-            end
+            x = getInternal(obj.Vertices);
         end
         
         function x = get.ExternalVertices(obj) % get list of external vertices
-            x = obj.Vertices(~arrayfun(@(x) isa(x,'GraphVertex_Internal'),obj.Vertices));
-        end   
+            x = getExternal(obj.Vertices);
+        end 
+        
+        function x = get.DynamicVertices(obj) % get list of Dynamic Vertices
+            x = getDynamic(obj.Vertices);
+        end
+        
+        function x = get.AlgebraicVertices(obj) % get list of algebraic Vertices
+            x = getAlgebraic(obj.Vertices);
+        end
+        
         function x = get.InternalEdges(obj) % get list of internal edges
-            x = obj.Edges(arrayfun(@(x) isa(x,'GraphEdge_Internal'),obj.Edges));
+            x = getInternal(obj.Edges);
         end
         function x = get.ExternalEdges(obj) % get list of external edges
-            x = obj.Edges(~arrayfun(@(x) isa(x,'GraphEdge_Internal'),obj.Edges));
+            x = getExternal(obj.Edges);
         end
         
         function init(obj)
-            if obj.ReorderElements
-                % reorder vertices in order of [xd;xa;xt] and edges in [int; ext]
-                obj.Vertices = [obj.DynamicVertices; obj.AlgebraicVertices; obj.ExternalVertices];
-                obj.Edges    = [obj.InternalEdges; obj.ExternalEdges];
-            end
-            
+            obj.Vertices = [obj.DynamicVertices; obj.AlgebraicVertices; obj.ExternalVertices];
+            obj.Edges    = [obj.InternalEdges; obj.ExternalEdges];
+   
             % Calculate input array from Internal Edges
             obj.Inputs = unique(vertcat(obj.InternalEdges.Input), 'stable');
 
@@ -208,9 +139,9 @@ classdef Graph < matlab.mixin.Copyable
             vTail = vertcat(obj.InternalEdges.TailVertex);
             vHead = vertcat(obj.InternalEdges.HeadVertex);
             
-            % indicies of tail and vertices
-            vT_idx =  arrayfun(@(x) find(arrayfun(@(y) eq(x,y),obj.Vertices)),vTail);
-            vH_idx =  arrayfun(@(x) find(arrayfun(@(y) eq(x,y),obj.Vertices)),vHead);
+            % indicies of tail and head vertices
+            vT_idx =  arrayfun(@(x) find(arrayfun(@(y) eq(x,y), obj.Vertices)),vTail);
+            vH_idx =  arrayfun(@(x) find(arrayfun(@(y) eq(x,y), obj.Vertices)),vHead);
 
             % calculate Edge and Incidence matrix
             obj.E = [vT_idx vH_idx];
@@ -519,6 +450,7 @@ classdef Graph < matlab.mixin.Copyable
                     error('Invalid ConnectX cell array');
                 end
             end
+            
             function conn_map = ReformatSerialConnections(conn_map)
                 inters = intersect(conn_map(:,1),conn_map(:,2)); % Find common elements in first and second columns of conn_map
                 if ~isempty(inters) % If intersections exist

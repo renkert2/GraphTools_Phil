@@ -35,10 +35,12 @@ classdef GraphVertex < handle & matlab.mixin.Heterogeneous & matlab.mixin.Copyab
         end
     end
     
-    methods (Sealed)
-        % custom GraphVertex object eq() function to compare a hetergeneous
-        % array of GraphVertices
+    methods (Sealed)   
         function x = eq(obj1,obj2)
+            % custom GraphVertex object eq() method to compare a hetergeneous
+            % array of GraphVertices
+            % GraphVertices are 'handle' objects, so they are considered
+            % equivalent if the handles point to the same GraphVertex object.
             if numel(obj1)==numel(obj2)
                 x = false(size(obj1));
                 for i = 1:numel(obj1)
@@ -59,12 +61,50 @@ classdef GraphVertex < handle & matlab.mixin.Heterogeneous & matlab.mixin.Copyab
             end
         end
         
-        % Custom ne() function
         function x = ne(obj1, obj2)
             x = ~eq(obj1, obj2);
         end
+        
+        function [v,i] = getInternal(obj_array)
+            i = arrayfun(@(x) isa(x,'GraphVertex_Internal'), obj_array);
+            v = obj_array(i);
+        end
+        
+        function [v,i] = getExternal(obj_array)
+            [~,i] = getInternal(obj_array);
+            i = ~i;
+            v = obj_array(i);
+        end
+            
+        function [v,i] = getDynamic(obj_array)
+            i = arrayfun(@isDynamic,obj_array);
+            v = obj_array(i);
+            
+            function l = isDynamic(x)
+                if isa(x,"GraphVertex_Internal")
+                    coeff = x.Coefficient;
+
+                    if isa(coeff, 'sym')
+                        l = ~ all(arrayfun(@(x) isequal(x, sym(0)), coeff));
+                    elseif isa(coeff, 'double')
+                        l = sum(abs(coeff))>0;
+                    else
+                        error('Invalid coefficient type')
+                    end
+                else
+                    l = false;
+                end
+            end
+        end
+        
+        function [v,i] = getAlgebraic(obj_array)
+            [~,i_dyn] = getDynamic(obj_array);
+            [~,i_int] = getInternal(obj_array);
+            
+            i = (~i_dyn) & i_int;
+            v = obj_array(i);
+        end
                    
     end
-
 end
 

@@ -17,8 +17,7 @@ classdef LinearModel < matlab.mixin.Copyable
     % f0 and g0 should be moved into the linear model class...
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
-    properties
-                
+    properties      
         A_sym  (:,:) sym
         B_sym  (:,:) sym
         E_sym  (:,:) sym
@@ -33,13 +32,11 @@ classdef LinearModel < matlab.mixin.Copyable
         % x_dot = A*x + B*u + G*d + f0
         % y     = C*x + D*u + H*d + g0
         
-        CalcState  (1,1) function_handle = @(x)0 % outputs A, B, and G matrices
-        CalcOutput  (1,1) function_handle = @(x)0 % outputs C, D, and H matrices
-
+        CalcState function_handle {mustBeScalarOrEmpty} % outputs A, B, and G matrices
+        CalcOutput function_handle {mustBeScalarOrEmpty} % outputs C, D, and H matrices
     end
     
     methods
-    
         function obj = LinearModel(varargin) % constructor stores the linear matrix information
             if nargin == 6
                 obj.A_sym = varargin{1};
@@ -47,13 +44,9 @@ classdef LinearModel < matlab.mixin.Copyable
                 obj.E_sym = varargin{3};
                 obj.C_sym = varargin{4};
                 obj.D_sym = varargin{5};
-                obj.H_sym = varargin{6};            
-            else
-                
+                obj.H_sym = varargin{6};             
             end
-        end
-        
-        
+        end  
     end
 end
 

@@ -19,7 +19,7 @@ classdef GraphEdge < matlab.mixin.Heterogeneous & matlab.mixin.Copyable
         Description (1,1) string % Edge Description
     end
     
-    properties (SetAccess = ?Component)
+    properties (SetAccess = ?Component) % Parent can only be set by the instantiating Component
         Parent Component = Component.empty() % edge parent object
     end
 
@@ -31,10 +31,12 @@ classdef GraphEdge < matlab.mixin.Heterogeneous & matlab.mixin.Copyable
         end
     end
     
-    methods (Sealed)
-        % custom GraphEdge object eq() function to compare a hetergeneous
-        % array of GraphEdges
+    methods (Sealed) % Sealed attribute required for heterogenous arrays
         function x = eq(obj1,obj2) 
+            % custom GraphEdge object eq() method to compare a hetergeneous
+            % array of GraphEdges
+            % GraphEdges are 'handle' objects, so they are considered 
+            % equivalent if the handles point to the same GraphEdge object. 
             if numel(obj1)==numel(obj2)
                 x = false(size(obj1));
                 for i = 1:numel(obj1)
@@ -55,9 +57,20 @@ classdef GraphEdge < matlab.mixin.Heterogeneous & matlab.mixin.Copyable
             end
         end
         
-        % Custom ne() function
         function x = ne(obj1, obj2)
+            % Custom ne() method; refer to eq() for details
             x = ~eq(obj1, obj2);
+        end
+        
+        function [e,i] = getInternal(obj_array)
+            i = arrayfun(@(x) isa(x,'GraphEdge_Internal'),obj_array);
+            e = obj_array(i);
+        end
+        
+        function [e,i] = getExternal(obj_array)
+            [~,i] = getInternal(obj_array);
+            i = ~i;
+            e = obj_array(i);
         end
     end
     

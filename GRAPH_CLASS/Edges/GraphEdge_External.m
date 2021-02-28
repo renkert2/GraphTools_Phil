@@ -17,15 +17,7 @@ classdef GraphEdge_External < GraphEdge
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
     properties
-        HeadVertex (1,1) GraphVertex %= GraphVertex.empty() % edge head vertex
+        HeadVertex GraphVertex {mustBeScalarOrEmpty} % edge head vertex
     end
-    
-    methods
-        function obj = GraphEdge_External(varargin) % constructor method
-            obj@GraphEdge(varargin{:}); % calls the superclass constructor
-        end
-               
-    end
-    
 end
 

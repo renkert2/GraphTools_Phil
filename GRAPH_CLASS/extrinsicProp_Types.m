@@ -1,6 +1,10 @@
 classdef extrinsicProp_Types
-    % extrinsicProp_Types ...
-    % @Phil
+    % extrinsicProp_Types is an enumeration class that stores information 
+    % pertaining to the different types of extrinsicProps, i.e. mass and 
+    % price.  Each type is associated with a combination function (usually
+    % @sum), and a numeric id that allows us to define a sort method for the 
+    % class.  
+    % A class must have a sort method to call unique() on the class
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Contributors: Christopher T. Aksland and Phil Renkert
@@ -20,7 +24,7 @@ classdef extrinsicProp_Types
     
     properties
         combFunc function_handle % function used to map enumeration values from Component -> System
-        id uint8 % Used for functions like 'Sort'
+        id uint8 % Used for functions like 'Sort'; Required to use @unique
     end
     
     methods
