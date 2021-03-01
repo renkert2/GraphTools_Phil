@@ -23,7 +23,7 @@ classdef GraphEdge_Internal < GraphEdge
     properties
         PowerFlow (:,1) Type_PowerFlow % PowerFlow representation for an edge
         Input (:,1) GraphInput % inputs incident on the edge 
-        Coefficient (:,1) {mustBeParam} = 0 % the constant edge coefficient.  Must be a double() or symParam() object
+        Coefficient (:,1) {mustBeNonnegativeOrSym} = 0 % the constant edge coefficient.  Must be a positive double() or a sym() or symParam()
         TailVertex (:,1) GraphVertex {mustBeScalarOrEmpty} % the edge tail vertex
         HeadVertex (:,1) GraphVertex {mustBeScalarOrEmpty} % the edge head vertex
     end

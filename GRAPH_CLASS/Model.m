@@ -188,7 +188,6 @@ classdef Model < matlab.mixin.Copyable
             
             if ~isempty(obj.SymParams)
                 vars{end+1} = [obj.SymParams];
-                error("Invalid Method")
             end
             
             cell_flag = isa(syms, 'cell');

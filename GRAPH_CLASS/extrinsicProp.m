@@ -44,6 +44,12 @@ classdef extrinsicProp
                 resProps(i) = extrinsicProp(unique_types(i), val); % Assign aggregate prop value into new system extrinsicProp
             end     
         end
+        
+        function [val, i] = getProp(obj_array, type)
+            % Get value of extrinsicProp of Type type from object array of extrinsicProps
+            i = [obj_array.Type] == type;
+            val = [obj_array(i).Value];
+        end
     end
 end
 
