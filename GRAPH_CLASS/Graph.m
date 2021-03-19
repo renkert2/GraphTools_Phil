@@ -31,8 +31,7 @@ classdef Graph < matlab.mixin.Copyable
         
         Outputs (:,1) GraphOutput % Graph Outputs
               
-        SymParams (:,1) sym 
-        SymParams_Vals (:,1) double
+        SymParams SymParams {mustBeScalarOrEmpty}
     end
     
     properties (SetAccess = private)
@@ -402,14 +401,8 @@ classdef Graph < matlab.mixin.Copyable
             
             %% Assign SymParams and SymParams_Vals
             sym_params = vertcat(G.SymParams);
-            [sym_params, ia, ~] = unique(sym_params);
-            
-            sym_vals = vertcat(G.SymParams_Vals);
-            sym_vals = sym_vals(ia);
-            
-            obj.SymParams = sym_params;
-            obj.SymParams_Vals = sym_vals;
-            
+            obj.SymParams = join(sym_params);
+         
             %% Helper Functions
             function ConnectX = formatConnectX(ConnectX, class, prop)
                 if all(cellfun(@(x) isa(x, class), ConnectX),'all') % Connect X Already given as lists of equivalent GraphVertices or GraphEdges with dominant element in front of list
