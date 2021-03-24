@@ -24,6 +24,7 @@ classdef Component < matlab.mixin.Heterogeneous & handle
         Ports (:,1) ComponentPort = ComponentPort.empty()
         
         extrinsicProps (:,1) extrinsicProp
+        SymParams SymParams {mustBeScalarOrEmpty}
     end
     
     methods
@@ -102,6 +103,7 @@ classdef Component < matlab.mixin.Heterogeneous & handle
                 end
             end
             sym_params = SymParams(sp_cell);
+            obj.SymParams = sym_params;
             obj.Graph.SymParams = sym_params;
         end          
     end
@@ -159,6 +161,10 @@ classdef Component < matlab.mixin.Heterogeneous & handle
                 props = vertcat(C.extrinsicProps);
                 extProps = Combine(props);
             end
+        end
+        
+        function setParamVal(obj, param, val)
+            obj.SymParams.setVal(param,val);
         end
         
         function comp_arrays = Replicate(obj_array, N)

@@ -75,10 +75,14 @@ classdef Model < matlab.mixin.Copyable
         function F = CalcF(obj,x,u,d,params)
             param_lengths = [obj.Nx, obj.Nu, obj.Nd, obj.SymParams.N];
             
-            if nargin == 4 || isempty(obj.SymParams)
+            if isempty(obj.SymParams)
                 vars = {x,u,d};
-            elseif nargin == 5
-                vars = {x,u,d,params};
+            else
+                if nargin == 4
+                    vars = {x,u,d,obj.SymParams.Vals};
+                elseif nargin == 5
+                    vars = {x,u,d,params};
+                end
             end
             
             for i = 1:numel(vars)
@@ -91,10 +95,14 @@ classdef Model < matlab.mixin.Copyable
         function G = CalcG(obj,x,u,d,params)
             param_lengths = [obj.Nx, obj.Nu, obj.Nd, obj.SymParams.N];
             
-            if nargin == 4 || isempty(obj.SymParams)
+            if isempty(obj.SymParams)
                 vars = {x,u,d};
-            elseif nargin == 5
-                vars = {x,u,d,params};
+            else
+                if nargin == 4
+                    vars = {x,u,d,obj.SymParams.Vals};
+                elseif nargin == 5
+                    vars = {x,u,d,params};
+                end
             end
             
             for i = 1:numel(vars)
@@ -198,7 +206,9 @@ classdef Model < matlab.mixin.Copyable
             % and assists with vectorizing the function
             
             n_ins = nargin(func);
-            assert(numel(vars) == n_ins, "Func Requires %d Arguments", n_ins);
+            if n_ins > -1
+                assert(numel(vars) == n_ins, "Func Requires %d Arguments", n_ins);
+            end
             
             if size(vars{1},2) == 1
                 X = func(vars{:});

@@ -1,4 +1,4 @@
-classdef SymParams
+classdef SymParams < matlab.mixin.Copyable
     %SYMPARAMS Contains list of SymParams Symbolic Variables, Default Values, and the number of SymParams
     % Note that this is an immutable Value class
     properties (SetAccess = private)
@@ -60,7 +60,7 @@ classdef SymParams
             sym_params = SymParams(syms,vals);
         end
         
-        function obj = append(obj, sym_param)
+        function append(obj, sym_param)
             assert(isa(sym_param, 'symParam'), 'Argument must be a symParam object');
 
             obj.Vals = [obj.Vals; double(sym_param)]; % Add the default value of symParam to sym_params_vals list
@@ -68,7 +68,7 @@ classdef SymParams
             obj.N = obj.N+1;
         end
         
-        function obj = prepend(obj, sym_param)
+        function prepend(obj, sym_param)
             assert(isa(sym_param, 'symParam'), 'Argument must be a symParam object');            
             
             obj.Vals = [double(sym_param); obj.Vals];
@@ -80,6 +80,23 @@ classdef SymParams
             l =  builtin('isempty', obj);
             if ~l 
                 l = obj.N == 0;
+            end
+        end
+        
+        function setVal(obj, param, val)
+            % setVal sets the value corresponding to symParam 'param' to 'val'
+            % - param: sym, char, or string identifying the symbolic variable
+            % - val: double, replaces element in obj.Vals corresponding to the param
+            
+            if isa(param, 'char') || isa(param, 'string')
+                param = sym(param);
+            end
+            
+            i = arrayfun(@(p) isequal(p, param), obj.Syms);
+            if any(i)
+                obj.Vals(i) = val;
+            else
+                error("%s not in SymParams Syms vector", string(param));
             end
         end
     end

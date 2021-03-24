@@ -36,6 +36,8 @@ function [Coeff,TypeSys] = MakeCoeffMatrix (All,TypeAll,numType)
         j = j+numType(i)-1; % j accounts for instances where a vertex may have multiple coefficients
     end
     
+    
+    
     TypeSys = copy(TypeAll(IB)); % get the system capacitance types, use "copy" to create unique instance/handle
 
     
