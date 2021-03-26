@@ -108,10 +108,14 @@ classdef LinearModel < Model
         function [A,B,E,C,D,H] = CalcMatrices(obj,x,u,d,params)
             param_lengths = [obj.Nx, obj.Nu, obj.Nd, obj.SymParams.N];
             
-            if nargin == 4 || isempty(obj.SymParams)
+            if isempty(obj.SymParams)
                 vars = {x,u,d};
-            elseif nargin == 5
-                vars = {x,u,d,params};
+            else
+                if nargin == 4
+                    vars = {x,u,d,obj.SymParams.Vals};
+                elseif nargin == 5
+                    vars = {x,u,d,params};
+                end
             end
             
             for i = 1:numel(vars)
