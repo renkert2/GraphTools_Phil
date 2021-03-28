@@ -66,7 +66,7 @@ classdef Tank < Component
             Edge(5) = GraphEdge_External('HeadVertex',Vertex(1),'Description','Heat Load');
             
             % special lookup functions
-            T = Type([sym('x1')],{sym('x1')},'x1'); 
+            T = Type('x1'); 
             Vertex(1).CapFunction = LookupFunction('Function',T,'Breakpoints',[Vertex(2)]);
             
             % Build Graph
@@ -80,7 +80,7 @@ classdef Tank < Component
             obj.Ports = p;
             
             % Define Additional Outputs
-            O = Type([sym('b1') sym('b2') sym('b3')],{sym('b1') sym('b2') sym('b3')},'b1*b2+b3');
+            O = Type('b1*b2+b3', {sym('b1') sym('b2') sym('b3')});
             o = GraphOutput('Description','Test','Function',O,'Breakpoints',{Vertex(1) I(2) Vertex(2)});
             obj.Graph.Outputs = o;
             

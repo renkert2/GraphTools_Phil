@@ -19,12 +19,12 @@ classdef Component < matlab.mixin.Heterogeneous & handle
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
     properties       
-    
         Name (1,1) string = "Component" % Block Name
         Graph (1,1) Graph
         Ports (:,1) ComponentPort = ComponentPort.empty()
         
         extrinsicProps (:,1) extrinsicProp
+        SymParams SymParams {mustBeScalarOrEmpty}
     end
     
     methods
@@ -94,22 +94,17 @@ classdef Component < matlab.mixin.Heterogeneous & handle
         function DefineSymParams(obj)
             % Pass symbolic parameters defined in the Component properties 
             % to the Graph
-            
             props = properties(obj);
-            
-            sym_params = sym.empty();
-            sym_params_vals = [];
-            
-            for i = 1:numel(props) % Loop over all Component properties
+            sp_cell = {};
+            for i = 1:numel(props)
                 prop = obj.(props{i});
-                if isa(prop, 'symParam') % For each symParam property,
-                    sym_params(end+1,1) = prop; % Add the symParam to sym_params list
-                    sym_params_vals(end+1,1) = double(prop); % Add the default value of symParam to sym_params_vals list
+                if isa(prop, 'symParam')
+                    sp_cell{end+1} = prop;
                 end
             end
-            
+            sym_params = SymParams(sp_cell);
+            obj.SymParams = sym_params;
             obj.Graph.SymParams = sym_params;
-            obj.Graph.SymParams_Vals = sym_params_vals;
         end          
     end
     
@@ -166,6 +161,10 @@ classdef Component < matlab.mixin.Heterogeneous & handle
                 props = vertcat(C.extrinsicProps);
                 extProps = Combine(props);
             end
+        end
+        
+        function setParamVal(obj, param, val)
+            obj.SymParams.setVal(param,val);
         end
         
         function comp_arrays = Replicate(obj_array, N)
