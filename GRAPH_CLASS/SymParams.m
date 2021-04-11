@@ -1,6 +1,5 @@
 classdef SymParams < matlab.mixin.Copyable
     %SYMPARAMS Contains list of SymParams Symbolic Variables, Default Values, and the number of SymParams
-    % Note that this is an immutable Value class
     properties (SetAccess = private)
         Syms (:,1) sym = sym.empty()
         Vals (:,1) double = []
@@ -99,6 +98,19 @@ classdef SymParams < matlab.mixin.Copyable
                 error("%s not in SymParams Syms vector", string(param));
             end
         end
+        
+        function f = matlabFunction(obj, sym)
+            % matlabFunction generates a matlabFunction from a syms 
+            % object using the SymParams.  If sym is not symbolic, generate
+            % a standard function that returns the constant value regardless
+            % of the input
+            
+            if isa(sym, 'sym')
+                f = matlabFunction(sym, 'Vars', {obj.Syms});
+            else
+                f = @(varargin) sym;
+            end
+        end  
     end
 end
 
