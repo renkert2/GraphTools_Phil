@@ -24,8 +24,8 @@ classdef GraphInput < handle
         Bounds Limits {mustBeScalarOrEmpty} 
     end
     
-    properties (SetAccess = ?Component)
-        Parent Component = Component.empty()
+    properties (SetAccess = ?SystemElement)
+        Parent SystemElement = SystemElement.empty()
     end
     
     methods

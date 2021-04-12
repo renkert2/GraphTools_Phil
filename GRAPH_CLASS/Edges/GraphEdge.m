@@ -19,8 +19,8 @@ classdef GraphEdge < matlab.mixin.Heterogeneous & matlab.mixin.Copyable
         Description (1,1) string % Edge Description
     end
     
-    properties (SetAccess = ?Component) % Parent can only be set by the instantiating Component
-        Parent Component = Component.empty() % edge parent object
+    properties (SetAccess = ?SystemElement) % Parent can only be set by the instantiating Component
+        Parent SystemElement = SystemElement.empty() % edge parent object
     end
 
     methods

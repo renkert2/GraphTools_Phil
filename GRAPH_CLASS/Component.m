@@ -1,4 +1,4 @@
-classdef Component < matlab.mixin.Heterogeneous & handle
+classdef Component < SystemElement
     % Component is a super class for all specifc components (Ex: tank, 
     % battery, etc) in the Graph Modeling Toolbox. The graph property of
     % different components can be connected to generate a system model.
@@ -17,15 +17,6 @@ classdef Component < matlab.mixin.Heterogeneous & handle
     % potential improvements:
     % Move SymParam and extrinsicProps outside of GraphClass Core
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    
-    properties       
-        Name (1,1) string = "Component" % Block Name
-        Graph (1,1) Graph
-        Ports (:,1) ComponentPort = ComponentPort.empty()
-        
-        extrinsicProps (:,1) extrinsicProp
-        SymParams SymParams {mustBeScalarOrEmpty}
-    end
     
     methods
         function obj = Component(varargin)
@@ -59,10 +50,6 @@ classdef Component < matlab.mixin.Heterogeneous & handle
             obj.init_super();
 
         end
-        
-        function set.Name(obj, name)
-            obj.Name = string(name);
-        end
     end
     
     methods (Sealed)
@@ -75,24 +62,8 @@ classdef Component < matlab.mixin.Heterogeneous & handle
     end
     
     methods (Sealed, Access = protected)
-        function DefineChildren(obj)
-            % Dive into obj.Graph and set the Parent property of all objects with the Parent property
-            
-            try
-                obj.Graph.Parent = obj;
-                graph_children = ["Vertices", "Edges", "Inputs", "Outputs"];
-                for child = graph_children
-                    for i = 1:numel(obj.Graph.(child))
-                        obj.Graph.(child)(i).Parent = obj;
-                    end
-                end
-            catch
-                warning('Error defining component as parent object')
-            end
-        end
-        
         function DefineSymParams(obj)
-            % Pass symbolic parameters defined in the Component properties 
+            % Pass symbolic parameters defined in the Component properties
             % to the Graph
             props = properties(obj);
             sp_cell = {};
@@ -105,10 +76,21 @@ classdef Component < matlab.mixin.Heterogeneous & handle
             sym_params = SymParams(sp_cell);
             obj.SymParams = sym_params;
             obj.Graph.SymParams = sym_params;
-        end          
+        end
+        
+        function DefineChildren(obj)
+            % Dive into obj.Graph and set the Parent property of all objects with the Parent property
+            obj.Graph.Parent = obj;
+            graph_children = ["Vertices", "Edges", "Inputs", "Outputs"];
+            for child = graph_children
+                for i = 1:numel(obj.Graph.(child))
+                    obj.Graph.(child)(i).Parent = obj;
+                end
+            end
+            
+        end
     end
     
-        
     methods (Access = protected)        
         function init(obj)
             % Placeholder - Optionally modified in subclasses
@@ -116,57 +98,6 @@ classdef Component < matlab.mixin.Heterogeneous & handle
     end
     
     methods (Sealed) 
-        function [gSys, extProps] = Combine(C, ConnectP, varargin)
-            % Component.Combine Connects components in Component array C according to Port connections defined in ConnectP
-            % - ConnectP: Each element of the cell array is a (1xn) Port array  of ports to be connected
-            % - varargin optional, passed to Graph.Combine.
-            % Returns:
-            % - gSys: System Graph
-            % - extProps: Combined system extrinsic properties related to the connections
-            
-            arguments
-                C (:,1) Component % Array of components to be connected in a system
-                ConnectP (:,1) cell % Cell array of Component Ports to be connected.
-            end
-            arguments (Repeating)
-                varargin
-            end
-            
-            num_c = size(ConnectP,1);
-            ConnectE = {};
-            ConnectV = {};
-            
-            for c = 1:num_c % For each port connection
-                ports = ConnectP{c};
-                type = ports(1).Type;
-                
-                assert(isa(ports, 'ComponentPort'), 'Entry %d in ConnectP must be of ComponentPort type',c) 
-                assert(all(type == [ports(2:end).Type]), 'Incompatible port types in connection %d', c);
-                assert(isCompatible([ports.Domain]), 'Incompatible port domains in connection %d', c);
-                
-                if type == "EdgeConnection"
-                    assert(numel(ports) == 2, 'Edge Connection can only contain two equivalent edges');
-                    ConnectE{end+1,1} = [ports.Element];
-                elseif type == "VertexConnection"
-                    ConnectV{end+1,1} = [ports.Element];
-                end 
-            end
-            
-            % Generate System Graph with Combine(G, ConnectE)
-            G = [C.Graph];
-            gSys = Combine(G, ConnectE, ConnectV, varargin{:});
-            
-            % Use extrinsicProp.Combine if extProps output argument called
-            if nargout == 2
-                props = vertcat(C.extrinsicProps);
-                extProps = Combine(props);
-            end
-        end
-        
-        function setParamVal(obj, param, val)
-            obj.SymParams.setVal(param,val);
-        end
-        
         function comp_arrays = Replicate(obj_array, N)
             % Replicate is used to create N independent copies of all the components in obj_array
             % Returns comp_arrays cell array containing the duplicate components.  

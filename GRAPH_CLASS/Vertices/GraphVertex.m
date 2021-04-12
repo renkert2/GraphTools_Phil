@@ -23,8 +23,8 @@ classdef GraphVertex < handle & matlab.mixin.Heterogeneous & matlab.mixin.Copyab
         DynamicType DynamicTypes = "EnergyFlow" % Dynamic Type: 1 - Energy Flow, 2 - State Flow
     end
     
-    properties (SetAccess = ?Component)
-        Parent Component = Component.empty() % parent object for vertices
+    properties (SetAccess = ?SystemElement)
+        Parent SystemElement = SystemElement.empty() % parent object for vertices
     end
     
     methods

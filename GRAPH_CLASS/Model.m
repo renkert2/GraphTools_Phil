@@ -129,17 +129,17 @@ classdef Model < matlab.mixin.Copyable
         end
         
         function t = get.StateTable(obj)
-            state_syms = arrayfun(@(x) string(sym2str(x)), obj.SymVars.x);
+            state_syms = arrayfun(@(x) string(x), obj.SymVars.x);
             t = table(state_syms, obj.StateDescriptions);
         end
         
         function t = get.InputTable(obj)
-            in_syms = arrayfun(@(x) string(sym2str(x)), obj.SymVars.u);
+            in_syms = arrayfun(@(x) string(x), obj.SymVars.u);
             t = table(in_syms, obj.InputDescriptions);
         end
         
         function t = get.DisturbanceTable(obj)
-            dist_syms = arrayfun(@(x) string(sym2str(x)), obj.SymVars.d);
+            dist_syms = arrayfun(@(x) string(x), obj.SymVars.d);
             t = table(dist_syms, obj.DisturbanceDescriptions);
         end
         

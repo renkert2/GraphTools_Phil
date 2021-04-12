@@ -1,4 +1,4 @@
-classdef System < handle
+classdef System < SystemElement
     % System is a superclass for any system composed of 
     % multiple components.
     
@@ -28,19 +28,11 @@ classdef System < handle
     % potential improvements:
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
-    properties
-        Name string = string.empty()
-        
-        Components (:,1) Component
+    properties        
+        Components (:,1) SystemElement
         ConnectP (:,1) cell
-        
-        Graph Graph = Graph.empty()
-        
+
         Model GraphModel = GraphModel.empty()
-        Ports ComponentPort = ComponentPort.empty()
-        
-        extrinsicProps (:,1) extrinsicProp = extrinsicProp.empty()
-        SymParams SymParams {mustBeScalarOrEmpty}
     end
     
     methods
@@ -86,6 +78,10 @@ classdef System < handle
             model = obj.Model; 
         end
         
+        function C = getComponents(obj, Type)
+            i = arrayfun(@(x) isa(x,Type), obj.Components);
+            C = obj.Components(i);
+        end
         %% Methods to be overriden by subclasses
         function init(obj)
             % Placeholder

@@ -25,8 +25,8 @@ classdef GraphOutput < handle
         Breakpoints cell % Must be cell array of GraphVertices or GraphInputs, asserted in set method
     end
     
-    properties (SetAccess = ?Component)
-        Parent Component = Component.empty()
+    properties (SetAccess = ?SystemElement)
+        Parent SystemElement = SystemElement.empty()
     end
     
     methods
