@@ -64,8 +64,8 @@ classdef Graph < matlab.mixin.Copyable
         ExternalEdges     (:,1) GraphEdge 
     end
     
-    properties (SetAccess = ?Component)
-        Parent Component = Component.empty()
+    properties (SetAccess = {?Component,?System})
+        Parent = Component.empty();
     end
     
     methods

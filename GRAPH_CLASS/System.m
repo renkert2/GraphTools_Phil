@@ -40,6 +40,7 @@ classdef System < handle
         Ports ComponentPort = ComponentPort.empty()
         
         extrinsicProps (:,1) extrinsicProp = extrinsicProp.empty()
+        SymParams SymParams {mustBeScalarOrEmpty}
     end
     
     methods

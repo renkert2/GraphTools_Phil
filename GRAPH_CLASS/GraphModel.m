@@ -70,6 +70,8 @@ classdef GraphModel < Model
                     obj.Graph = arg1;
                 elseif isa(arg1,'Component')
                     obj.Graph = arg1.Graph;
+                elseif isa(arg1, 'System')
+                    obj.Graph = arg1.Graph;
                 else
                     error('Invalid argument to GraphModel.  Must be of type Graph or Component')
                 end
