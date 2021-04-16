@@ -100,14 +100,23 @@ classdef SymParams < matlab.mixin.Copyable
             end
         end
         
-        function f = matlabFunction(obj, sym)
+        function f = matlabFunction(obj, sym, args)
             % matlabFunction generates a matlabFunction from a syms 
             % object using the SymParams.  If sym is not symbolic, generate
             % a standard function that returns the constant value regardless
             % of the input
+            % Args can be used to specify additional input arguments for
+            % other symbolic variables not in the SymParams.  Elements of
+            % cell array args are added as arguments after the first
+            % argument for the sym param values
+            arguments
+                obj
+                sym
+                args cell = {}
+            end
             
             if isa(sym, 'sym')
-                f = matlabFunction(sym, 'Vars', {obj.Syms});
+                f = matlabFunction(sym, 'Vars', [{obj.Syms} args]);
             else
                 f = @(varargin) sym;
             end
