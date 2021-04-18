@@ -1,3 +1,3 @@
 function mustBeParam(p)
-    mustBeA(p,["double","symParam"]);
+    mustBeA(p,["double","symParam","compParam"]);
 end

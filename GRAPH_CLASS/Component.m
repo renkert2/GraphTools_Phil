@@ -55,27 +55,26 @@ classdef Component < SystemElement
     methods (Sealed)
         function init_super(obj)
             obj.init(); % Concrete method that can be overriden by subclasses
+            obj.DefineParams();
             obj.DefineComponent();
             obj.DefineChildren();
-            obj.DefineSymParams();
         end
     end
     
     methods (Sealed, Access = protected)
-        function DefineSymParams(obj)
+        function DefineParams(obj)
             % Pass symbolic parameters defined in the Component properties
             % to the Graph
             props = properties(obj);
-            sp_cell = {};
+            cp = compParam.empty();
             for i = 1:numel(props)
                 prop = obj.(props{i});
-                if isa(prop, 'symParam')
-                    sp_cell{end+1} = prop;
+                if isa(prop, 'compParam') && ~isempty(prop)
+                    prop.Parent = obj;
+                    cp(end+1,1) = prop;
                 end
             end
-            sym_params = SymParams(sp_cell);
-            obj.SymParams = sym_params;
-            obj.Graph.SymParams = sym_params;
+            obj.Params = cp;
         end
         
         function DefineChildren(obj)

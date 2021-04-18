@@ -8,7 +8,7 @@ classdef SystemElement < matlab.mixin.Heterogeneous & handle
         Ports (:,1) ComponentPort = ComponentPort.empty()
         
         extrinsicProps (:,1) extrinsicProp
-        SymParams SymParams {mustBeScalarOrEmpty}
+        Params (:,1) compParam
     end
     
     methods
@@ -66,7 +66,7 @@ classdef SystemElement < matlab.mixin.Heterogeneous & handle
         end
         
         function setParamVal(obj, param, val)
-            obj.SymParams.setVal(param,val);
+            obj.Params.setVal(param,val);
         end
     end
 end
