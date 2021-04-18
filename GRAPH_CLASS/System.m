@@ -36,27 +36,11 @@ classdef System < SystemElement
     end
     
     methods
-        function obj = System(varargin)
-            if numel(varargin) > 0
-                if numel(varargin) == 1
-                    % Graph Passed to Constructor - Skip Initialization
-                    obj.Graph = varargin{1};
-                elseif numel(varargin) == 2
-                    % Components and ConnectP Passed to Constructor - call init_super
-                    obj.Components = varargin{1};
-                    obj.ConnectP = varargin{2};
-                    obj.init_super();
-                end
+        function obj = System(Name, Comps, ConnectP)
+            if nargin == 3
+                    obj.Name = Name;
+                    obj=Combine(Comps, ConnectP, obj);
             end
-        end
-               
-        function init_super(obj)
-            init(obj); % Optionally defined by subclasses
-            createSysGraph(obj); % Calls Component.Combine to create system graph and resulting extrinsic props
-        end
-        
-        function createSysGraph(obj)
-            [obj.Graph, obj.extrinsicProps] = Combine(obj.Components, obj.ConnectP);
         end
         
         function model = createModel(obj, varargin)
@@ -64,8 +48,8 @@ classdef System < SystemElement
             % it in obj.Model.  Pass additional arguments 
             % to the GraphModel constructor with varargin
             
-            obj.Model = GraphModel(obj.Graph, varargin{:});
-            model = obj.Model;
+            model = GraphModel(obj, varargin{:});
+            obj.Model = model;
         end
         
         function model = get.Model(obj)
@@ -81,10 +65,6 @@ classdef System < SystemElement
         function C = getComponents(obj, Type)
             i = arrayfun(@(x) isa(x,Type), obj.Components);
             C = obj.Components(i);
-        end
-        %% Methods to be overriden by subclasses
-        function init(obj)
-            % Placeholder
         end
     end
 end

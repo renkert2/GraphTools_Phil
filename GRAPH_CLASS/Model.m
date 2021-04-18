@@ -31,7 +31,7 @@ classdef Model < matlab.mixin.Copyable
         OutputDescriptions string
         
         SymVars SymVars {mustBeScalarOrEmpty} % Contains fields x,u,d, each an array of symbolic variables
-        SymParams SymParams {mustBeScalarOrEmpty}
+        Params compParam
     end
     
     properties
@@ -72,18 +72,10 @@ classdef Model < matlab.mixin.Copyable
             obj.g_func = CalcFuncs_Cell{2};
         end
         
-        function F = CalcF(obj,x,u,d,params)
-            param_lengths = [obj.Nx, obj.Nu, obj.Nd, obj.SymParams.N];
+        function F = CalcF(obj,x,u,d)
+            param_lengths = [obj.Nx, obj.Nu, obj.Nd];
             
-            if isempty(obj.SymParams)
-                vars = {x,u,d};
-            else
-                if nargin == 4
-                    vars = {x,u,d,obj.SymParams.Vals};
-                elseif nargin == 5
-                    vars = {x,u,d,params};
-                end
-            end
+            vars = {x,u,d};
             
             for i = 1:numel(vars)
                 assert(size(vars{i},1) >= param_lengths(i), "Argument %d requires %d entries", i, param_lengths(i));
@@ -92,18 +84,10 @@ classdef Model < matlab.mixin.Copyable
             F = obj.CalcX(obj.f_func, vars);
         end
         
-        function G = CalcG(obj,x,u,d,params)
-            param_lengths = [obj.Nx, obj.Nu, obj.Nd, obj.SymParams.N];
-            
-            if isempty(obj.SymParams)
-                vars = {x,u,d};
-            else
-                if nargin == 4
-                    vars = {x,u,d,obj.SymParams.Vals};
-                elseif nargin == 5
-                    vars = {x,u,d,params};
-                end
-            end
+        function G = CalcG(obj,x,u,d)
+            param_lengths = [obj.Nx, obj.Nu, obj.Nd];
+
+            vars = {x,u,d};
             
             for i = 1:numel(vars)
                 assert(size(vars{i},1) >= param_lengths(i), "Argument %d requires %d entries", i, param_lengths(i));
@@ -165,10 +149,6 @@ classdef Model < matlab.mixin.Copyable
                 vars = {[obj.SymVars.x], [obj.SymVars.u], [obj.SymVars.d]};
             end
             
-            if ~isempty(obj.SymParams)
-                vars{end+1} = [obj.SymParams.Syms];
-            end
-            
             cell_flag = isa(syms, 'cell');
             if cell_flag
                 funcs = cellfun(@processSym, syms, 'UniformOutput', false);
@@ -178,7 +158,11 @@ classdef Model < matlab.mixin.Copyable
             
             function func = processSym(sym)
                 if isa(sym, 'sym')
-                    func = matlabFunction(sym,'Vars',vars);
+                    if ~isempty(obj.Params)
+                        func = matlabFunction(obj.Params, sym, vars);
+                    else
+                        func = matlabFunction(sym,'Vars',vars);
+                    end
                 else
                     func = @(varargin) sym;
                 end

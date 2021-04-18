@@ -68,10 +68,9 @@ classdef GraphModel < Model
             if ~isempty(arg1)
                 if isa(arg1,'Graph')
                     obj.Graph = arg1;
-                elseif isa(arg1,'Component')
+                elseif isa(arg1,'SystemElement')
                     obj.Graph = arg1.Graph;
-                elseif isa(arg1, 'System')
-                    obj.Graph = arg1.Graph;
+                    obj.Params = arg1.Params;
                 else
                     error('Invalid argument to GraphModel.  Must be of type Graph or Component')
                 end
@@ -89,7 +88,6 @@ classdef GraphModel < Model
             obj.Ny = obj.Graph.Nv + numel(obj.Graph.Outputs); % number of outputs
             
             setSymVars(obj)
-            obj.SymParams = obj.Graph.SymParams; % list of symbolic parametes
             
             % get state initial conditions
             if ~isempty(obj.Graph.DynamicVertices)
@@ -258,10 +256,10 @@ classdef GraphModel < Model
             
             if ~isempty(obj.Graph.DynamicVertices)
                 % Dynamic states exist
-                xdot = processArgs(@CalcF, inputs, disturbances, params); % Might need to change processArgs so things run faster
+                xdot = processArgs(@CalcF, inputs, disturbances); % Might need to change processArgs so things run faster
                 [t,xdyn] = opts.Solver(xdot, [t_range(1) t_range(end)], obj.x_init, opts.SolverOpts);
                 if ~isempty(obj.Graph.AlgebraicVertices)
-                    xfull = processArgs(@CalcG, inputs, disturbances, params);
+                    xfull = processArgs(@CalcG, inputs, disturbances);
                     x = xfull(t',xdyn')';
                 else
                     x = xdyn;
@@ -275,9 +273,9 @@ classdef GraphModel < Model
             
             if nargout == 3
                 if input_function_flag
-                    pf = CalcP(obj, x', inputs(t)', repmat(params,1,numel(t)))';
+                    pf = CalcP(obj, x', inputs(t)')';
                 else
-                    pf = CalcP(obj, x', repmat(inputs,1,numel(t)), repmat(params,1,numel(t)))';
+                    pf = CalcP(obj, x', repmat(inputs,1,numel(t)))';
                 end
             end
             
@@ -637,21 +635,13 @@ classdef GraphModel < Model
             Y = OF; % solve for the capacitance of each vertex  
         end
         
-        function P = CalcP(obj, x_full, u, params)
+        function P = CalcP(obj, x_full, u)
             % calculate the values of the power flows when simulating the
             % graph
             
-            param_lengths = [numel(obj.SymVars.x_full), obj.Nu, obj.SymParams.N];
-            
-            if isempty(obj.SymParams)
-                vars = {x_full,u};
-            else
-                if nargin == 3
-                    vars = {x_full,u,obj.SymParams.Vals};
-                elseif nargin == 4
-                    vars = {x_full,u,params};
-                end
-            end
+            param_lengths = [numel(obj.SymVars.x_full), obj.Nu];
+
+            vars = {x_full,u};
             
             % through an error if the user did not pass enough (or too
             % much) information to the simulate function

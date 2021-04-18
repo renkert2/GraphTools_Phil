@@ -1,4 +1,4 @@
-classdef extrinsicProp
+classdef extrinsicProp < compParam
     % extrinsicProp is a class that represents design-dependent 
     % properties like mass and price.  When Components are 
     % combined into a system, extrinsicProps are combined into the
@@ -19,17 +19,22 @@ classdef extrinsicProp
     
     properties
         Type extrinsicProp_Types = "Abstract" % Property type, i.e. mass, price, etc...
-        Value {mustBeA(Value, ["double", "sym"])} % Numeric or Symbolic value associated with the property
     end
     
     methods
-        function obj = extrinsicProp(type, val)
-            if nargin == 2
-                obj.Type = type;
-                obj.Value = val;
+        function obj = extrinsicProp(type, val, varargin)
+            if isa(type, 'string') || isa(type, 'char')
+                type = extrinsicProp_Types(type);
+            elseif ~isa(type, 'extrinsicProp_Types')
+                error('Type must be a valid extrinsic prop type');
             end
+            
+            obj = obj@compParam(string(type), val, 'AutoRename', true, varargin{:});
+            obj.Type = type;
         end
-        
+    end
+    
+    methods (Sealed)
         function resProps = Combine(obj_array)
             % extrinsicProp.Combine combines like types in array of extrinsicProps 
             % into the resulting system extrinsicProps

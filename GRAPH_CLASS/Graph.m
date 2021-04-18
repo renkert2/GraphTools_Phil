@@ -30,8 +30,6 @@ classdef Graph < matlab.mixin.Copyable
         Edges (:,1) GraphEdge % set of edges
         
         Outputs (:,1) GraphOutput % Graph Outputs
-              
-        SymParams SymParams {mustBeScalarOrEmpty}
     end
     
     properties (SetAccess = private)
@@ -398,10 +396,6 @@ classdef Graph < matlab.mixin.Copyable
             % Instantiate and Return the Graph Object
             obj = Graph(sys_verts, sys_edges);
             obj.Outputs = all_outputs;
-            
-            %% Assign SymParams and SymParams_Vals
-            sym_params = vertcat(G.SymParams);
-            obj.SymParams = join(sym_params);
          
             %% Helper Functions
             function ConnectX = formatConnectX(ConnectX, class, prop)
