@@ -51,16 +51,6 @@ classdef compParam < handle & matlab.mixin.Heterogeneous
             obj.Unit = opts.Unit;
         end
         
-        function x = pop(obj)
-            % pop() returns symbolic object or default value depending on 
-            % tunable property.  Detaches value from compParam handle object
-            if obj.Tunable
-                x = obj.Sym_;
-            else
-                x = obj.Value;
-            end
-        end
-        
         function d = double(obj)
             d = pop(obj);
         end
@@ -99,6 +89,29 @@ classdef compParam < handle & matlab.mixin.Heterogeneous
     % Methods for heterogeneous object arrays of compParams
     
     methods (Sealed)
+                
+        function x = pop(obj_array)
+            % pop() returns symbolic object or default value depending on
+            % tunable property.  Detaches value from compParam handle object
+            if isscalar(obj_array)
+                if obj_array.Tunable
+                    x = obj_array.Sym_;
+                else
+                    x = obj_array.Value;
+                end
+            else
+                x = sym.empty(numel(obj_array),0);
+                for i = 1:numel(obj_array)
+                    obj = obj_array(i);
+                    if obj.Tunable
+                        x(i) = obj.Sym_;
+                    else
+                        x(i) = obj.Value;
+                    end
+                end
+            end
+        end
+        
         function i = isaArrayFun(obj_array, classname)
             i = arrayfun(@(x) builtin('isa',x,classname), obj_array);
         end
