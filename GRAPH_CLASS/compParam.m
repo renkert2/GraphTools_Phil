@@ -1,4 +1,4 @@
-classdef compParam < handle & matlab.mixin.Heterogeneous
+classdef compParam < handle & matlab.mixin.Heterogeneous & matlab.mixin.CustomDisplay
     % compParams are used to define component parameters.  symParams can
     % replace numeric parameters in a component definition.  When using 
     % symParams in a GraphModel, capacitance and powerflow coefficients 
@@ -88,8 +88,7 @@ classdef compParam < handle & matlab.mixin.Heterogeneous
     %% Sealed Methods
     % Methods for heterogeneous object arrays of compParams
     
-    methods (Sealed)
-                
+    methods (Sealed)  
         function x = pop(obj_array)
             % pop() returns symbolic object or default value depending on
             % tunable property.  Detaches value from compParam handle object
@@ -111,9 +110,13 @@ classdef compParam < handle & matlab.mixin.Heterogeneous
                 end
             end
         end
+    
+        function i = find(obj, args)
+            i = arrayfun(@(x) find(indexBy(obj, "SymID", x)), string(args));
+        end
         
-        function i = isaArrayFun(obj_array, classname)
-            i = arrayfun(@(x) builtin('isa',x,classname), obj_array);
+        function o = get(obj, args)
+            o = obj(find(obj, args));
         end
         
         function exps = extrinsicProps(obj_array)
@@ -170,10 +173,74 @@ classdef compParam < handle & matlab.mixin.Heterogeneous
                 f_mtlb = @(varargin) sym;
                 f = f_mtlb;
             end
-        end 
+        end
         
-        function disp(obj_array)
-            tbl = table(vertcat(obj_array.Sym), vertcat(obj_array.Value), vertcat(obj_array.Unit), vertcat(obj_array.Description), vertcat(vertcat(obj_array.Parent).Name),...
+        function s = exportStruct(obj_array, opts)
+            arguments
+               obj_array
+               opts.ExportUnits = false
+            end
+            
+            s = struct();
+            for i = 1:numel(obj_array)
+                obj = obj_array(i);
+                val = obj.Value;
+                if isa(val, 'sym')
+                    val = double(subs(val, obj_array.tunableSyms, obj_array.tunableVals));
+                end
+                
+                if opts.ExportUnits
+                   struct_val = struct();
+                   struct_val.Value = val;
+                   struct_val.Unit = obj.Unit;
+                else
+                    struct_val = val;
+                end
+                
+                comp_name = obj.Parent.Name;
+                sym_name = genvarname(obj.Sym);
+                if ~isempty(comp_name)
+                    comp_name = genvarname(comp_name);
+                    s.(comp_name).(sym_name) = struct_val;
+                else
+                    s.(sym_name) = struct_val;
+                end    
+            end
+        end
+    end
+    
+    methods (Sealed, Hidden = true)
+        function i = indexBy(obj_array, props, vals)
+            if isscalar(props)
+                i = vertcat(obj_array.(props)) == vals;
+            else
+                i_array = zeros(numel(obj_array), numel(props));
+                for j = 1:numel(props)
+                    i_array(:,j) = vertcat(obj_array.(props(j))) == vals(j);
+                end
+                i = all(i_array,2);
+            end
+        end
+        
+        function obj_array = filterBy(obj, props, vals)
+            obj_array = obj(indexBy(obj, props, vals));
+        end
+        
+        function X = filteredProps(obj, prop, filter)
+            vec = vertcat(obj.(prop));
+            X = vec(filter);
+        end
+        
+        function i = isaArrayFun(obj_array, classname)
+            i = arrayfun(@(x) builtin('isa',x,classname), obj_array);
+        end
+    end
+    
+        
+    methods (Sealed, Access = protected)
+        function displayNonScalarObject(obj_array)
+            % Modifies method from Mixin.Custom Display
+            tbl = table(vertcat(obj_array.Sym), string(vertcat(obj_array.Value)), vertcat(obj_array.Unit), vertcat(obj_array.Description), vertcat(vertcat(obj_array.Parent).Name),...
                 'VariableNames', ["Sym", "Value", "Unit", "Description", "Parent"]);
             disp(tbl);
         end
