@@ -207,6 +207,19 @@ classdef compParam < handle & matlab.mixin.Heterogeneous & matlab.mixin.CustomDi
                 end    
             end
         end
+        
+        function s = latex(obj_array)
+            N = numel(obj_array);
+            s = string.empty(N,0);
+            for i = 1:N
+                obj = obj_array(i);
+                s_temp = "$$"+obj.Sym+"$$";
+                if ~isempty(obj.Unit) && obj.Unit ~= ""
+                    s_temp = s_temp + " "+"("+obj.Unit+")";
+                end
+                s(i,1) = s_temp;
+            end
+        end
     end
     
     methods (Sealed, Hidden = true)
@@ -222,8 +235,25 @@ classdef compParam < handle & matlab.mixin.Heterogeneous & matlab.mixin.CustomDi
             end
         end
         
-        function obj_array = filterBy(obj, props, vals)
-            obj_array = obj(indexBy(obj, props, vals));
+        function i = indexByParent(obj_array, props, vals)
+            parents = vertcat(obj_array.Parent);
+            if isscalar(props)
+                i = vertcat(parents.(props)) == vals;
+            else
+                i_array = zeros(numel(parents), numel(props));
+                for j = 1:numel(props)
+                    i_array(:,j) = vertcat(parents.(props(j))) == vals(j);
+                end
+                i = all(i_array,2);
+            end
+        end
+        
+        function obj_filt = filterBy(obj_array, props, vals)
+            obj_filt = obj_array(indexBy(obj_array, props, vals));
+        end
+        
+        function obj_filt = filterByParent(obj_array, props, vals)
+            obj_filt = obj_array(indexByParent(obj_array, props, vals));
         end
         
         function X = filteredProps(obj, prop, filter)
