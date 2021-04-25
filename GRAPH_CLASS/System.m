@@ -39,8 +39,15 @@ classdef System < SystemElement
         function obj = System(Name, Comps, ConnectP)
             if nargin == 3
                     obj.Name = Name;
-                    obj=Combine(Comps, ConnectP, obj);
+                    obj.Components = Comps;
+                    obj.ConnectP = ConnectP;
+                    
+                    obj=SystemCombine(obj);
             end
+        end
+        
+        function obj = SystemCombine(obj)
+            obj = Combine(obj.Components, obj.ConnectP, obj);
         end
         
         function model = createModel(obj, varargin)
