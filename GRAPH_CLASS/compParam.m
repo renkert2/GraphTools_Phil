@@ -20,7 +20,7 @@ classdef compParam < handle & matlab.mixin.Heterogeneous & matlab.mixin.CustomDi
         Sym string
         Value
         Tunable logical = false
-        AutoRename logical = false % Automatically append name of Parent element to end of Sym and Sym_
+        AutoRename logical = true % Automatically append name of Parent element to end of Sym and Sym_
         Description string
         Unit
         
@@ -38,7 +38,7 @@ classdef compParam < handle & matlab.mixin.Heterogeneous & matlab.mixin.CustomDi
                 sym_arg string
                 val
                 opts.Tunable logical = false
-                opts.AutoRename logical = false
+                opts.AutoRename logical = true
                 opts.Description = ""
                 opts.Unit = ""
             end
@@ -208,13 +208,18 @@ classdef compParam < handle & matlab.mixin.Heterogeneous & matlab.mixin.CustomDi
             end
         end
         
-        function s = latex(obj_array)
+        function s = latex(obj_array, opts)
+            arguments
+                obj_array
+                opts.UnitFlag = true
+            end
+            
             N = numel(obj_array);
             s = string.empty(N,0);
             for i = 1:N
                 obj = obj_array(i);
                 s_temp = "$$"+obj.Sym+"$$";
-                if ~isempty(obj.Unit) && obj.Unit ~= ""
+                if ~isempty(obj.Unit) && obj.Unit ~= "" && opts.UnitFlag
                     s_temp = s_temp + " "+"("+obj.Unit+")";
                 end
                 s(i,1) = s_temp;
