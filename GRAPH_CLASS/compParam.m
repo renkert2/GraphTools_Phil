@@ -119,6 +119,37 @@ classdef compParam < handle & matlab.mixin.Heterogeneous & matlab.mixin.CustomDi
             o = obj(find(obj, args));
         end
         
+        function load(obj_array, data)
+            % Updates values to array of compParamValues or ComponentData
+            % object
+            if isa(data, 'ComponentData')
+                data = data.Data;
+            end
+            
+            comps = parentTypes(obj_array);
+            syms = reshape(vertcat(obj_array.Sym), size(obj_array));
+            
+            for i = 1:numel(data)
+                i_comp = data(i).Component == comps;
+                i_sym = data(i).Sym == syms;
+                i_combined = i_comp & i_sym;
+                if any(i_combined)
+                    objs = obj_array(i_combined);
+                    
+                    unit = data(i).Unit;
+                    if ~isempty(unit) || unit ~= ""
+                        objs_units = vertcat(objs.Unit);
+                        assert(all(objs_units == unit), "Incompatible Units in %s parameter %s", data(i).Component, data(i).Sym);
+                    end
+                    
+                    for j = 1:numel(objs)
+                        objs(j).Value = data(i).Value;
+                    end
+                end
+            end
+        end
+            
+        
         function exps = extrinsicProps(obj_array)
             i = isaArrayFun(obj_array, 'extrinsicProp');
             exps = obj_array(i);
@@ -253,6 +284,14 @@ classdef compParam < handle & matlab.mixin.Heterogeneous & matlab.mixin.CustomDi
             end
         end
         
+        function s = parentTypes(obj_array) 
+            s = string.empty(numel(obj_array), 0);
+            for i = 1:numel(obj_array)
+                s(i) = class(obj_array(i).Parent);
+            end
+            s = reshape(s,size(obj_array));
+        end
+
         function obj_filt = filterBy(obj_array, props, vals)
             obj_filt = obj_array(indexBy(obj_array, props, vals));
         end
@@ -271,7 +310,6 @@ classdef compParam < handle & matlab.mixin.Heterogeneous & matlab.mixin.CustomDi
         end
     end
     
-        
     methods (Sealed, Access = protected)
         function displayNonScalarObject(obj_array)
             % Modifies method from Mixin.Custom Display
