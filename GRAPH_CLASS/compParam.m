@@ -208,13 +208,18 @@ classdef compParam < handle & matlab.mixin.Heterogeneous & matlab.mixin.CustomDi
             end
         end
         
-        function s = latex(obj_array)
+        function s = latex(obj_array, opts)
+            arguments
+                obj_array
+                opts.UnitFlag = true
+            end
+            
             N = numel(obj_array);
             s = string.empty(N,0);
             for i = 1:N
                 obj = obj_array(i);
                 s_temp = "$$"+obj.Sym+"$$";
-                if ~isempty(obj.Unit) && obj.Unit ~= ""
+                if ~isempty(obj.Unit) && obj.Unit ~= "" && opts.UnitFlag
                     s_temp = s_temp + " "+"("+obj.Unit+")";
                 end
                 s(i,1) = s_temp;
