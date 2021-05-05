@@ -95,6 +95,28 @@ classdef Model < matlab.mixin.Copyable
             
             G = obj.CalcX(obj.g_func, vars);
         end
+        
+        function [x_bar,y_bar] = calcSteadyState(obj, u, d, x0, opts)
+            % Solves CalcF == 0 to get the steady state values
+            arguments
+                obj
+                u double
+                d double
+                x0 double = []
+                opts.SolverOpts struct = optimset('Display', 'off');
+            end
+            
+            if isempty(x0)
+                x0 = zeros(obj.Nx,1);
+            end
+            [x_bar,] = fsolve(@(x) CalcF(obj,x,u,d), x0, opts.SolverOpts);
+            
+            if nargout == 2
+                y_bar = CalcG(obj,x_bar,u,d);
+            end
+        end
+                
+            
               
         function lm = getLinearModel(obj)
             f = obj.f_sym;

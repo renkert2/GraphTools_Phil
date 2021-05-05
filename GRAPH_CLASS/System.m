@@ -64,7 +64,7 @@ classdef System < SystemElement
             % if one doesn't already exist
             
             if isempty(obj.Model)
-                obj.Model = GraphModel(obj.Graph);
+                createModel(obj);
             end
             model = obj.Model; 
         end
