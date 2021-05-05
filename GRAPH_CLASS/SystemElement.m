@@ -67,7 +67,11 @@ classdef SystemElement < matlab.mixin.Heterogeneous & matlab.mixin.Copyable & ha
             Sys.Graph = gSys;
             Sys.Components = C;
             Sys.ConnectP = ConnectP;
-            
+            setParams(Sys);
+        end
+        
+        function setParams(obj)
+            C = obj.Components;
             params = vertcat(C.Params);
             if ~isempty(params) % Params have components
                 exprop_i = isaArrayFun(params, 'extrinsicProp');
@@ -75,13 +79,13 @@ classdef SystemElement < matlab.mixin.Heterogeneous & matlab.mixin.Copyable & ha
                 if ~isempty(exprops)
                     sys_exprops = Combine(exprops); % Combine extrinsic props from components into system level extrinsic props
                     for i = 1:numel(sys_exprops)
-                        sys_exprops(i).Parent = Sys;
+                        sys_exprops(i).Parent = obj;
                     end
                     params = [unique(params(~exprop_i)); unique(exprops); sys_exprops]; % Order is [~extrinsic props, component extrinsic props, system extrinsic props]
                 else
                     params = unique(params); % Select params with unique Sym identifiers
                 end
-                Sys.Params = params;
+                obj.Params = params;
             end
         end
         
