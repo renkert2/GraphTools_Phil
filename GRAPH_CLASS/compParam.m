@@ -119,7 +119,22 @@ classdef compParam < handle & matlab.mixin.Heterogeneous & matlab.mixin.CustomDi
             o = obj(find(obj, args));
         end
         
-        function load(obj_array, data)
+        function cpvals = getValues(obj_array)
+            % 'Freezes' value of compParams and exports a compParamValue
+            % array that can be reloaded later.  
+            for i = 1:numel(obj_array)
+                param = obj_array(i);
+                pval = compParamValue(param.Sym, param.Value);
+                pval.Unit = param.Unit;
+                pval.Description = param.Description;
+                if ~isempty(param.Parent)
+                    pval.Component = class(param.Parent);
+                end
+                cpvals(i,1) = pval;
+            end
+        end
+        
+        function loadValues(obj_array, data)
             % Updates values to array of compParamValues or ComponentData
             % object
             if isa(data, 'ComponentData')
