@@ -18,13 +18,18 @@ classdef compParam < handle & matlab.mixin.Heterogeneous & matlab.mixin.CustomDi
     
     properties
         Sym string
-        Value
+        Value double = NaN;
         Tunable logical = false
         AutoRename logical = true % Automatically append name of Parent element to end of Sym and Sym_
         Description string
         Unit
         
         Parent SystemElement
+        
+        % Functionality for Dependent Parameters.  Could also be made a subclass
+        Dependent logical = false % Flag that states whether to reference call internal function or cached obj.Value
+        DependentFunction function_handle % Function used to evaluate the dependent parameter value
+        DependentBreakpoints (:,1) compParam % compParams on which obj depends.  These are the arguments for obj.DependenceFunction.  Leave empty if DependenceFunction takes no arguments
     end
     
     properties (SetAccess = private, Hidden = true)
@@ -33,22 +38,17 @@ classdef compParam < handle & matlab.mixin.Heterogeneous & matlab.mixin.CustomDi
     end
     
     methods
-        function obj = compParam(sym_arg, val, opts)
-            arguments
-                sym_arg string
-                val
-                opts.Tunable logical = false
-                opts.AutoRename logical = true
-                opts.Description = ""
-                opts.Unit = ""
+        function obj = compParam(sym_arg, val, varargin)
+            if nargin >= 1
+                obj.Sym = sym_arg; 
             end
-            
-            obj.Sym = sym_arg; 
-            obj.Value = val;
-            obj.Tunable = opts.Tunable;
-            obj.AutoRename = opts.AutoRename;
-            obj.Description = opts.Description;
-            obj.Unit = opts.Unit;
+            if (nargin >= 2)
+                obj.Value = val;
+            end
+            if nargin > 2
+                my_inputparser(obj,varargin{:});
+            end
+            update(obj)
         end
         
         function d = double(obj)
@@ -110,6 +110,15 @@ classdef compParam < handle & matlab.mixin.Heterogeneous & matlab.mixin.CustomDi
                 end
             end
         end
+        
+        function update(obj_array)
+            for i = 1:numel(obj_array)
+                obj = obj_array(i);
+                if obj.Dependent
+                    calcDependentValue(obj);
+                end
+            end
+        end
     
         function i = find(obj, args)
             i = arrayfun(@(x) find(indexBy(obj, "SymID", x)), string(args));
@@ -164,7 +173,6 @@ classdef compParam < handle & matlab.mixin.Heterogeneous & matlab.mixin.CustomDi
             end
         end
             
-        
         function exps = extrinsicProps(obj_array)
             i = isaArrayFun(obj_array, 'extrinsicProp');
             exps = obj_array(i);
@@ -345,7 +353,14 @@ classdef compParam < handle & matlab.mixin.Heterogeneous & matlab.mixin.CustomDi
             p_name = regexprep(p_name, '[\W]', '_');
             str_out = str_in+"__"+p_name;
         end
+        
+        function calcDependentValue(obj)
+            if ~isempty(obj.DependentFunction)
+                obj.Value = obj.DependentFunction(obj.DependentBreakpoints.Value);
+            end
+        end
     end
+    
     %% Overload!
     methods
         function x = times(varargin)

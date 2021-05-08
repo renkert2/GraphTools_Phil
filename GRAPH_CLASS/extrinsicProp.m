@@ -45,9 +45,13 @@ classdef extrinsicProp < compParam
             resProps = extrinsicProp.empty();
             for i = 1:numel(unique_types) % For each unique type in obj_array
                 prop_id = (unique_types(i) == types); % Get indices of all properties of that type
-                prop_vals = pop(obj_array(prop_id));
-                val = unique_types(i).combFunc(prop_vals); % Call the combination function of the type on the values of the property of that type
-                resProps(i) = extrinsicProp(unique_types(i), val); % Assign aggregate prop value into new system extrinsicProp
+                breakpoints = obj_array(prop_id); % Breakpoints for Dependent compParam
+                type = unique_types(i);
+                F = @(varargin) type.combFunc([varargin{:}]);
+                resProps(i) = extrinsicProp(unique_types(i), NaN,...
+                    'Dependent',true,...
+                    'DependentBreakpoints', breakpoints,...
+                    'DependentFunction', F); % Assign aggregate prop value into new system extrinsicProp
             end     
         end
         

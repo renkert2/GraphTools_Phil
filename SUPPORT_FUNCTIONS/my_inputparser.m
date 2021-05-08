@@ -34,7 +34,7 @@ while i <= nargin-1 % loop through all arguements
     par = varargin{i}; % extract the argument
     
     if val == 0 % check if the arguement is a name or value
-        if ~ischar(par) % error check if argument is not a string name
+        if ~(ischar(par) || isstring(par))  % error check if argument is not a string name
             error('Provide name arguement as a string name.')
         end
         
