@@ -21,8 +21,8 @@ classdef compParam < handle & matlab.mixin.Heterogeneous & matlab.mixin.CustomDi
         Value double = NaN;
         Tunable logical = false
         AutoRename logical = true % Automatically append name of Parent element to end of Sym and Sym_
-        Description string
-        Unit
+        Description string = ""
+        Unit string = ""
         
         Parent SystemElement
         
@@ -49,6 +49,13 @@ classdef compParam < handle & matlab.mixin.Heterogeneous & matlab.mixin.CustomDi
                 my_inputparser(obj,varargin{:});
             end
             update(obj)
+        end
+        
+        function setDependency(obj, fun, bkpnts)
+            % Makes adding dependencies a little faster in construction
+            obj.Dependent = true;
+            obj.DependentFunction = fun;
+            obj.DependentBreakpoints = bkpnts;
         end
         
         function d = double(obj)
@@ -115,6 +122,7 @@ classdef compParam < handle & matlab.mixin.Heterogeneous & matlab.mixin.CustomDi
             for i = 1:numel(obj_array)
                 obj = obj_array(i);
                 if obj.Dependent
+                    obj.DependentBreakpoints.update();
                     calcDependentValue(obj);
                 end
             end
