@@ -1,9 +1,6 @@
 classdef compParam < handle & matlab.mixin.Heterogeneous & matlab.mixin.CustomDisplay
     % compParams are used to define component parameters.  symParams can
-    % replace numeric parameters in a component definition.  When using 
-    % symParams in a GraphModel, capacitance and powerflow coefficients 
-    % become symbolic.  Also, CalcF and CalcG require an additional 
-    % argument for with numeric values for the symbolic parameters.
+    % replace numeric parameters in a component definition.
     % 
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -119,6 +116,9 @@ classdef compParam < handle & matlab.mixin.Heterogeneous & matlab.mixin.CustomDi
         end
         
         function update(obj_array)
+            % Use update() method to update the value field of all dependent compParams
+            % in a compParam object array.  This will recursively update nested dependent
+            % parameters by updating all of the compParams in DependentBreakpoints.
             for i = 1:numel(obj_array)
                 obj = obj_array(i);
                 if obj.Dependent
