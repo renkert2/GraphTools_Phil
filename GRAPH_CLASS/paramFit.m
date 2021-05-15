@@ -3,8 +3,8 @@ classdef paramFit < handle
     % that use continuous functions to estimate dependent compParams from
     % other compParams
     properties
-        Inputs (:,1) compParams
-        Outputs (:,1) compParams
+        Inputs (:,1) compParam
+        Outputs (:,1) compParam
     end
     
     properties (SetAccess = private)
@@ -26,7 +26,7 @@ classdef paramFit < handle
         
         function set.Inputs(obj, ins)
             obj.Inputs = ins;
-            obj.N_ins = numel(inputs);
+            obj.N_ins = numel(ins);
         end
         
         function set.Outputs(obj, outs)
@@ -44,7 +44,7 @@ classdef paramFit < handle
         end
         
         function setBoundary(obj)
-            obj.Boundary = Boundary(obj.Data.Inputs);
+            obj.Boundary = Boundary(obj.Data(1).Inputs);
         end
         
         function setModels(obj, fit_type, fit_opts)
@@ -57,21 +57,62 @@ classdef paramFit < handle
             end
             
             for i = 1:obj.N_outs
-                obj.Models{i} = makeFit(obj, obj.Data(i).Inputs, obj.Data(i).Ouptuts, fit_type{i}, fit_opts{i});
+                obj.Models{i} = makeFit(obj, obj.Data(i).Inputs, obj.Data(i).Outputs, fit_type{i}, fit_opts{i});
             end 
         end
                         
         function setOutputDependency(obj)
         end
         
-        function outs = calcParams(obj, ins)
+        function outs = calcParams(obj, varargin)
             outs = zeros(obj.N_outs,1);
             for i = 1:obj.N_outs
-                f = obj.Models{i};
-                outs(i,1) =  f(
+                f = obj.Models{i}; 
+                outs(i,1) =  f(varargin{:});
+            end
         end
         
-        function plot(obj)
+        function plot(obj, varargin)
+            if nargin > 1
+                outs = calcParams(obj, varargin{:});
+            end
+            
+            for i = 1:obj.N_outs
+                figure(i)
+                plot(obj.Models{i}, obj.Data(i).Inputs, obj.Data(i).Outputs);
+                
+                title('paramFit Plot')
+                [olb,oub] = bounds(obj.Data(i).Outputs);
+                switch obj.N_ins
+                    case 1
+                        pfun = @plot;
+                        ylim([olb oub]);
+                        xlabel(latex(obj.Inputs(1)),'Interpreter','latex');
+                        ylabel(latex(obj.Outputs(i)),'Interpreter','latex');
+                    case 2
+                        pfun = @plot3;
+                        zlim([olb oub]);
+                        xlabel(latex(obj.Inputs(1)),'Interpreter','latex');
+                        ylabel(latex(obj.Inputs(2)),'Interpreter','latex');
+                        zlabel(latex(obj.Outputs(i)),'Interpreter','latex');
+                end
+                
+                if nargin > 1
+                    hold on
+                    pfun(varargin{:}, outs(i),'.r','MarkerSize',20)
+                    hold off
+                end
+            end
+        end
+        
+        function cftool(obj, output_number)
+            dat = obj.Data(output_number);
+            switch obj.N_ins
+                case 1
+                    cftool(dat.Inputs(:,1),dat.Outputs);
+                case 2
+                    cftool(dat.Inputs(:,1),dat.Inputs(:,2),dat.Outputs);
+            end
         end
     end
     
@@ -82,7 +123,7 @@ classdef paramFit < handle
                 case 1
                     [inputs_out, outputs_out] = prepareCurveData(inputs_in, outputs_in);
                 case 2
-                    [inputs_out, outputs_out] = prepareSurfaceData(inputs_in, outputs_in);
+                    [inputs_out(:,1), inputs_out(:,2), outputs_out] = prepareSurfaceData(inputs_in(:,1),inputs_in(:,2), outputs_in);
                 otherwise
                     inputs_out = inputs_in;
                     outputs_out = outputs_in;
