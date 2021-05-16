@@ -62,6 +62,10 @@ classdef paramFit < handle
         end
                         
         function setOutputDependency(obj)
+            for i = 1:obj.N_outs
+                f = obj.Models{i};
+                setDependency(obj.Outputs(i), f, obj.Inputs);
+            end
         end
         
         function outs = calcParams(obj, varargin)

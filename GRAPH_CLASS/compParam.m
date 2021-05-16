@@ -25,7 +25,7 @@ classdef compParam < handle & matlab.mixin.Heterogeneous & matlab.mixin.CustomDi
         
         % Functionality for Dependent Parameters.  Could also be made a subclass
         Dependent logical = false % Flag that states whether to reference call internal function or cached obj.Value
-        DependentFunction function_handle % Function used to evaluate the dependent parameter value
+        DependentFunction % Function used to evaluate the dependent parameter value - must accept comma seperated list of inputs
         DependentBreakpoints (:,1) compParam % compParams on which obj depends.  These are the arguments for obj.DependenceFunction.  Leave empty if DependenceFunction takes no arguments
     end
     
@@ -53,6 +53,7 @@ classdef compParam < handle & matlab.mixin.Heterogeneous & matlab.mixin.CustomDi
             obj.Dependent = true;
             obj.DependentFunction = fun;
             obj.DependentBreakpoints = bkpnts;
+            obj.update();
         end
         
         function d = double(obj)
