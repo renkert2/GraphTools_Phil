@@ -5,7 +5,7 @@ classdef compParamValue
     properties
         Sym string
         Value double
-        Unit
+        Unit string
         Description string
         
         Component string % Name of component object corresponding to this parameter
@@ -45,6 +45,27 @@ classdef compParamValue
                 for j = 1:numel(propnames)
                     field = propnames(j);
                     obj.(field) = param_table(i,:).(field);
+                end
+                obj_array(i,1) = obj;
+            end
+        end
+        
+        function obj_array = importFromStruct(param_struct)
+            % Construct array of compParamValues from struct array or cell array 
+            % of structs
+            
+            N = numel(param_struct);  
+            obj_array = compParamValue.empty(N,0);
+            for i = 1:N
+                obj = compParamValue();
+                if isa(param_struct, 'cell')
+                    ps = param_struct{i};
+                else
+                    ps = param_struct(i);
+                end
+                field_names = string(fields(ps))';
+                for f = field_names
+                    obj.(f) = ps.(f);
                 end
                 obj_array(i,1) = obj;
             end

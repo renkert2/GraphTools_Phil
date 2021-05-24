@@ -124,6 +124,43 @@ classdef ComponentData
                 end
             end
         end
+        function obj_array = importFromJSON(file)
+            arguments
+                file string
+            end
+            raw = fileread(file);
+            json = jsondecode(raw); % Struct array, each element is a component
+            obj_array = ComponentData.importFromStruct(json);
+        end
+        function obj_array = importFromStruct(s)
+            
+            N = numel(s);
+            obj_array = ComponentData.empty(N,0);
+            
+            for i = 1:N
+                if isa(s,'cell')
+                    comp_struct = s{i};
+                elseif isa(s,'struct')
+                    comp_struct = s(i);
+                else
+                    error('Input argument must be struct array or cell array of structs')
+                end
+                dat = comp_struct.Data;
+                cpv = compParamValue.importFromStruct(dat);
+                for j = 1:numel(cpv)
+                    cpv(j).Component = comp_struct.Component;
+                end
+                comp_struct.Data = cpv;
+                
+                cd = ComponentData();
+                field_names = string(fields(comp_struct))';
+                for f = field_names
+                    cd.(f) = comp_struct.(f);
+                end
+                    
+                obj_array(i,1) = cd;
+            end   
+        end
     end
 end
 
