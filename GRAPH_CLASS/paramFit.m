@@ -5,23 +5,37 @@ classdef paramFit < handle
     properties
         Inputs (:,1) compParam
         Outputs (:,1) compParam
+        
+        BoundaryWarning logical = true
     end
     
     properties (SetAccess = private)
         Data (:,1) struct % Struct array (obj.N_outs, 1), each with Inputs and Outputs field for use with model creation
         Boundary Boundary
         Models (:,1) cell % Cell array of fit objects or function handles
+        Functions (:,1) cell % Cell array of function handles, wrap Models with additional functionality like boundary checking
     end
     
-    properties (Access = private)
+    properties (SetAccess = private)
         N_ins double
         N_outs double
     end
     
     methods
         function obj = paramFit(ins, outs)
-            obj.Inputs = ins;
-            obj.Outputs = outs;
+            if nargin == 2
+                if isa(ins, 'compParam') && isa(outs, 'compParam')
+                    obj.Inputs = ins;
+                    obj.Outputs = outs;
+                elseif isnumeric(ins) && isnumeric(outs)
+                    mustBeInteger(ins);
+                    mustBeInteger(outs);
+                    obj.N_ins = ins;
+                    obj.N_outs = outs;
+                else
+                    error("invalid constructor arguments.  Must be the input and output compParams arrays or the number of inputs and outputs")
+                end
+            end
         end
         
         function set.Inputs(obj, ins)
@@ -57,13 +71,32 @@ classdef paramFit < handle
             end
             
             for i = 1:obj.N_outs
-                obj.Models{i} = makeFit(obj, obj.Data(i).Inputs, obj.Data(i).Outputs, fit_type{i}, fit_opts{i});
-            end 
+                model = makeFit(obj, obj.Data(i).Inputs, obj.Data(i).Outputs, fit_type{i}, fit_opts{i});
+                obj.Models{i} = model;
+                obj.Functions{i} = makeModelWrapper(obj,model);
+            end
+            
+            function fh = makeModelWrapper(obj,model)
+                fh = @ModelWrapper;
+                
+                function out = ModelWrapper(varargin)
+                    if obj.BoundaryWarning
+                        in_bounds = obj.Boundary.isInBoundary(varargin{:});
+                        if any(~in_bounds)
+                            out_i = find(~in_bounds);
+                            out_str = num2str(out_i, '%d, ');
+                            warning("Points %s Outside Boundary", out_str)
+                        end
+                    end
+                    out = model(varargin{:});
+                    % Can add post process functionality like LB < out < UB later
+                end
+            end
         end
-                        
+        
         function setOutputDependency(obj)
             for i = 1:obj.N_outs
-                f = obj.Models{i};
+                f = obj.Functions{i};
                 setDependency(obj.Outputs(i), f, obj.Inputs);
             end
         end
@@ -71,7 +104,7 @@ classdef paramFit < handle
         function outs = calcParams(obj, varargin)
             outs = zeros(obj.N_outs,1);
             for i = 1:obj.N_outs
-                f = obj.Models{i}; 
+                f = obj.Functions{i};
                 outs(i,1) =  f(varargin{:});
             end
         end
@@ -87,18 +120,27 @@ classdef paramFit < handle
                 
                 title('paramFit Plot')
                 [olb,oub] = bounds(obj.Data(i).Outputs);
+
                 switch obj.N_ins
                     case 1
                         pfun = @plot;
                         ylim([olb oub]);
-                        xlabel(latex(obj.Inputs(1)),'Interpreter','latex');
-                        ylabel(latex(obj.Outputs(i)),'Interpreter','latex');
+                        if ~isempty(obj.Inputs)
+                            xlabel(latex(obj.Inputs(1)),'Interpreter','latex');
+                        end
+                        if ~isempty(obj.Outputs)
+                            ylabel(latex(obj.Outputs(i)),'Interpreter','latex');
+                        end
                     case 2
                         pfun = @plot3;
                         zlim([olb oub]);
-                        xlabel(latex(obj.Inputs(1)),'Interpreter','latex');
-                        ylabel(latex(obj.Inputs(2)),'Interpreter','latex');
-                        zlabel(latex(obj.Outputs(i)),'Interpreter','latex');
+                        if ~isempty(obj.Inputs)
+                            xlabel(latex(obj.Inputs(1)),'Interpreter','latex');
+                            ylabel(latex(obj.Inputs(2)),'Interpreter','latex');
+                        end
+                        if ~isempty(obj.Outputs)
+                            zlabel(latex(obj.Outputs(i)),'Interpreter','latex');
+                        end
                 end
                 
                 if nargin > 1

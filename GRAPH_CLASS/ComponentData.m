@@ -41,11 +41,19 @@ classdef ComponentData
             tbl = table('Size', [numel(obj_array), numel(varnames)], 'VariableTypes', vartypes, 'VariableNames', varnames);
             for i = 1:numel(obj_array)
                 for f = comp_fields
-                    tbl(i,:).(f) = obj_array(i).(f);
+                    val = obj_array(i).(f);
+                    if isempty(val)
+                        val = "";
+                    end
+                    tbl(i,:).(f) = val;
                 end
                 for j = 1:numel(params)
                     f = params(j);
-                    tbl(i,:).(f) = obj_array(i).Data(j).Value;
+                    val = obj_array(i).Data(j).Value;
+                    if isempty(val)
+                        val = NaN;
+                    end
+                    tbl(i,:).(f) = val;
                 end
             end
         end
