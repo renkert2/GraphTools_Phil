@@ -47,8 +47,14 @@ classdef extrinsicProp < compParam
                 prop_id = (unique_types(i) == types); % Get indices of all properties of that type
                 breakpoints = obj_array(prop_id); % Breakpoints for Dependent compParam
                 type = unique_types(i);
+                units = [breakpoints.Unit];
+                unit = units(1);
+                if any(units ~= unit)
+                    warning('Combining extrinsicProps with different units!')
+                end
                 F = @(varargin) type.combFunc([varargin{:}]);
                 resProps(i) = extrinsicProp(unique_types(i), NaN,...
+                    'Unit', unit,...
                     'Dependent',true,...
                     'DependentBreakpoints', breakpoints,...
                     'DependentFunction', F); % Assign aggregate prop value into new system extrinsicProp
@@ -58,7 +64,7 @@ classdef extrinsicProp < compParam
         function [val, i] = getProp(obj_array, type)
             % Get value of extrinsicProp of Type type from object array of extrinsicProps
             i = [obj_array.Type] == type;
-            val = [obj_array(i).Value];
+            val = vertcat(obj_array(i));
         end
     end
 end

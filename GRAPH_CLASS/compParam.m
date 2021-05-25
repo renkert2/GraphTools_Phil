@@ -98,19 +98,24 @@ classdef compParam < handle & matlab.mixin.Heterogeneous & matlab.mixin.CustomDi
             % pop() returns symbolic object or default value depending on
             % tunable property.  Detaches value from compParam handle object
             if isscalar(obj_array)
-                if obj_array.Tunable
-                    x = obj_array.Sym_;
-                else
-                    x = obj_array.Value;
-                end
+                x = popScalar(obj_array);
             else
-                x = sym.empty(numel(obj_array),0);
+                x = cell.empty(numel(obj_array),0);
                 for i = 1:numel(obj_array)
                     obj = obj_array(i);
-                    if obj.Tunable
-                        x(i) = obj.Sym_;
+                    x{i} = popScalar(obj);
+                end
+            end
+            
+            function x = popScalar(obj)
+                if obj.Tunable
+                    x = obj.Sym_;
+                else
+                    if ~obj.Dependent
+                        x = obj.Value;
                     else
-                        x(i) = obj.Value;
+                        bkpntsPop = pop(obj.DependentBreakpoints); % Cell array of syms and/or doubles
+                        x = obj.DependentFunction(bkpntsPop{:});
                     end
                 end
             end

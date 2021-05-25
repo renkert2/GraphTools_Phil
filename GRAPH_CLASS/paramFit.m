@@ -81,11 +81,13 @@ classdef paramFit < handle
                 
                 function out = ModelWrapper(varargin)
                     if obj.BoundaryWarning
-                        in_bounds = obj.Boundary.isInBoundary(varargin{:});
-                        if any(~in_bounds)
-                            out_i = find(~in_bounds);
-                            out_str = num2str(out_i, '%d, ');
-                            warning("Points %s Outside Boundary", out_str)
+                        if all(isnumeric([varargin{:}]))
+                            in_bounds = obj.Boundary.isInBoundary(varargin{:});
+                            if any(~in_bounds)
+                                out_i = find(~in_bounds);
+                                out_str = num2str(out_i, '%d, ');
+                                warning("Points %s Outside Boundary", out_str)
+                            end
                         end
                     end
                     out = model(varargin{:});
