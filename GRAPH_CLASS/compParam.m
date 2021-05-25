@@ -142,7 +142,7 @@ classdef compParam < handle & matlab.mixin.Heterogeneous & matlab.mixin.CustomDi
             % array that can be reloaded later.  
             for i = 1:numel(obj_array)
                 param = obj_array(i);
-                pval = compParamValue(param.Sym, param.Value);
+                pval = compParamValue(param.Sym, 'Value', param.Value);
                 pval.Unit = param.Unit;
                 pval.Description = param.Description;
                 if ~isempty(param.Parent)
