@@ -27,6 +27,67 @@ classdef ComponentData
             end
         end
         
+        function [CD_sorted, D_sorted] = filterNearest(obj_array, target, N_max)
+            arguments 
+                obj_array
+                target compParamValue
+                N_max double = inf
+            end
+            
+            unique_comps = intersect(unique([target.Component],'stable'), unique([obj_array.Component],'stable'), 'stable');
+            N_unique_comps = numel(unique_comps);
+            
+            if N_unique_comps > 1
+                CD_sorted = cell.empty(N_unique_comps,0); % Cell Array containing component data filtered by component
+                D_sorted = cell.empty(N_unique_comps,0); % Cell array containing distances for each component
+                
+                for i = 1:N_unique_comps
+                    comp = unique_comps(i);
+                    cd_comp = filterComponent(obj_array, comp);
+                    target_comp = filterComponent(target, comp);
+                    
+                    N_comp = numel(cd_comp);
+                    
+                    d = zeros(N_comp,1);
+                    for j = 1:N_comp
+                        d(j) = distance(target_comp, cd_comp(j).Data);
+                    end
+                    
+                    [~, i_sorted] = sort(d, 'ascend');
+                    i_sorted = i_sorted(1:min(N_comp, N_max)); % Extract no more than N_max values
+                    
+                    cd_comp_sorted = cd_comp(i_sorted);
+                    d_sorted = d(i_sorted);
+                    
+                    CD_sorted{i} = cd_comp_sorted;
+                    D_sorted{i} = d_sorted;
+                end
+            elseif N_unique_comps == 1
+                cd_comp = filterComponent(obj_array, unique_comps);
+                target_comp = filterComponent(target, unique_comps);
+                
+                N_comp = numel(cd_comp);
+                
+                d = zeros(N_comp,1);
+                for j = 1:N_comp
+                    d(j) = distance(target_comp, cd_comp(j).Data);
+                end
+                
+                [~, i_sorted] = sort(d, 'ascend');
+                i_sorted = i_sorted(1:min(N_comp, N_max)); % Extract no more than N_max values
+                
+                cd_comp_sorted = cd_comp(i_sorted);
+                d_sorted = d(i_sorted);
+                
+                CD_sorted = cd_comp_sorted;
+                D_sorted = d_sorted;
+            end
+        end
+        
+        function cd_filtered = filterComponent(obj_array, component)
+           cd_filtered = obj_array([obj_array.Component] == component); 
+        end
+        
         function [tbl,param_table] = table(obj_array)
             pdat = obj_array(1).Data;
             param_table = table(pdat);
