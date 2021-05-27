@@ -32,6 +32,7 @@ classdef compParam < handle & matlab.mixin.Heterogeneous & matlab.mixin.CustomDi
     properties (SetAccess = private, Hidden = true)
         SymID string 
         Sym_ sym
+        DependentDefault logical
     end
     
     methods
@@ -86,7 +87,7 @@ classdef compParam < handle & matlab.mixin.Heterogeneous & matlab.mixin.CustomDi
         
         function set.Parent(obj, par)
             obj.Parent = par;
-            obj.Sym = obj.Sym; % Rename sym with Parent name if AutoRename flag is true
+            obj.Sym = obj.Sym; % Call Set Sym set method to Rename sym with Parent name if AutoRename flag is true
         end
     end
     
@@ -157,21 +158,24 @@ classdef compParam < handle & matlab.mixin.Heterogeneous & matlab.mixin.CustomDi
             end
         end
         
-        function loadValues(obj_array, data)
+        function modified_objs = loadValues(obj_array, data)
             % Updates values to array of compParamValues or ComponentData
             % object
+            % Returns an array of compParams whose Values were set
             if isa(data, 'ComponentData')
                 data = data.Data;
             end
             
-            comps = parentTypes(obj_array);
-            syms = reshape(vertcat(obj_array.Sym), size(obj_array));
+            obj_array_size = size(obj_array);
+            comps = reshape(parentTypes(obj_array), obj_array_size);
+            syms = reshape(vertcat(obj_array.Sym), obj_array_size);
             
-            for i = 1:numel(data)
+            i_combined_accum = false(obj_array_size); % Logical array tracks which objects matched a compParamValue
+            for i = 1:numel(data)% Loop over each compParamValue
                 i_comp = data(i).Component == comps;
                 i_sym = data(i).Sym == syms;
                 i_combined = i_comp & i_sym;
-                if any(i_combined)
+                if any(i_combined) 
                     objs = obj_array(i_combined);
                     
                     unit = data(i).Unit;
@@ -183,8 +187,11 @@ classdef compParam < handle & matlab.mixin.Heterogeneous & matlab.mixin.CustomDi
                     for j = 1:numel(objs)
                         objs(j).Value = data(i).Value;
                     end
+                    
+                    i_combined_accum = i_combined_accum | i_combined;
                 end
             end
+            modified_objs = obj_array(i_combined_accum);
         end
             
         function exps = extrinsicProps(obj_array)
@@ -291,6 +298,21 @@ classdef compParam < handle & matlab.mixin.Heterogeneous & matlab.mixin.CustomDi
                     s_temp = s_temp + " "+"("+obj.Unit+")";
                 end
                 s(i,1) = s_temp;
+            end
+        end
+        
+        function setDependentTemporary(obj_array, isdependent)
+           for i = 1:numel(obj_array)
+               obj = obj_array(i);
+               obj.DependentDefault = obj.Dependent;
+               obj.Dependent = isdependent;
+           end
+        end
+        
+        function restoreDependentDefault(obj_array)
+            for i = 1:numel(obj_array)
+                obj = obj_array(i);
+                obj.Dependent = obj.DependentDefault;
             end
         end
     end

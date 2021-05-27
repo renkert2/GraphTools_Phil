@@ -31,61 +31,76 @@ classdef ComponentData
             arguments 
                 obj_array
                 target compParamValue
-                N_max double = inf
+                N_max = inf
             end
             
             unique_comps = intersect(unique([target.Component],'stable'), unique([obj_array.Component],'stable'), 'stable');
             N_unique_comps = numel(unique_comps);
             
+            if isa(N_max, 'struct')
+                N_max_arr = zeros(1,N_unique_comps);
+                for i = 1:N_unique_comps
+                    N_max_arr(i) = N_max.(unique_comps(i));
+                end
+            elseif isscalar(N_max)
+                N_max_arr = repmat(N_max,1,N_unique_comps);
+            else
+                error("N_max argument must be scalar double or a struct where each field is a component with corresponding value N_max")
+            end
+            
             if N_unique_comps > 1
-                CD_sorted = cell.empty(N_unique_comps,0); % Cell Array containing component data filtered by component
-                D_sorted = cell.empty(N_unique_comps,0); % Cell array containing distances for each component
+                CD_sorted = struct(); % Cell Array containing component data filtered by component
+                D_sorted = struct(); % Cell array containing distances for each component
                 
                 for i = 1:N_unique_comps
                     comp = unique_comps(i);
                     cd_comp = filterComponent(obj_array, comp);
                     target_comp = filterComponent(target, comp);
                     
-                    N_comp = numel(cd_comp);
+                    [cd_comp_sorted, d_sorted] = processComp(target_comp, cd_comp, N_max_arr(i));
                     
-                    d = zeros(N_comp,1);
-                    for j = 1:N_comp
-                        d(j) = distance(target_comp, cd_comp(j).Data);
-                    end
-                    
-                    [~, i_sorted] = sort(d, 'ascend');
-                    i_sorted = i_sorted(1:min(N_comp, N_max)); % Extract no more than N_max values
-                    
-                    cd_comp_sorted = cd_comp(i_sorted);
-                    d_sorted = d(i_sorted);
-                    
-                    CD_sorted{i} = cd_comp_sorted;
-                    D_sorted{i} = d_sorted;
+                    CD_sorted.(comp) = cd_comp_sorted;
+                    D_sorted.(comp) = d_sorted;
                 end
             elseif N_unique_comps == 1
                 cd_comp = filterComponent(obj_array, unique_comps);
                 target_comp = filterComponent(target, unique_comps);
                 
-                N_comp = numel(cd_comp);
-                
-                d = zeros(N_comp,1);
-                for j = 1:N_comp
-                    d(j) = distance(target_comp, cd_comp(j).Data);
-                end
-                
-                [~, i_sorted] = sort(d, 'ascend');
-                i_sorted = i_sorted(1:min(N_comp, N_max)); % Extract no more than N_max values
-                
-                cd_comp_sorted = cd_comp(i_sorted);
-                d_sorted = d(i_sorted);
+                [cd_comp_sorted, d_sorted] = processComp(target_comp, cd_comp, N_max_arr);
                 
                 CD_sorted = cd_comp_sorted;
                 D_sorted = d_sorted;
             end
+            
+            function [cd_sorted,d_sorted] = processComp(target, cd, n_max)
+                N_comp = numel(cd);
+                d = zeros(N_comp,1);
+                for j = 1:N_comp
+                    d(j) = distance(target, cd(j).Data);
+                end
+                
+                [~, i_sorted] = sort(d, 'ascend');
+                i_sorted = i_sorted(1:min(N_comp, n_max)); % Extract no more than N_max values
+                
+                cd_sorted = cd(i_sorted);
+                d_sorted = d(i_sorted);
+            end
         end
         
         function cd_filtered = filterComponent(obj_array, component)
-           cd_filtered = obj_array([obj_array.Component] == component); 
+           cd_filtered = obj_array(vertcat(obj_array.Component) == component); 
+        end
+        
+        function combinations = combinations(varargin)
+            % Enumerates all component combinations that can be formed by 
+            % selecting one component out of each ComponentData array
+            % argument.  The output is a PxN matrix, where P is the product
+            % of the lengths of the arguments and N is the number of
+            % arguments.  See allcomb documentation on file exchange for
+            % more details
+            arg_chk = cellfun(@(x) isa(x, 'ComponentData') && min(size(x)) == 1, varargin);
+            assert(all(arg_chk), 'All input arguments must be ComponentData vectors');
+            combinations = allcomb(varargin{:});
         end
         
         function [tbl,param_table] = table(obj_array)
