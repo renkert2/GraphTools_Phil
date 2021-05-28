@@ -27,7 +27,7 @@ classdef ComponentData
             end
         end
         
-        function [CD_sorted, D_sorted] = filterNearest(obj_array, target, N_max)
+        function [CD_sorted, D_sorted, unique_comps] = filterNearest(obj_array, target, N_max)
             arguments 
                 obj_array
                 target compParamValue
@@ -106,16 +106,21 @@ classdef ComponentData
         end
         
         function [tbl,param_table] = table(obj_array)
-            pdat = obj_array(1).Data;
-            param_table = table(pdat);
+
+            assert(all(obj_array(1).Component == [obj_array.Component]), 'Component Data Objects must have Common Component to make a table');
+            
+            pdat_all = vertcat(obj_array.Data);
+            [params, I] = unique(vertcat(pdat_all.Sym));
+            unique_pdat = pdat_all(I);
+
+            param_table = table(unique_pdat);
             pvars = string(param_table.Properties.VariableNames);
             pvi = pvars ~= "Value";
             param_table = param_table(:,pvi);
             
-            params = [pdat.Sym];
-            comp_fields = ["Make", "Model", "SKU", "Description"];
-            varnames = [comp_fields, params];
-            vartypes = [repmat("string",1,4) repmat("double",1,numel(params))];
+            comp_fields = ["Make", "Model", "SKU"];
+            varnames = [comp_fields, params'];
+            vartypes = [repmat("string",1,numel(comp_fields)) repmat("double",1,numel(params))];
             tbl = table('Size', [numel(obj_array), numel(varnames)], 'VariableTypes', vartypes, 'VariableNames', varnames);
             for i = 1:numel(obj_array)
                 for f = comp_fields
@@ -125,15 +130,59 @@ classdef ComponentData
                     end
                     tbl(i,:).(f) = val;
                 end
+                dat = obj_array(i).Data;
                 for j = 1:numel(params)
                     f = params(j);
-                    val = obj_array(i).Data(j).Value;
-                    if isempty(val)
+                    cpv = filterSym(dat, f);
+                    if isempty(cpv)
                         val = NaN;
+                    else
+                        N_cpv = numel(cpv);
+                        if N_cpv ~= 1
+                            error("Multiple compParamVals of same name")
+                        else
+                            val = cpv.Value;
+                        end
                     end
                     tbl(i,:).(f) = val;
                 end
             end
+        end
+        
+        function dispTable(obj_array, opts)
+            arguments
+               obj_array
+               opts.ParamTable logical = false
+            end
+            
+            comps = unique([obj_array.Component]);
+            for c = comps
+                fprintf("Component: %s \n", c)
+                [t,tp] = table(filterComponent(obj_array, c));
+                disp(t);
+                if opts.ParamTable
+                    disp(tp);
+                end
+                disp(newline);
+            end
+        end
+        
+        function tbl = summaryTable(obj_array)
+            comp_fields = ["Component", "Make", "Model", "SKU", "Description"];
+            
+            tbldat = cell.empty(0,numel(comp_fields));
+            for i = 1:numel(comp_fields)
+                S = strings(numel(obj_array),1);
+                for j = 1:numel(obj_array)
+                    s = obj_array(j).(comp_fields(i));
+                    if ~isempty(s)
+                        S(j) = s;
+                    end
+                end
+                tbldat{1,i} = S;
+            end
+
+            tbl = table(tbldat{:}, 'VariableNames', comp_fields);
         end
     end
     

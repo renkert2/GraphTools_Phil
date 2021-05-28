@@ -26,6 +26,10 @@ classdef compParamValue
            obj_filtered = obj_array([obj_array.Component] == component); 
         end
         
+        function obj_filtered = filterSym(obj_array, sym)
+            obj_filtered = obj_array([obj_array.Sym] == sym); 
+        end
+        
         function obj_pairs = getPairs(obj_array_1, obj_array_2)
             % Each row of obj_pairs is a parameter pair
             obj_pairs = compParamValue.empty(0,2);
@@ -51,6 +55,11 @@ classdef compParamValue
             
             normalized_distance = candidate_vals./target_vals - 1;
             d = norm(normalized_distance);
+        end
+        
+        function [obj_array_sorted, I] = sort(obj_array, varargin)
+            [~,I] = sort([obj_array.Sym]);
+            obj_array_sorted = obj_array(I);
         end
         
         function t = table(obj_array)
