@@ -1,4 +1,4 @@
-classdef compParam < handle & matlab.mixin.Heterogeneous & matlab.mixin.CustomDisplay
+classdef compParam < handle & matlab.mixin.Heterogeneous
     % compParams are used to define component parameters.  symParams can
     % replace numeric parameters in a component definition.
     % 
@@ -166,27 +166,37 @@ classdef compParam < handle & matlab.mixin.Heterogeneous & matlab.mixin.CustomDi
                 data = data.Data;
             end
             
-            obj_array_size = size(obj_array);
-            comps = reshape(parentTypes(obj_array), obj_array_size);
-            syms = reshape(vertcat(obj_array.Sym), obj_array_size);
+            obj_array_size = [numel(obj_array), 1];
+            cp_syms = vertcat(obj_array.Sym);
+            cp_comps = reshape(parentTypes(obj_array), obj_array_size);
+            cp_idcols = [cp_syms, cp_comps];
+            
+            cpv_syms = vertcat(data.Sym);
+            cpv_comps = vertcat(data.Component);
+            cpv_idcols = [cpv_syms, cpv_comps];
             
             i_combined_accum = false(obj_array_size); % Logical array tracks which objects matched a compParamValue
             for i = 1:numel(data)% Loop over each compParamValue
-                i_comp = data(i).Component == comps;
-                i_sym = data(i).Sym == syms;
-                i_combined = i_comp & i_sym;
-                if any(i_combined) 
-                    objs = obj_array(i_combined);
+                cpv_id = cpv_idcols(i,:);
+                
+                % Ensure each cpv can be uniquely identified
+                assert(sum(all(cpv_id == cpv_idcols,2)) == 1, "Each compValue entry in data must have a unique combination of Sym and Component");
+                
+                i_combined = all(cpv_id == cp_idcols,2);
+                if any(i_combined)
+                    assert(sum(i_combined) == 1, "Multiple compParams correspond to compParamValue %d", i);
+                    obj = obj_array(i_combined);
                     
-                    unit = data(i).Unit;
-                    if ~isempty(unit) || unit ~= ""
-                        objs_units = vertcat(objs.Unit);
-                        assert(all(objs_units == unit), "Incompatible Units in %s parameter %s", data(i).Component, data(i).Sym);
+                    
+                    unit_test = @(s) ~(isempty(s) || s == "");
+                    cpv_unit = data(i).Unit;
+                    obj_unit = obj.Unit;
+                    if unit_test(cpv_unit) && unit_test(obj_unit)
+                        assert(strcmpi(cpv_unit, obj_unit), "Incompatible Units in %s parameter %s: compParam has unit %s and compParamValue has unit %s",...
+                            data(i).Component, data(i).Sym, obj_unit, cpv_unit);
                     end
                     
-                    for j = 1:numel(objs)
-                        objs(j).Value = data(i).Value;
-                    end
+                    obj.Value = data(i).Value;
                     
                     i_combined_accum = i_combined_accum | i_combined;
                 end
@@ -302,18 +312,26 @@ classdef compParam < handle & matlab.mixin.Heterogeneous & matlab.mixin.CustomDi
         end
         
         function setDependentTemporary(obj_array, isdependent)
-           for i = 1:numel(obj_array)
-               obj = obj_array(i);
-               obj.DependentDefault = obj.Dependent;
-               obj.Dependent = isdependent;
-           end
+            for i = 1:numel(obj_array)
+                obj = obj_array(i);
+                obj.DependentDefault = obj.Dependent;
+                obj.Dependent = isdependent;
+            end
         end
         
         function restoreDependentDefault(obj_array)
             for i = 1:numel(obj_array)
                 obj = obj_array(i);
-                obj.Dependent = obj.DependentDefault;
+                if ~isempty(obj.DependentDefault)
+                    obj.Dependent = obj.DependentDefault;
+                end
             end
+        end
+        
+        function dispTable(obj_array)
+            tbl = table(vertcat(obj_array.Sym), vertcat(obj_array.Value), vertcat(obj_array.Unit), vertcat(obj_array.Description), vertcat(vertcat(obj_array.Parent).Name), vertcat(obj_array.Dependent),...
+                'VariableNames', ["Sym", "Value", "Unit", "Description", "Parent", "Dependent"]);
+            disp(tbl);
         end
     end
     
@@ -366,15 +384,6 @@ classdef compParam < handle & matlab.mixin.Heterogeneous & matlab.mixin.CustomDi
         
         function i = isaArrayFun(obj_array, classname)
             i = arrayfun(@(x) builtin('isa',x,classname), obj_array);
-        end
-    end
-    
-    methods (Sealed, Access = protected)
-        function displayNonScalarObject(obj_array)
-            % Modifies method from Mixin.Custom Display
-            tbl = table(vertcat(obj_array.Sym), string(vertcat(obj_array.Value)), vertcat(obj_array.Unit), vertcat(obj_array.Description), vertcat(vertcat(obj_array.Parent).Name),...
-                'VariableNames', ["Sym", "Value", "Unit", "Description", "Parent"]);
-            disp(tbl);
         end
     end
     

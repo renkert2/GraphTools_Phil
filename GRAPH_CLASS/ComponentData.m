@@ -49,8 +49,8 @@ classdef ComponentData
             end
             
             if N_unique_comps > 1
-                CD_sorted = struct(); % Cell Array containing component data filtered by component
-                D_sorted = struct(); % Cell array containing distances for each component
+                CD_sorted = cell.empty(0,N_unique_comps); % Cell Array containing component data filtered by component
+                D_sorted = cell.empty(0,N_unique_comps); % Cell array containing distances for each component
                 
                 for i = 1:N_unique_comps
                     comp = unique_comps(i);
@@ -59,8 +59,8 @@ classdef ComponentData
                     
                     [cd_comp_sorted, d_sorted] = processComp(target_comp, cd_comp, N_max_arr(i));
                     
-                    CD_sorted.(comp) = cd_comp_sorted;
-                    D_sorted.(comp) = d_sorted;
+                    CD_sorted{1,i} = cd_comp_sorted;
+                    D_sorted{1,i} = d_sorted;
                 end
             elseif N_unique_comps == 1
                 cd_comp = filterComponent(obj_array, unique_comps);
@@ -91,7 +91,7 @@ classdef ComponentData
            cd_filtered = obj_array(vertcat(obj_array.Component) == component); 
         end
         
-        function combinations = combinations(varargin)
+        function [combinations, I] = combinations(varargin)
             % Enumerates all component combinations that can be formed by 
             % selecting one component out of each ComponentData array
             % argument.  The output is a PxN matrix, where P is the product
@@ -100,6 +100,8 @@ classdef ComponentData
             % more details
             arg_chk = cellfun(@(x) isa(x, 'ComponentData') && min(size(x)) == 1, varargin);
             assert(all(arg_chk), 'All input arguments must be ComponentData vectors');
+            lens = cellfun(@(v) 1:numel(v), varargin, 'UniformOutput', false);
+            I = allcomb(lens{:});
             combinations = allcomb(varargin{:});
         end
         
