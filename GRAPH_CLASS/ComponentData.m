@@ -36,6 +36,7 @@ classdef ComponentData
                 opts.Gradient double = []
                 opts.Hessian double = []
                 opts.Weights = []
+                opts.Tolerance double = []
             end
             
             unique_comps = intersect(unique([target.Component],'stable'), unique([obj_array.Component],'stable'), 'stable');
@@ -61,6 +62,8 @@ classdef ComponentData
                 weight = [];
                 grad = [];
                 hessian = [];
+                tolerance = [];
+                map = [];
                 if any(target_I)
                     switch opts.DistanceMode
                         case "Norm"
@@ -73,15 +76,23 @@ classdef ComponentData
                             end
                         case "TaylorSeries"
                             if ~isempty(opts.Gradient)
-                                grad = opts.Gradient(target_I);
+                                grad = opts.Gradient;
                             end
                             if ~isempty(opts.Hessian)
-                                hessian = opts.Hessian(target_I,target_I);
+                                hessian = opts.Hessian;
+                            end
+                            map = find(target_I);
+                            if ~isempty(opts.Tolerance)
+                                if isscalar(opts.Tolerance)
+                                    tolerance = opts.Tolerance;
+                                else
+                                    tolerance = opts.Tolerance(target_I);
+                                end
                             end
                     end
                 end
 
-                [cd_comp_sorted, d_sorted] = processComp(target_comp, cd_comp, n_max, weight, grad, hessian);
+                [cd_comp_sorted, d_sorted] = processComp(target_comp, cd_comp, n_max, weight, grad, hessian, map, tolerance);
                 
                 CD_sorted{1,i} = cd_comp_sorted;
                 D_sorted{1,i} = d_sorted;
@@ -92,15 +103,15 @@ classdef ComponentData
                 D_sorted = D_sorted{:};
             end
             
-            function [cd_sorted,d_sorted] = processComp(target, cd, n_max, weights, grad, hessian)
+            function [cd_sorted,d_sorted] = processComp(target, cd, n_max, weights, grad, hessian, map, tolerance)
                 N_comp = numel(cd);
                 d = zeros(N_comp,1);
                 for j = 1:N_comp
-                    d(j) = distance(target, cd(j).Data, 'Mode', opts.DistanceMode, 'Weights', weights, 'Gradient', grad, 'Hessian', hessian);
+                    d(j) = distance(target, cd(j).Data, 'Mode', opts.DistanceMode, 'Weights', weights, 'Gradient', grad, 'Hessian', hessian, 'Map', map, 'Tolerance', tolerance);
                 end
-                
+                d = d(~isnan(d));
                 [~, i_sorted] = sort(d, 'ascend');
-                i_sorted = i_sorted(1:min(N_comp, n_max)); % Extract no more than N_max values
+                i_sorted = i_sorted(1:min(numel(i_sorted), n_max)); % Extract no more than N_max values
                 
                 cd_sorted = cd(i_sorted);
                 d_sorted = d(i_sorted);
@@ -119,8 +130,11 @@ classdef ComponentData
             % of the lengths of the arguments and N is the number of
             % arguments.  See allcomb documentation on file exchange for
             % more details
-            arg_chk = cellfun(@(x) isa(x, 'ComponentData') && min(size(x)) == 1, varargin);
-            assert(all(arg_chk), 'All input arguments must be ComponentData vectors');
+            arg_chk_1 = cellfun(@(x) isa(x, 'ComponentData'), varargin);
+            arg_chk_2 = cellfun(@(x) min(size(x)) == 1, varargin);
+            assert(all(arg_chk_1), 'All input arguments must be ComponentData vectors');
+            assert(all(arg_chk_2), "All arguments must have at least one element");
+            
             lens = cellfun(@(v) 1:numel(v), varargin, 'UniformOutput', false);
             I = allcomb(lens{:});
             combinations = allcomb(varargin{:});

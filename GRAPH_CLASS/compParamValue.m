@@ -62,8 +62,11 @@ classdef compParamValue
                 opts.Weights = []
                 opts.Gradient double = [] % Must be in same order as target
                 opts.Hessian double = [] % Must be in same order as target
+                opts.Map double = [] % Maps target parameter values to their respective location in the Gradient/Hessian
+                opts.Tolerance = Inf % Determines how far away the second-order estimation can look.  Each normalized error must be less than the tolerance.
             end
             
+            N_target = numel(target);
             [pairs, I_pairs] = getPairs(target, candidate); % Nx2 compParam array
             
             target_vals = vertcat(pairs(:,1).Value);
@@ -84,29 +87,89 @@ classdef compParamValue
                             end
                         end
                     else
-                        weights = opts.Weights(I_pairs(:,1));
+                        assert(numel(opts.Weights) == N_target, "Size of weights must match number of targets");
+                        weights = opts.Weights;
                     end
+                    weights = weights(I_pairs(:,1));
                     
                     normalized_distance = abs(weights).*(candidate_vals./target_vals - 1);
                     d = norm(normalized_distance);
                 case "TaylorSeries"
+                    if isa(opts.Tolerance, 'struct')
+                        tol_struct = opts.Tolerance;
+                        tols = inf(size(target_vals));
+                        syms = [pairs(:,1).Sym];
+                        for i = 1:numel(syms)
+                            if isfield(tol_struct, syms(i))
+                                tols(i) = tol_struct.(syms(i));
+                            end
+                        end
+                    elseif isnumeric(opts.Tolerance) && isscalar(opts.Tolerance)
+                        tols = repmat(opts.Tolerance, size(target_vals));
+                    elseif isempty(opts.Tolerance)
+                        tols = inf(size(target_vals));
+                    else
+                        assert(numel(opts.Tolerance) == N_target, "Size of weights must match number of targets");
+                        tols = opts.Tolerance;
+                    end
+                    tols = tols(I_pairs(:,1));
+                    
                     dx = candidate_vals - target_vals;
-                    I = I_pairs(:,1);
+
+                    normalized_distance = (candidate_vals./target_vals - 1);
+                    valid = all(abs(normalized_distance) < tols);
                     
-                    if ~isempty(opts.Gradient)
-                        G = opts.Gradient(I);
+                    if valid
+                        I_x = I_pairs(:,1);
+
+                        if ~isempty(opts.Gradient)
+                            G = opts.Gradient;
+                            N_G = numel(G);
+                        else
+                            N_G = 0;
+                        end
+
+                        if ~isempty(opts.Hessian)
+                            H = opts.Hessian;
+                            [N_H_1, N_H_2] = size(H);
+                            assert(N_H_1 == N_H_2, "Hessian must be square");
+                            N_H = N_H_1;
+                        else
+                            N_H = 0;
+                        end
+
+                        if all([N_G, N_H])
+                            assert(N_G == N_H, 'Gradient and Hessian must be of same size');
+                            N_X = max([N_G, N_H]); % Total number of inputs required to evaluate function approximation
+                        elseif N_H == 0
+                            N_X = N_G;
+                            H = zeros(N_X);
+                        elseif N_G == 0
+                            N_X = N_H;
+                            G = zeros(N_X,1);
+                        end
+
+
+                        if N_X < N_target
+                            error("Size of gradient/hessian must be at least as large as the number of target variables")
+                        else
+                            if ~isempty(opts.Map)
+                                assert(numel(opts.Map) == N_target, "Size of map must match number of targets")
+                                I_X = opts.Map(I_x);
+                            else
+                                assert(N_X == N_target, "Map option required if gradient/hessian is larger than the number of target variables")
+                                I_X = I_x;
+                            end
+                        end
+
+                        dX = zeros(N_X,1);
+                        dX(I_X) = dx;
+
+                        df = G'*dX + (1/2)*dX'*H*dX; % Approximate change in function
+                        d = df;
                     else
-                        G = zeros(numel(I),1);
+                        d = NaN;
                     end
-                    
-                    if ~isempty(opts.Hessian)
-                        H = opts.Hessian(I,I);
-                    else
-                        H = zeros(numel(I));
-                    end
-                    
-                    df = G'*dx + (1/2)*dx'*H*dx; % Approximate change in function
-                    d = df;
                 otherwise
                     error("Invalid Mode.  Must be Norm, WeightedNorm, or TaylorSeries");
             end
