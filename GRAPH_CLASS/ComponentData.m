@@ -27,56 +27,76 @@ classdef ComponentData
             end
         end
         
-        function [CD_sorted, D_sorted, unique_comps] = filterNearest(obj_array, target, N_max)
+        function [CD_sorted, D_sorted, unique_comps] = filterNearest(obj_array, target, N_max, opts)
             arguments 
                 obj_array
                 target compParamValue
                 N_max = inf
+                opts.DistanceMode string = "Norm"
+                opts.Gradient double = []
+                opts.Hessian double = []
+                opts.Weights = []
             end
             
             unique_comps = intersect(unique([target.Component],'stable'), unique([obj_array.Component],'stable'), 'stable');
             N_unique_comps = numel(unique_comps);
             
-            if isa(N_max, 'struct')
-                N_max_arr = zeros(1,N_unique_comps);
-                for i = 1:N_unique_comps
-                    N_max_arr(i) = N_max.(unique_comps(i));
+            CD_sorted = cell.empty(0,N_unique_comps); % Cell Array containing component data filtered by component
+            D_sorted = cell.empty(0,N_unique_comps); % Cell array containing distances for each component
+            
+            for i = 1:N_unique_comps
+                comp = unique_comps(i);
+                
+                if isa(N_max, 'struct')
+                    n_max = N_max.(comp);
+                elseif isscalar(N_max)
+                    n_max = N_max;
+                else
+                    error("N_max argument must be scalar double or a struct where each field is a component with corresponding value N_max")
                 end
-            elseif isscalar(N_max)
-                N_max_arr = repmat(N_max,1,N_unique_comps);
-            else
-                error("N_max argument must be scalar double or a struct where each field is a component with corresponding value N_max")
+                
+                [cd_comp, ~] = filterComponent(obj_array, comp);
+                [target_comp, target_I] = filterComponent(target, comp);
+                
+                weight = [];
+                grad = [];
+                hessian = [];
+                if any(target_I)
+                    switch opts.DistanceMode
+                        case "Norm"
+                            % do nothing
+                        case "WeightedNorm"
+                            if isa(opts.Weights, 'struct')
+                                weight = opts.Weights.(comp);
+                            else
+                                weight = opts.Weights(target_I);
+                            end
+                        case "TaylorSeries"
+                            if ~isempty(opts.Gradient)
+                                grad = opts.Gradient(target_I);
+                            end
+                            if ~isempty(opts.Hessian)
+                                hessian = opts.Hessian(target_I,target_I);
+                            end
+                    end
+                end
+
+                [cd_comp_sorted, d_sorted] = processComp(target_comp, cd_comp, n_max, weight, grad, hessian);
+                
+                CD_sorted{1,i} = cd_comp_sorted;
+                D_sorted{1,i} = d_sorted;
             end
             
-            if N_unique_comps > 1
-                CD_sorted = cell.empty(0,N_unique_comps); % Cell Array containing component data filtered by component
-                D_sorted = cell.empty(0,N_unique_comps); % Cell array containing distances for each component
-                
-                for i = 1:N_unique_comps
-                    comp = unique_comps(i);
-                    cd_comp = filterComponent(obj_array, comp);
-                    target_comp = filterComponent(target, comp);
-                    
-                    [cd_comp_sorted, d_sorted] = processComp(target_comp, cd_comp, N_max_arr(i));
-                    
-                    CD_sorted{1,i} = cd_comp_sorted;
-                    D_sorted{1,i} = d_sorted;
-                end
-            elseif N_unique_comps == 1
-                cd_comp = filterComponent(obj_array, unique_comps);
-                target_comp = filterComponent(target, unique_comps);
-                
-                [cd_comp_sorted, d_sorted] = processComp(target_comp, cd_comp, N_max_arr);
-                
-                CD_sorted = cd_comp_sorted;
-                D_sorted = d_sorted;
+            if N_unique_comps == 1
+                CD_sorted = CD_sorted{:};
+                D_sorted = D_sorted{:};
             end
             
-            function [cd_sorted,d_sorted] = processComp(target, cd, n_max)
+            function [cd_sorted,d_sorted] = processComp(target, cd, n_max, weights, grad, hessian)
                 N_comp = numel(cd);
                 d = zeros(N_comp,1);
                 for j = 1:N_comp
-                    d(j) = distance(target, cd(j).Data);
+                    d(j) = distance(target, cd(j).Data, 'Mode', opts.DistanceMode, 'Weights', weights, 'Gradient', grad, 'Hessian', hessian);
                 end
                 
                 [~, i_sorted] = sort(d, 'ascend');
@@ -87,8 +107,9 @@ classdef ComponentData
             end
         end
         
-        function cd_filtered = filterComponent(obj_array, component)
-           cd_filtered = obj_array(vertcat(obj_array.Component) == component); 
+        function [cd_filtered, I] = filterComponent(obj_array, component)
+           I = vertcat(obj_array.Component) == component;
+           cd_filtered = obj_array(I); 
         end
         
         function [combinations, I] = combinations(varargin)
