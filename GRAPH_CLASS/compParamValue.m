@@ -59,6 +59,8 @@ classdef compParamValue
                 target compParamValue
                 candidate compParamValue
                 opts.Mode string = "Norm" % Modes: Norm, WeightedNorm, TaylorSeries
+                opts.LB double = []
+                opts.UB double = []
                 opts.Weights = []
                 opts.Gradient double = [] % Must be in same order as target
                 opts.Hessian double = [] % Must be in same order as target
@@ -67,10 +69,46 @@ classdef compParamValue
             end
             
             N_target = numel(target);
+            sz_target = size(target);
+            
             [pairs, I_pairs] = getPairs(target, candidate); % Nx2 compParam array
+            
             
             target_vals = vertcat(pairs(:,1).Value);
             candidate_vals = vertcat(pairs(:,2).Value);
+            
+            sz_pairs = size(target_vals);
+            
+            % Parse Upper and Lower Bound Options
+            if opts.LB
+                if isscalar(opts.LB)
+                    LB = repmat(opts.LB, sz_target);
+                else
+                    assert(numel(opts.LB) == N_target, "Number of vars in LB must match size of target");
+                    LB = opts.LB;
+                end
+            else
+                LB = -Inf(sz_target);
+            end       
+            lb = LB(I_pairs(:,1));
+            
+            if opts.UB
+                if isscalar(opts.UB)
+                    UB = repmat(opts.UB, sz_target);
+                else
+                    assert(numel(opts.UB) == N_target, "Number of vars in UB must match size of target");
+                    UB = opts.UB;
+                end
+            else
+                UB = Inf(sz_target);
+            end
+            ub = UB(I_pairs(:,1));
+            
+            in_bounds = (candidate_vals >= lb) & (candidate_vals <= ub);
+            if ~all(in_bounds)
+                d = NaN;
+                return
+            end
             
             switch opts.Mode
                 case "Norm"
@@ -79,7 +117,7 @@ classdef compParamValue
                 case "WeightedNorm"
                     if isa(opts.Weights, 'struct')
                         weights_struct = opts.Weights;
-                        weights = ones(size(target_vals));
+                        weights = ones(sz_pairs);
                         syms = [pairs(:,1).Sym];
                         for i = 1:numel(syms)
                             if isfield(weights_struct, syms(i))
@@ -89,30 +127,33 @@ classdef compParamValue
                     else
                         assert(numel(opts.Weights) == N_target, "Size of weights must match number of targets");
                         weights = opts.Weights;
+                        weights = weights(I_pairs(:,1));
                     end
-                    weights = weights(I_pairs(:,1));
-                    
+
                     normalized_distance = abs(weights).*(candidate_vals./target_vals - 1);
                     d = norm(normalized_distance);
                 case "TaylorSeries"
                     if isa(opts.Tolerance, 'struct')
                         tol_struct = opts.Tolerance;
-                        tols = inf(size(target_vals));
+                        tols = inf(sz_pairs);
                         syms = [pairs(:,1).Sym];
                         for i = 1:numel(syms)
                             if isfield(tol_struct, syms(i))
                                 tols(i) = tol_struct.(syms(i));
                             end
                         end
-                    elseif isnumeric(opts.Tolerance) && isscalar(opts.Tolerance)
-                        tols = repmat(opts.Tolerance, size(target_vals));
-                    elseif isempty(opts.Tolerance)
-                        tols = inf(size(target_vals));
                     else
-                        assert(numel(opts.Tolerance) == N_target, "Size of weights must match number of targets");
-                        tols = opts.Tolerance;
+                        if isnumeric(opts.Tolerance) && isscalar(opts.Tolerance)
+                            tols = repmat(opts.Tolerance, sz_target);
+                        elseif isempty(opts.Tolerance)
+                            tols = inf(sz_target);
+                        else
+                            assert(numel(opts.Tolerance) == N_target, "Size of weights must match number of targets");
+                            tols = opts.Tolerance;
+                        end
+                        tols = tols(I_pairs(:,1));
                     end
-                    tols = tols(I_pairs(:,1));
+                    
                     
                     dx = candidate_vals - target_vals;
 

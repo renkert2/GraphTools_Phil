@@ -32,6 +32,8 @@ classdef ComponentData
                 obj_array
                 target compParamValue
                 N_max = inf
+                opts.LB (:,1) double
+                opts.UB (:,1) double
                 opts.DistanceMode string = "Norm"
                 opts.Gradient double = []
                 opts.Hessian double = []
@@ -59,12 +61,20 @@ classdef ComponentData
                 [cd_comp, ~] = filterComponent(obj_array, comp);
                 [target_comp, target_I] = filterComponent(target, comp);
                 
+                lb = [];
+                ub = [];
                 weight = [];
                 grad = [];
                 hessian = [];
                 tolerance = [];
                 map = [];
                 if any(target_I)
+                    if opts.LB
+                        lb = opts.LB(target_I);
+                    end
+                    if opts.UB
+                        ub = opts.UB(target_I);
+                    end
                     switch opts.DistanceMode
                         case "Norm"
                             % do nothing
@@ -92,7 +102,7 @@ classdef ComponentData
                     end
                 end
 
-                [cd_comp_sorted, d_sorted] = processComp(target_comp, cd_comp, n_max, weight, grad, hessian, map, tolerance);
+                [cd_comp_sorted, d_sorted] = processComp(target_comp, cd_comp, n_max, weight, grad, hessian, map, tolerance, lb, ub);
                 
                 CD_sorted{1,i} = cd_comp_sorted;
                 D_sorted{1,i} = d_sorted;
@@ -103,11 +113,11 @@ classdef ComponentData
                 D_sorted = D_sorted{:};
             end
             
-            function [cd_sorted,d_sorted] = processComp(target, cd, n_max, weights, grad, hessian, map, tolerance)
+            function [cd_sorted,d_sorted] = processComp(target, cd, n_max, weights, grad, hessian, map, tolerance, lb, ub)
                 N_comp = numel(cd);
                 d = zeros(N_comp,1);
                 for j = 1:N_comp
-                    d(j) = distance(target, cd(j).Data, 'Mode', opts.DistanceMode, 'Weights', weights, 'Gradient', grad, 'Hessian', hessian, 'Map', map, 'Tolerance', tolerance);
+                    d(j) = distance(target, cd(j).Data, 'Mode', opts.DistanceMode, 'LB', lb, 'UB', ub, 'Weights', weights, 'Gradient', grad, 'Hessian', hessian, 'Map', map, 'Tolerance', tolerance);
                 end
                 d = d(~isnan(d));
                 [~, i_sorted] = sort(d, 'ascend');
