@@ -51,10 +51,9 @@ classdef compParam < handle & matlab.mixin.Heterogeneous
         
         function setDependency(obj, fun, bkpnts)
             % Makes adding dependencies a little faster in construction
-            obj.Dependent = true;
+            % obj.Dependent = true;
             obj.DependentFunction = fun;
             obj.DependentBreakpoints = bkpnts;
-            obj.update();
         end
         
         function d = double(obj)
