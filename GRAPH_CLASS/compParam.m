@@ -328,7 +328,23 @@ classdef compParam < handle & matlab.mixin.Heterogeneous
         end
         
         function dispTable(obj_array)
-            tbl = table(vertcat(obj_array.Sym), vertcat(obj_array.Value), vertcat(obj_array.Unit), vertcat(obj_array.Description), vertcat(vertcat(obj_array.Parent).Name), vertcat(obj_array.Dependent),...
+            try
+                vals = vertcat(obj_array.Value);
+            catch
+                vals = strings(numel(obj_array),1);
+                for i = 1:numel(vals)
+                    val = obj_array(i).Value;
+                    if isnumeric(val) && isscalar(val)
+                        vals(i,1) = num2str(val);
+                    else
+                        sz = size(val);
+                        type = class(val);
+                        vals(i,1) = sprintf("%dx%d %s", sz(1), sz(2), type);
+                    end
+                end
+            end
+            
+            tbl = table(vertcat(obj_array.Sym), vals, vertcat(obj_array.Unit), vertcat(obj_array.Description), vertcat(vertcat(obj_array.Parent).Name), vertcat(obj_array.Dependent),...
                 'VariableNames', ["Sym", "Value", "Unit", "Description", "Parent", "Dependent"]);
             disp(tbl);
         end

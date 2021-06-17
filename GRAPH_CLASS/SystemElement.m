@@ -67,10 +67,11 @@ classdef SystemElement < matlab.mixin.Heterogeneous & matlab.mixin.Copyable & ha
             Sys.Graph = gSys;
             Sys.Components = C;
             Sys.ConnectP = ConnectP;
-            setParams(Sys);
+            setCombinedParams(Sys);
         end
         
-        function setParams(obj)
+        function params = setCombinedParams(obj)
+            existing_params = obj.Params;
             C = obj.Components;
             params = vertcat(C.Params);
             if ~isempty(params) % Params have components
@@ -81,12 +82,12 @@ classdef SystemElement < matlab.mixin.Heterogeneous & matlab.mixin.Copyable & ha
                     for i = 1:numel(sys_exprops)
                         sys_exprops(i).Parent = obj;
                     end
-                    params = [unique(params(~exprop_i)); unique(exprops); sys_exprops]; % Order is [~extrinsic props, component extrinsic props, system extrinsic props]
+                    params = [unique(params(~exprop_i)); existing_params; unique(exprops); sys_exprops]; % Order is [component ~extrinsic props, system props, component extrinsic props, system extrinsic props]
                 else
-                    params = unique(params); % Select params with unique Sym identifiers
+                    params = unique(params); % Select params with unique Sym_ID identifiers
                 end
-                obj.Params = params;
             end
+            obj.Params = params;
         end
         
         function comp_arrays = Replicate(obj_array, N, opts)
@@ -161,16 +162,38 @@ classdef SystemElement < matlab.mixin.Heterogeneous & matlab.mixin.Copyable & ha
         end
         
         function DefineParams(obj)
-            props = properties(obj);
+            obj_meta = metaclass(obj);
+            parent_props = vertcat(obj_meta.SuperclassList.PropertyList);
+            meta_props = setdiff(obj_meta.PropertyList, parent_props);
+            
+            % Make property filter
+            meta_filter = ~[meta_props.Dependent]; % Initially exclude dependent props
+            for i = 1:numel(meta_filter)
+                if meta_filter(i)
+                    meta_prop = meta_props(i);
+                    v = meta_prop.Validation;
+                    if isempty(v) || isempty(v.Class)
+                        meta_filter(i) = false;
+                    else
+                        meta_cp = ?compParam;
+                        v_class_flag = (v.Class == meta_cp) || ismember(meta_cp, v.Class.SuperclassList);
+                        if ~v_class_flag
+                            meta_filter(i) = false;
+                        end
+                    end
+                end
+            end
+
+            meta_props = meta_props(meta_filter);
+            
             cp = compParam.empty();
-            for i = 1:numel(props)
-                prop = obj.(props{i});
+            for i = 1:numel(meta_props)
+                prop = obj.(meta_props(i).Name);
                 if isa(prop, 'compParam') && isscalar(prop)
                     cp(end+1,1) = prop;
                 end
             end
-            
-            
+
             for i = 1:numel(cp)
                 cp(i).Parent = obj;
             end

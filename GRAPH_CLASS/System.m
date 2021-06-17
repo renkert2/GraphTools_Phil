@@ -41,7 +41,7 @@ classdef System < SystemElement
                     obj.Name = Name;
                     obj.Components = Comps;
                     obj.ConnectP = ConnectP;
-                    
+                    obj.init_super();
                     obj=SystemCombine(obj);
             end
         end
