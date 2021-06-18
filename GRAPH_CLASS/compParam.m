@@ -134,12 +134,18 @@ classdef compParam < handle & matlab.mixin.Heterogeneous
             end
         end
     
-        function i = find(obj, args)
-            i = arrayfun(@(x) find(indexBy(obj, "SymID", x)), string(args));
+        function i = find(obj, args1, args2)
+            if nargin == 2
+                % Single argument -> find by SymID
+                i = arrayfun(@(sid) find(indexBy(obj, "SymID", sid)), string(args1));
+            elseif nargin == 3
+                % Two arguments -> find by Sym, Parent
+                i = arrayfun(@(s,p) find(indexBy(obj, "Sym", s) & indexByParent(obj, "Name", p)), string(args1), string(args2));
+            end
         end
         
-        function o = get(obj, args)
-            o = obj(find(obj, args));
+        function o = get(obj, varargin)
+            o = obj(find(obj, varargin{:}));
         end
         
         function cpvals = getValues(obj_array)
@@ -228,7 +234,7 @@ classdef compParam < handle & matlab.mixin.Heterogeneous
             cp = obj_array(ia);
         end
               
-        function [f, f_mtlb] = matlabFunction(obj_array, sym, args)
+        function [f, f_mtlb] = matlabFunction(obj_array, sym, args, opts)
             % matlabFunction generates a matlabFunction from a syms 
             % object using the SymParams.  If sym is not symbolic, generate
             % a standard function that returns the constant value regardless
@@ -241,13 +247,26 @@ classdef compParam < handle & matlab.mixin.Heterogeneous
                 obj_array
                 sym
                 args cell = {}
+                opts.FilterTunable logical = true
             end
             
             if isa(sym, 'sym')
-                tunables = tunableSyms(obj_array);
-                if ~isempty(tunables)
-                    f_mtlb = matlabFunction(sym, 'Vars', [{tunables}, args]);
-                    f = @(varargin) f_mtlb(tunableVals(obj_array), varargin{:});
+                if opts.FilterTunable
+                    param_syms = tunableSyms(obj_array);
+                else
+                    param_syms = vertcat(obj_array.Sym_);
+                end
+                
+                if ~isempty(param_syms)
+                    f_mtlb = matlabFunction(sym, 'Vars', [{param_syms}, args]);
+                    
+                    if opts.FilterTunable
+                        valFun = @(x) tunableVals(x);
+                    else
+                        valFun = @(x) vertcat(x.Value);
+                    end
+                    
+                    f = @(varargin) f_mtlb(valFun(obj_array), varargin{:});
                 else
                     f_mtlb = matlabFunction(sym, 'Vars', args);
                     f = f_mtlb;
