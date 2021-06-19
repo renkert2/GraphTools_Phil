@@ -162,37 +162,7 @@ classdef SystemElement < matlab.mixin.Heterogeneous & matlab.mixin.Copyable & ha
         end
         
         function DefineParams(obj)
-            obj_meta = metaclass(obj);
-            parent_props = vertcat(obj_meta.SuperclassList.PropertyList);
-            meta_props = setdiff(obj_meta.PropertyList, parent_props);
-            
-            % Make property filter
-            meta_filter = ~[meta_props.Dependent]; % Initially exclude dependent props
-            for i = 1:numel(meta_filter)
-                if meta_filter(i)
-                    meta_prop = meta_props(i);
-                    v = meta_prop.Validation;
-                    if isempty(v) || isempty(v.Class)
-                        meta_filter(i) = false;
-                    else
-                        meta_cp = ?compParam;
-                        v_class_flag = (v.Class == meta_cp) || ismember(meta_cp, v.Class.SuperclassList);
-                        if ~v_class_flag
-                            meta_filter(i) = false;
-                        end
-                    end
-                end
-            end
-
-            meta_props = meta_props(meta_filter);
-            
-            cp = compParam.empty();
-            for i = 1:numel(meta_props)
-                prop = obj.(meta_props(i).Name);
-                if isa(prop, 'compParam') && isscalar(prop)
-                    cp(end+1,1) = prop;
-                end
-            end
+            cp = compParam.gatherObjectParams(obj);
 
             for i = 1:numel(cp)
                 cp(i).Parent = obj;

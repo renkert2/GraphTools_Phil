@@ -15,11 +15,13 @@ classdef compParam < handle & matlab.mixin.Heterogeneous
     
     properties
         Sym string
-        Value double = NaN;
+        Size (1,2) double = [1 1]
+        Value double = NaN
         Tunable logical = false
         AutoRename logical = true % Automatically append name of Parent element to end of Sym and Sym_
         Description string = ""
         Unit string = ""
+        Assumptions string = ["real", "positive"]
         
         Parent SystemElement
         
@@ -29,7 +31,7 @@ classdef compParam < handle & matlab.mixin.Heterogeneous
         DependentBreakpoints (:,1) compParam % compParams on which obj depends.  These are the arguments for obj.DependenceFunction.  Leave empty if DependenceFunction takes no arguments
     end
     
-    properties (SetAccess = private, Hidden = true)
+    properties (SetAccess = private)
         SymID string 
         Sym_ sym
         DependentDefault logical
@@ -41,6 +43,7 @@ classdef compParam < handle & matlab.mixin.Heterogeneous
                 obj.Sym = sym_arg; 
             end
             if (nargin >= 2)
+                obj.Size = size(val);
                 obj.Value = val;
             end
             if nargin > 2
@@ -73,6 +76,21 @@ classdef compParam < handle & matlab.mixin.Heterogeneous
                 obj.SymID = obj.Sym;
             end
             
+            obj.Sym_ = sym.empty();
+        end
+        
+        function set.Size(obj, size)
+            obj.Size = size;
+            obj.Sym_ = sym.empty();
+        end
+        
+        function set.Value(obj, val)
+            assert(all(size(val) == obj.Size), 'Size of Value must match obj.Size')
+            obj.Value = val;
+        end
+        
+        function set.Assumptions(obj, assumptions)
+            obj.Assumptions = assumptions;
             obj.Sym_ = sym.empty();
         end
         
@@ -115,7 +133,11 @@ classdef compParam < handle & matlab.mixin.Heterogeneous
                         x = obj.Value;
                     else
                         bkpntsPop = pop(obj.DependentBreakpoints); % Cell array of syms and/or doubles
-                        x = obj.DependentFunction(bkpntsPop{:});
+                        if iscell(bkpntsPop)
+                            x = obj.DependentFunction(bkpntsPop{:});
+                        else
+                            x = obj.DependentFunction(bkpntsPop);
+                        end
                     end
                 end
             end
@@ -395,14 +417,14 @@ classdef compParam < handle & matlab.mixin.Heterogeneous
             end
         end
         
-        function s = parentTypes(obj_array) 
+        function s = parentTypes(obj_array)
             s = string.empty(numel(obj_array), 0);
             for i = 1:numel(obj_array)
                 s(i) = class(obj_array(i).Parent);
             end
             s = reshape(s,size(obj_array));
         end
-
+        
         function obj_filt = filterBy(obj_array, props, vals)
             obj_filt = obj_array(indexBy(obj_array, props, vals));
         end
@@ -421,10 +443,52 @@ classdef compParam < handle & matlab.mixin.Heterogeneous
         end
     end
     
+    %% Static
+    methods (Static)
+        function cp = gatherObjectParams(obj)
+            % Collects compParams assigned to object's properties into a single compParam array
+            obj_meta = metaclass(obj);
+            parent_props = vertcat(obj_meta.SuperclassList.PropertyList);
+            meta_props = setdiff(obj_meta.PropertyList, parent_props);
+            
+            % Make property filter
+            meta_filter = ~[meta_props.Dependent]; % Initially exclude dependent props
+            for i = 1:numel(meta_filter)
+                if meta_filter(i)
+                    meta_prop = meta_props(i);
+                    v = meta_prop.Validation;
+                    if isempty(v) || isempty(v.Class)
+                        meta_filter(i) = false;
+                    else
+                        meta_cp = ?compParam;
+                        v_class_flag = (v.Class == meta_cp) || ismember(meta_cp, v.Class.SuperclassList);
+                        if ~v_class_flag
+                            meta_filter(i) = false;
+                        end
+                    end
+                end
+            end
+            
+            meta_props = meta_props(meta_filter);
+            
+            cp = compParam.empty();
+            for i = 1:numel(meta_props)
+                prop = obj.(meta_props(i).Name);
+                if isa(prop, 'compParam') && isscalar(prop)
+                    cp(end+1,1) = prop;
+                end
+            end 
+        end
+    end
+    
     %% Private
     methods (Hidden = true)
         function setSym_(obj)
-            obj.Sym_ = sym(obj.SymID, ["real", "positive"]); % Add real, positive assumptions to all sym_param symbolic variables
+            if all(obj.Size == [1 1])
+                obj.Sym_ = sym(obj.SymID, obj.Assumptions);
+            else
+                obj.Sym_ = sym(obj.SymID, obj.Size, obj.Assumptions);
+            end
         end
         
         function str_out = appendParentName(obj, str_in)
