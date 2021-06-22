@@ -274,21 +274,14 @@ classdef compParam < handle & matlab.mixin.Heterogeneous
             
             if isa(sym, 'sym')
                 if opts.FilterTunable
-                    param_syms = tunableSyms(obj_array);
+                    params = obj_array(isTunable(obj_array));
                 else
-                    param_syms = vertcat(obj_array.Sym_);
+                    params = obj_array;
                 end
                 
-                if ~isempty(param_syms)
-                    f_mtlb = matlabFunction(sym, 'Vars', [{param_syms}, args]);
-                    
-                    if opts.FilterTunable
-                        valFun = @(x) tunableVals(x);
-                    else
-                        valFun = @(x) vertcat(x.Value);
-                    end
-                    
-                    f = @(varargin) f_mtlb(valFun(obj_array), varargin{:});
+                if ~isempty(params)
+                    f_mtlb = matlabFunction(sym, 'Vars', [{params.Sym_}, args]); % params.Sym_ is a comma separated list
+                    f = @(varargin) f_mtlb(params.Value, varargin{:}); % params.Value is a comma separated list
                 else
                     f_mtlb = matlabFunction(sym, 'Vars', args);
                     f = f_mtlb;

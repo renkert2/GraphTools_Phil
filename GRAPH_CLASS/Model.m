@@ -25,10 +25,10 @@ classdef Model < matlab.mixin.Copyable
         Nd (1,1) double = 0 % number of disturbances
         Ny (1,1) double = 0 % number of outputs
         
-        StateDescriptions string
-        InputDescriptions string
-        DisturbanceDescriptions string
-        OutputDescriptions string
+        StateDescriptions (:,1) string
+        InputDescriptions (:,1) string
+        DisturbanceDescriptions (:,1) string
+        OutputDescriptions (:,1) string
         
         SymVars SymVars {mustBeScalarOrEmpty} % Contains fields x,u,d, each an array of symbolic variables
         Params compParam
@@ -115,43 +115,102 @@ classdef Model < matlab.mixin.Copyable
                 y_bar = CalcG(obj,x_bar,u,d);
             end
         end
-                
-            
-              
+                   
         function lm = getLinearModel(obj)
             f = obj.f_sym;
             g = obj.g_sym;
             
-            A = jacobian(f,obj.SymVars.x);
-            B = jacobian(f,obj.SymVars.u);
-            E = jacobian(f,obj.SymVars.d);
+            x = obj.SymVars.x;
+            u = obj.SymVars.u;
+            d = obj.SymVars.d;
+     
+            A = jacobian(f,x);
+            B = jacobian(f,u);
+            E = jacobian(f,d);
             
-            C = jacobian(g,obj.SymVars.x);
-            D = jacobian(g,obj.SymVars.u);
-            H = jacobian(g,obj.SymVars.d);
+            C = jacobian(g,x);
+            D = jacobian(g,u);
+            H = jacobian(g,d);
             
-            lm = LinearModel(A,B,E,C,D,H);
+            f0 = subs(obj.f_sym, vertcat(x,u,d), zeros(obj.Nx + obj.Nu + obj.Nd,1));
+            g0 = subs(obj.g_sym, vertcat(x,u,d), zeros(obj.Nx + obj.Nu + obj.Nd,1));
+            
+            %lm = LinearModel(A,B,E,C,D,H);
+            lm = LinearModel();
             copyModelProps(obj, lm);
+            
+            [lm.A_sym, lm.B_sym, lm.E_sym, lm.C_sym, lm.D_sym, lm.H_sym, lm.f0_sym, lm.g0_sym]...
+                = deal(A,B,E,C,D,H,f0,g0);
+            
+            lm.init();
+        end
+        
+        function h = makeSimulinkModel(obj, name)
+            if nargin == 1
+                name = 'Model_Simulink';
+            end
+            
+            try
+                h = new_system(name, 'FromFile', 'Model_SimulinkTemplate');
+            catch
+                h = load_system(name);
+            end
+            
+            obj_name = [name '__OBJECT'];
+            assignin('base', obj_name, obj);
+            
+            set_param([name '/Model'], 'x_0', mat2str(zeros(obj.Nx,1)));
+            
+            set_param([name '/Model/Model_CalcF'], 'MATLABFcn', ['@(x) CalcMux(' obj_name ',x,@CalcF)']);
+            set_param([name '/Model/Model_CalcF'], 'OutputDimensions', mat2str([obj.Nx]));
+            set_param([name '/Model/Model_CalcG'], 'MATLABFcn', ['@(x) CalcMux(' obj_name ',x,@CalcG)']);
+            set_param([name '/Model/Model_CalcG'], 'OutputDimensions', mat2str([obj.Ny]));
+            
+            if obj.Nu
+                set_param([name '/Model/Input1'], 'PortDimensions', mat2str([obj.Nu,1]));
+            end
+            if obj.Nd
+                set_param([name '/Model/Input2'], 'PortDimensions', mat2str([obj.Nd,1]));
+            end
         end
         
         function t = get.StateTable(obj)
             state_syms = arrayfun(@(x) string(x), obj.SymVars.x);
-            t = table(state_syms, obj.StateDescriptions);
+            t = table(state_syms, obj.StateDescriptions, 'VariableNames', ["State Variable", "Description"]);
         end
         
         function t = get.InputTable(obj)
             in_syms = arrayfun(@(x) string(x), obj.SymVars.u);
-            t = table(in_syms, obj.InputDescriptions);
+            t = table(in_syms, obj.InputDescriptions,'VariableNames', ["Input Variable", "Description"]);
         end
         
         function t = get.DisturbanceTable(obj)
             dist_syms = arrayfun(@(x) string(x), obj.SymVars.d);
-            t = table(dist_syms, obj.DisturbanceDescriptions);
+            t = table(dist_syms, obj.DisturbanceDescriptions, 'VariableNames', ["Disturbance Variable", "Description"]);
         end
         
         function t = get.OutputTable(obj)
             out_syms = arrayfun(@(x) sprintf("y%d", x), 1:obj.Ny);
             t = table(out_syms', obj.OutputDescriptions);
+        end
+        
+        function c = parseMuxArg(obj, mux_arg)
+            c = cell(1,3);
+            start_indices = 1 + cumsum([0 obj.Nx obj.Nu]);
+            end_indices = cumsum([obj.Nx obj.Nu obj.Nd]);
+            c{1} = mux_arg(start_indices(1):end_indices(1));
+            c{2} = mux_arg(start_indices(2):end_indices(2));
+            c{3} = mux_arg(start_indices(3):end_indices(3));
+        end
+        
+        function v = CalcFMux(obj, mux_arg)
+           c = parseMuxArg(obj, mux_arg);
+           v = CalcF(obj, c{:});
+        end
+                
+        function v = CalcGMux(obj, mux_arg)
+           c = parseMuxArg(obj, mux_arg);
+           v = CalcG(obj, c{:});
         end
     end
    
@@ -197,7 +256,7 @@ classdef Model < matlab.mixin.Copyable
                 obj_to
                 opts.Properties = ["Nx","Nu","Nd","Ny",...
                 "StateDescriptions", "InputDescriptions", "DisturbanceDescriptions", "OutputDescriptions",...
-                "SymVars","SymParams"];
+                "SymVars","Params"];
             end
 
             for prop = opts.Properties

@@ -27,8 +27,8 @@ classdef LinearModel < Model
         D_sym  (:,:) {mustBeNumericOrSym}
         H_sym  (:,:) {mustBeNumericOrSym}
         
-        f0 (:,1) {mustBeNumericOrSym}
-        g0 (:,1) {mustBeNumericOrSym}
+        f0_sym (:,1) {mustBeNumericOrSym}
+        g0_sym (:,1) {mustBeNumericOrSym}
     end
         
     properties (Access = private)   
@@ -39,37 +39,51 @@ classdef LinearModel < Model
         C_func  function_handle {mustBeScalarOrEmpty}
         D_func  function_handle {mustBeScalarOrEmpty}
         H_func  function_handle {mustBeScalarOrEmpty}
+        
+        f0_func function_handle {mustBeScalarOrEmpty}
+        g0_func function_handle {mustBeScalarOrEmpty}
     end
     
     properties (Constant, Access = private)
         N_mats = 6
-        syms_props = ["A_sym", "B_sym", "E_sym", "C_sym", "D_sym", "H_sym"];
-        func_props = ["A_func", "B_func", "E_func", "C_func", "D_func", "H_func"];
+        syms_props = ["A_sym", "B_sym", "E_sym", "C_sym", "D_sym", "H_sym", "f0_sym", "g0_sym"];
+        func_props = ["A_func", "B_func", "E_func", "C_func", "D_func", "H_func", "f0_func", "g0_func"];
     end
 
     methods
         function obj = LinearModel(varargin) % constructor stores the linear matrix information
-            if nargin == 6
-                obj.A_sym = varargin{1};
-                obj.B_sym = varargin{2};
-                obj.E_sym = varargin{3};
-                obj.C_sym = varargin{4};
-                obj.D_sym = varargin{5};
-                obj.H_sym = varargin{6};
-                
-                obj.Nx = size(obj.A_sym, 2);
-                obj.Nu = size(obj.B_sym, 2);
-                obj.Nd = size(obj.E_sym, 2);
-                obj.Ny = size(obj.C_sym, 1);
-                
-                obj.f0 = zeros(obj.Nx,1);
-                obj.g0 = zeros(obj.Ny,1);
-                
+            if nargin
+                switch nargin
+                    case 6
+                        obj.A_sym = varargin{1};
+                        obj.B_sym = varargin{2};
+                        obj.E_sym = varargin{3};
+                        obj.C_sym = varargin{4};
+                        obj.D_sym = varargin{5};
+                        obj.H_sym = varargin{6};
+                        
+                        obj.f0 = zeros(size(obj.A_sym, 2),1);
+                        obj.g0 = zeros(size(obj.C_sym, 1),1);
+                    case 8
+                        obj.A_sym = varargin{1};
+                        obj.B_sym = varargin{2};
+                        obj.E_sym = varargin{3};
+                        obj.C_sym = varargin{4};
+                        obj.D_sym = varargin{5};
+                        obj.H_sym = varargin{6};
+                        obj.f0 = varargin{7};
+                        obj.g0 = varargin{8};
+                end
                 obj.init();
             end
         end
         
         function init(obj)
+            obj.Nx = size(obj.A_sym, 2);
+            obj.Nu = size(obj.B_sym, 2);
+            obj.Nd = size(obj.E_sym, 2);
+            obj.Ny = size(obj.C_sym, 1);
+            
             if isempty(obj.SymVars)
                 setSymVars(obj);
             end
@@ -94,15 +108,8 @@ classdef LinearModel < Model
             u = obj.SymVars.u;
             d = obj.SymVars.d;
             
-            if isempty(u)
-                u = 0;
-            end
-            if isempty(d)
-                d = 0;
-            end
-            
-            obj.f_sym = obj.A_sym*x + obj.B_sym*u + obj.E_sym*d + obj.f0;
-            obj.g_sym = obj.C_sym*x + obj.D_sym*u + obj.H_sym*d + obj.g0;
+            obj.f_sym = sum([obj.A_sym*x, obj.B_sym*u, obj.E_sym*d, obj.f0_sym],2); % using horzcat and sum allows us to ignore empty values
+            obj.g_sym = sum([obj.C_sym*x, obj.D_sym*u, obj.H_sym*d, obj.g0_sym],2);
         end
             
         function [A,B,E,C,D,H] = CalcMatrices(obj,x,u,d)
