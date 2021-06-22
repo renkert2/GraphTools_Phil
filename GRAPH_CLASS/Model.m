@@ -109,13 +109,33 @@ classdef Model < matlab.mixin.Copyable
             if isempty(x0)
                 x0 = zeros(obj.Nx,1);
             end
-            [x_bar,] = fsolve(@(x) CalcF(obj,x,u,d), x0, opts.SolverOpts);
+            [x_bar] = fsolve(@(x) CalcF(obj,x,u,d), x0, opts.SolverOpts);
             
             if nargout == 2
                 y_bar = CalcG(obj,x_bar,u,d);
             end
         end
-                   
+        
+        function [u_bar, y_bar] = calcSteadyStateInput(obj, x, d, u0, opts)
+            % Solves CalcF == 0 to get the steady state input
+            arguments
+                obj
+                x double
+                d double
+                u0 double = []
+                opts.SolverOpts struct = optimset('Display', 'off');
+            end
+            
+            if isempty(u0)
+                u0 = zeros(obj.Nu,1);
+            end
+            [u_bar] = fsolve(@(u) CalcF(obj,x,u,d), u0, opts.SolverOpts);
+            
+            if nargout == 2
+                y_bar = CalcG(obj,x,u_bar,d);
+            end
+        end
+        
         function lm = getLinearModel(obj)
             f = obj.f_sym;
             g = obj.g_sym;
@@ -151,26 +171,28 @@ classdef Model < matlab.mixin.Copyable
             end
             
             try
-                h = new_system(name, 'FromFile', 'Model_SimulinkTemplate');
-            catch
                 h = load_system(name);
+            catch
+                h = new_system(name, 'FromFile', 'Model_SimulinkTemplate');
             end
+            mdlWks = get_param([name],'ModelWorkspace');
             
-            obj_name = [name '__OBJECT'];
-            assignin('base', obj_name, obj);
+            
+            obj_name = 'ModelObject';
+            assignin(mdlWks, obj_name, obj);
             
             set_param([name '/Model'], 'x_0', mat2str(zeros(obj.Nx,1)));
             
-            set_param([name '/Model/Model_CalcF'], 'MATLABFcn', ['@(x) CalcMux(' obj_name ',x,@CalcF)']);
-            set_param([name '/Model/Model_CalcF'], 'OutputDimensions', mat2str([obj.Nx]));
-            set_param([name '/Model/Model_CalcG'], 'MATLABFcn', ['@(x) CalcMux(' obj_name ',x,@CalcG)']);
-            set_param([name '/Model/Model_CalcG'], 'OutputDimensions', mat2str([obj.Ny]));
+            set_param([name '/Model/Model_CalcF'], 'MATLABFcn', ['Model_SimulinkInterpretedFunction(u,''',name, ''',@CalcFMux)']);
+            set_param([name '/Model/Model_CalcF'], 'OutputDimensions', sprintf('%s.Nx', obj_name));
+            set_param([name '/Model/Model_CalcG'], 'MATLABFcn', ['Model_SimulinkInterpretedFunction(u,''',name, ''',@CalcGMux)']);
+            set_param([name '/Model/Model_CalcG'], 'OutputDimensions', sprintf('%s.Ny', obj_name));
             
             if obj.Nu
-                set_param([name '/Model/Input1'], 'PortDimensions', mat2str([obj.Nu,1]));
+                set_param([name '/Model/Input1'], 'PortDimensions', sprintf('[%s.Nu,1]', obj_name));
             end
             if obj.Nd
-                set_param([name '/Model/Input2'], 'PortDimensions', mat2str([obj.Nd,1]));
+                set_param([name '/Model/Input2'], 'PortDimensions', sprintf('[%s.Nd,1]', obj_name));
             end
         end
         
