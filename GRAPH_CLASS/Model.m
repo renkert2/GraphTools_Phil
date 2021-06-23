@@ -32,6 +32,8 @@ classdef Model < matlab.mixin.Copyable
         
         SymVars SymVars {mustBeScalarOrEmpty} % Contains fields x,u,d, each an array of symbolic variables
         Params compParam
+        
+        Name string % Used to identify model subsystem blocks in Simulink model
     end
     
     properties
@@ -165,34 +167,52 @@ classdef Model < matlab.mixin.Copyable
             lm.init();
         end
         
-        function h = makeSimulinkModel(obj, name)
+        function sys_h = makeSimulinkModel(obj, sys_name)
             if nargin == 1
-                name = 'Model_Simulink';
+                sys_name = 'Model_Simulink';
+            end
+            
+            if isempty(obj.Name)
+                model_name = 'Model';
+                obj_name = 'Model_Object';
+            else
+                model_name = obj.Name;
+                obj_name = sprintf('%s_Object', obj.Name);
             end
             
             try
-                h = load_system(name);
+                sys_h = load_system(sys_name);
             catch
-                h = new_system(name, 'FromFile', 'Model_SimulinkTemplate');
+                sys_h = new_system(sys_name);
             end
-            mdlWks = get_param([name],'ModelWorkspace');
+            mdlWks = get_param(sys_name,'ModelWorkspace');
+            assignin(mdlWks, obj_name, obj); % Assign object to Model Workspace so we can reference it
             
+            % Get 
+            h = Simulink.findBlocks(sys_name, 'Name', model_name, 'BlockType', 'SubSystem');
+            if numel(h) == 1
+                model_path = getfullname(h);
+            elseif numel(h) > 1
+                error("Multiple subsystem blocks with name %s found in %s", model_name, sys_name);
+            elseif numel(h) == 0
+                % Assign model path
+                model_path = sprintf('%s/%s', sys_name, model_name);
+                % Copy model template into model
+                add_block('Model_SimulinkTemplate/Model',model_path);
+            end
+
+            set_param(model_path, 'x_0', mat2str(zeros(obj.Nx,1)));
             
-            obj_name = 'ModelObject';
-            assignin(mdlWks, obj_name, obj);
-            
-            set_param([name '/Model'], 'x_0', mat2str(zeros(obj.Nx,1)));
-            
-            set_param([name '/Model/Model_CalcF'], 'MATLABFcn', ['Model_SimulinkInterpretedFunction(u,''',name, ''',@CalcFMux)']);
-            set_param([name '/Model/Model_CalcF'], 'OutputDimensions', sprintf('%s.Nx', obj_name));
-            set_param([name '/Model/Model_CalcG'], 'MATLABFcn', ['Model_SimulinkInterpretedFunction(u,''',name, ''',@CalcGMux)']);
-            set_param([name '/Model/Model_CalcG'], 'OutputDimensions', sprintf('%s.Ny', obj_name));
+            set_param([model_path,'/Model_CalcF'], 'MATLABFcn', sprintf('Model_SimulinkInterpretedFunction(u,''%s'',''%s'',@CalcFMux)', sys_name, obj_name));
+            set_param([model_path,'/Model_CalcF'], 'OutputDimensions', sprintf('%s.Nx', obj_name));
+            set_param([model_path,'/Model_CalcG'], 'MATLABFcn', sprintf('Model_SimulinkInterpretedFunction(u,''%s'',''%s'',@CalcGMux)', sys_name, obj_name));
+            set_param([model_path,'/Model_CalcG'], 'OutputDimensions', sprintf('%s.Ny', obj_name));
             
             if obj.Nu
-                set_param([name '/Model/Input1'], 'PortDimensions', sprintf('[%s.Nu,1]', obj_name));
+                set_param([model_path,'/Input1'], 'PortDimensions', sprintf('[%s.Nu,1]', obj_name));
             end
             if obj.Nd
-                set_param([name '/Model/Input2'], 'PortDimensions', sprintf('[%s.Nd,1]', obj_name));
+                set_param([model_path,'/Input2'], 'PortDimensions', sprintf('[%s.Nd,1]', obj_name));
             end
         end
         
