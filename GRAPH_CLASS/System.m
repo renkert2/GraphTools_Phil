@@ -31,18 +31,32 @@ classdef System < SystemElement
     properties        
         Components (:,1) SystemElement
         ConnectP (:,1) cell
-
-        Model GraphModel = GraphModel.empty()
+        
+        Model Model = Model.empty()
     end
     
     methods
-        function obj = System(Name, Comps, ConnectP)
+        function obj = System(Name, Comps, arg3)
+            if nargin == 1
+                obj.Name = Name;
+            end
+            if nargin == 2
+                obj.Name = Name;
+                obj.Components = Comps;
+            end
             if nargin == 3
-                    obj.Name = Name;
-                    obj.Components = Comps;
-                    obj.ConnectP = ConnectP;
+                obj.Name = Name;
+                obj.Components = Comps;
+                
+                if isa(arg3, 'cell')
+                    % Create system from components and connections
+                    obj.ConnectP = arg3;
                     obj.init_super();
                     obj=SystemCombine(obj);
+                elseif isa(arg3, 'Model')
+                    % Assign predefined model
+                    obj.Model = arg3;
+                end
             end
         end
         

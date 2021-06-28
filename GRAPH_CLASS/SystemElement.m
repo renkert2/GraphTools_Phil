@@ -70,19 +70,29 @@ classdef SystemElement < matlab.mixin.Heterogeneous & matlab.mixin.Copyable & ha
             setCombinedParams(Sys);
         end
         
-        function params = setCombinedParams(obj)
+        function params = setCombinedParams(obj,opts)
+            arguments
+                obj
+                opts.FilterDirectDescendentExProps logical = false 
+            end
+            
             existing_params = obj.Params;
             C = obj.Components;
             params = vertcat(C.Params);
             if ~isempty(params) % Params have components
-                exprop_i = isaArrayFun(params, 'extrinsicProp');
-                exprops = params(exprop_i);
+                exprop_filter = isaArrayFun(params, 'extrinsicProp');
+                exprops = params(exprop_filter);
                 if ~isempty(exprops)
-                    sys_exprops = Combine(exprops); % Combine extrinsic props from components into system level extrinsic props
+                    if opts.FilterDirectDescendentExProps
+                        parent_filter = arrayfun(@(p) ismember(p.Parent, C), exprops); % Ensure we only combine extrinsic props from direct descendents.  
+                        sys_exprops = Combine(exprops(parent_filter)); % Combine extrinsic props from components into system level extrinsic props
+                    else
+                        sys_exprops = Combine(exprops);
+                    end
                     for i = 1:numel(sys_exprops)
                         sys_exprops(i).Parent = obj;
                     end
-                    params = [unique(params(~exprop_i)); existing_params; unique(exprops); sys_exprops]; % Order is [component ~extrinsic props, system props, component extrinsic props, system extrinsic props]
+                    params = [unique(params(~exprop_filter)); existing_params; unique(exprops); sys_exprops]; % Order is [component ~extrinsic props, system props, component extrinsic props, system extrinsic props]
                 else
                     params = unique(params); % Select params with unique Sym_ID identifiers
                 end
@@ -149,6 +159,35 @@ classdef SystemElement < matlab.mixin.Heterogeneous & matlab.mixin.Copyable & ha
                     comp_arrays{i} = comp_array;
                 end
             end
+        end
+
+        function x = eq(obj1,obj2)
+            % eq() method to compare a hetergeneous
+            % array of SystemElements
+            % GraphVertices are 'handle' objects, so they are considered
+            % equivalent if the handles point to the same object.
+            if numel(obj1)==numel(obj2)
+                x = false(size(obj1));
+                for i = 1:numel(obj1)
+                    x(i) = eq@handle(obj1(i), obj2(i));
+                end
+            elseif numel(obj1)==1
+                x = false(size(obj2));
+                for i = 1:numel(obj2)
+                    x(i) = eq@handle(obj1, obj2(i));
+                end
+            elseif numel(obj2)==1
+                x = false(size(obj1));
+                for i = 1:numel(obj1)
+                    x(i) = eq@handle(obj2, obj1(i));
+                end
+            else
+                error('array sizes are incompatible') 
+            end
+        end
+        
+        function x = ne(obj1, obj2)
+            x = ~eq(obj1, obj2);
         end
     end
     

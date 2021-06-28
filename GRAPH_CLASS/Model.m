@@ -41,6 +41,10 @@ classdef Model < matlab.mixin.Copyable
         g_sym (:,1) sym % g(x,u,d), can contain symbolic parameters
     end
     
+    properties (SetAccess = protected)
+        LinearModel LinearModel
+    end
+    
     properties (SetAccess = protected, GetAccess = protected)
         f_func function_handle {mustBeScalarOrEmpty} % calculates x_dot
         g_func function_handle {mustBeScalarOrEmpty} % calculates y
@@ -165,6 +169,15 @@ classdef Model < matlab.mixin.Copyable
                 = deal(A,B,E,C,D,H,f0,g0);
             
             lm.init();
+        end
+        
+        function lm = get.LinearModel(obj)
+           if isempty(obj.LinearModel)
+               lm = getLinearModel(obj);
+               obj.LinearModel = lm;
+           else
+               lm = obj.LinearModel;
+           end
         end
         
         function sys_h = makeSimulinkModel(obj, sys_name)
