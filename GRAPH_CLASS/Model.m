@@ -163,6 +163,7 @@ classdef Model < matlab.mixin.Copyable
             
             %lm = LinearModel(A,B,E,C,D,H);
             lm = LinearModel();
+            lm.Name = obj.Name + "_Linearized";
             copyModelProps(obj, lm);
             
             [lm.A_sym, lm.B_sym, lm.E_sym, lm.C_sym, lm.D_sym, lm.H_sym, lm.f0_sym, lm.g0_sym]...

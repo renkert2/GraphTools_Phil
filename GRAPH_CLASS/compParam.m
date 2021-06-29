@@ -57,6 +57,7 @@ classdef compParam < handle & matlab.mixin.Heterogeneous
             % obj.Dependent = true;
             obj.DependentFunction = fun;
             obj.DependentBreakpoints = bkpnts;
+            obj.update();
         end
         
         function d = double(obj)
@@ -441,7 +442,8 @@ classdef compParam < handle & matlab.mixin.Heterogeneous
         function cp = gatherObjectParams(obj)
             % Collects compParams assigned to object's properties into a single compParam array
             obj_meta = metaclass(obj);
-            parent_props = vertcat(obj_meta.SuperclassList.PropertyList);
+            parent_obj = metaclass(SystemElement);
+            parent_props = parent_obj.PropertyList;
             meta_props = setdiff(obj_meta.PropertyList, parent_props);
             
             % Make property filter
