@@ -25,6 +25,8 @@ classdef Model < matlab.mixin.Copyable
         Nd (1,1) double = 0 % number of disturbances
         Ny (1,1) double = 0 % number of outputs
         
+        x0 double
+        
         StateDescriptions (:,1) string
         InputDescriptions (:,1) string
         DisturbanceDescriptions (:,1) string
@@ -76,6 +78,13 @@ classdef Model < matlab.mixin.Copyable
             CalcFuncs_Cell = genMatlabFunctions(obj, {f, g});
             obj.f_func = CalcFuncs_Cell{1};
             obj.g_func = CalcFuncs_Cell{2};
+        end
+        
+        function set.x0(obj, x0)
+            if obj.Nx
+                assert(numel(x0) == obj.Nx, 'Value for x0 must have %d entries', obj.Nx);
+            end
+            obj.x0 = x0;
         end
         
         function F = CalcF(obj,x,u,d)
@@ -198,6 +207,7 @@ classdef Model < matlab.mixin.Copyable
                 sys_h = load_system(sys_name);
             catch
                 sys_h = new_system(sys_name);
+                load_system(sys_h);
             end
             mdlWks = get_param(sys_name,'ModelWorkspace');
             assignin(mdlWks, obj_name, obj); % Assign object to Model Workspace so we can reference it
@@ -215,7 +225,7 @@ classdef Model < matlab.mixin.Copyable
                 add_block('Model_SimulinkTemplate/Model',model_path);
             end
 
-            set_param(model_path, 'x_0', mat2str(zeros(obj.Nx,1)));
+            set_param(model_path, 'x_0', sprintf('%s.x0', obj_name));
             
             set_param([model_path,'/Model_CalcF'], 'MATLABFcn', sprintf('Model_SimulinkInterpretedFunction(u,''%s'',''%s'',@CalcFMux)', sys_name, obj_name));
             set_param([model_path,'/Model_CalcF'], 'OutputDimensions', sprintf('%s.Nx', obj_name));
@@ -310,7 +320,7 @@ classdef Model < matlab.mixin.Copyable
             arguments
                 obj_from
                 obj_to
-                opts.Properties = ["Nx","Nu","Nd","Ny",...
+                opts.Properties = ["Nx","Nu","Nd","Ny","x0",...
                 "StateDescriptions", "InputDescriptions", "DisturbanceDescriptions", "OutputDescriptions",...
                 "SymVars","Params"];
             end
