@@ -326,7 +326,10 @@ classdef Model < matlab.mixin.Copyable
             end
 
             for prop = opts.Properties
-                obj_to.(prop) = obj_from.(prop);
+                val = obj_from.(prop);
+                if ~isempty(val)
+                    obj_to.(prop) = val;
+                end
             end
         end
     end
