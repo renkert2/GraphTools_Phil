@@ -331,13 +331,14 @@ classdef compParam < handle & matlab.mixin.Heterogeneous
             arguments
                 obj_array
                 opts.UnitFlag = true
+                opts.InlineArg = "$$"
             end
             
             N = numel(obj_array);
             s = string.empty(N,0);
             for i = 1:N
                 obj = obj_array(i);
-                s_temp = "$$"+obj.Sym+"$$";
+                s_temp = opts.InlineArg+obj.Sym+opts.InlineArg;
                 if ~isempty(obj.Unit) && obj.Unit ~= "" && opts.UnitFlag
                     s_temp = s_temp + " "+"("+obj.Unit+")";
                 end
@@ -345,11 +346,22 @@ classdef compParam < handle & matlab.mixin.Heterogeneous
             end
         end
         
-        function setDependentTemporary(obj_array, isdependent)
+        function storeDependentDefault(obj_array)
             for i = 1:numel(obj_array)
                 obj = obj_array(i);
                 obj.DependentDefault = obj.Dependent;
-                obj.Dependent = isdependent;
+            end
+        end
+        
+        function dependent_old = setDependent(obj_array, dependent_new)
+            dependent_old = vertcat(obj_array.Dependent);
+            for i = 1:numel(obj_array)
+                obj = obj_array(i);
+                if isscalar(dependent_new)
+                    obj.Dependent = dependent_new;
+                else
+                    obj.Dependent = dependent_new(i);
+                end
             end
         end
         
@@ -362,26 +374,53 @@ classdef compParam < handle & matlab.mixin.Heterogeneous
             end
         end
         
-        function dispTable(obj_array)
-            try
-                vals = vertcat(obj_array.Value);
-            catch
-                vals = strings(numel(obj_array),1);
-                for i = 1:numel(vals)
-                    val = obj_array(i).Value;
-                    if isnumeric(val) && isscalar(val)
-                        vals(i,1) = num2str(val);
-                    else
-                        sz = size(val);
-                        type = class(val);
-                        vals(i,1) = sprintf("%dx%d %s", sz(1), sz(2), type);
-                    end
+        function tbl = dispTable(obj_array, fields, opts)
+            arguments
+                obj_array
+                fields string = ["Sym", "Value", "Unit", "Description", "Parent", "Dependent"]
+                opts.LatexSym logical = false
+                opts.LatexOpts cell = {}
+            end
+            field_vals_cell = cell(size(fields));
+            for i = 1:numel(fields)
+                field = fields(i);
+                switch field
+                    case "Value"
+                        try
+                            vals = vertcat(obj_array.Value);
+                        catch
+                            vals = strings(numel(obj_array),1);
+                            for j = 1:numel(vals)
+                                val = obj_array(j).Value;
+                                if isnumeric(val) && isscalar(val)
+                                    vals(j,1) = num2str(val);
+                                else
+                                    sz = size(val);
+                                    type = class(val);
+                                    vals(j,1) = sprintf("%dx%d %s", sz(1), sz(2), type);
+                                end
+                            end
+                        end
+                        field_vals = vals;
+                    case "Sym"
+                        if opts.LatexSym
+                            sym = latex(obj_array, opts.LatexOpts{:});
+                        else
+                            sym = vertcat(obj_array.Sym);
+                        end
+                        field_vals = sym;
+                    case "Parent"
+                        field_vals = vertcat(vertcat(obj_array.Parent).Name);
+                    otherwise
+                        field_vals = vertcat(obj_array.(field));
                 end
+                field_vals_cell{i} = field_vals;
             end
             
-            tbl = table(vertcat(obj_array.Sym), vals, vertcat(obj_array.Unit), vertcat(obj_array.Description), vertcat(vertcat(obj_array.Parent).Name), vertcat(obj_array.Dependent),...
-                'VariableNames', ["Sym", "Value", "Unit", "Description", "Parent", "Dependent"]);
-            disp(tbl);
+            tbl = table(field_vals_cell{:},'VariableNames', fields);
+            if nargout == 0
+                disp(tbl);
+            end
         end
     end
     

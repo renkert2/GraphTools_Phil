@@ -53,7 +53,7 @@ classdef extrinsicProp < compParam
                     warning('Combining extrinsicProps with different units!')
                 end
                 F = @(varargin) type.combFunc([varargin{:}]);
-                resProps(i) = extrinsicProp(unique_types(i), NaN,...
+                resProps(i,1) = extrinsicProp(unique_types(i), NaN,...
                     'Unit', unit,...
                     'Dependent',true,...
                     'DependentBreakpoints', breakpoints,...
@@ -61,9 +61,12 @@ classdef extrinsicProp < compParam
             end     
         end
         
-        function [val, i] = getProp(obj_array, type)
+        function [val, i] = getProp(obj_array, type, parent)
             % Get value of extrinsicProp of Type type from object array of extrinsicProps
             i = [obj_array.Type] == type;
+            if nargin == 3
+                i = i & ([obj_array.Parent] == parent);
+            end
             val = vertcat(obj_array(i));
         end
     end

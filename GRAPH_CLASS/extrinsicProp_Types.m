@@ -19,7 +19,7 @@ classdef extrinsicProp_Types
     enumeration
         Abstract (@sum, 1)
         Mass (@sum, 2)
-        Cost (@sum, 3)
+        Price (@sum, 3)
     end
     
     properties

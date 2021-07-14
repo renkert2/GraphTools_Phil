@@ -241,7 +241,6 @@ classdef compParamValue
         end
         
         function dispTable(obj_array)
-            % Modifies method from Mixin.Custom Display
             tbl = table(vertcat(obj_array.Sym), vertcat(obj_array.Value), vertcat(obj_array.Unit), vertcat(obj_array.Description), vertcat(obj_array.Component),...
                 'VariableNames', ["Sym", "Value", "Unit", "Description", "Component"]);
             disp(tbl);
