@@ -111,9 +111,13 @@ classdef paramFit < handle
             end
         end
         
-        function plot(obj, varargin)
+        function p = plot(obj, varargin)
             if nargin > 1
-                outs = calcParams(obj, varargin{:});
+                ins = varargin;
+                outs = calcParams(obj, ins{:});
+            elseif ~isempty(obj.Inputs)
+                ins = {obj.Inputs.Value};
+                outs = calcParams(obj, ins{:});
             end
             
             for i = 1:obj.N_outs
@@ -145,12 +149,25 @@ classdef paramFit < handle
                         end
                 end
                 
-                if nargin > 1
+                if ~isempty(outs)
                     hold on
-                    pfun(varargin{:}, outs(i),'.r','MarkerSize',20)
+                    pfun(ins{:}, outs(i),'.r','MarkerSize',25, 'MarkerEdgeColor', 'w')
                     hold off
                 end
+                p = gca;
             end
+        end
+        
+        function p = plotBoundary(obj, varargin)
+            plot(obj.Boundary, varargin{:});
+            switch obj.N_ins
+                case 1
+                    xlabel(latex(obj.Inputs(1)),'Interpreter','latex');
+                case 2
+                    xlabel(latex(obj.Inputs(1)),'Interpreter','latex');
+                    ylabel(latex(obj.Inputs(2)),'Interpreter','latex');
+            end
+            p = gca;
         end
         
         function cftool(obj, output_number)
