@@ -6,6 +6,9 @@ classdef paramFit < handle
         Inputs (:,1) compParam
         Outputs (:,1) compParam
         
+        FitTypes (:,1) cell
+        FitOpts (:,1) cell % cell of structs
+        
         BoundaryWarning logical = true
     end
     
@@ -17,8 +20,8 @@ classdef paramFit < handle
     end
     
     properties (SetAccess = private)
-        N_ins double
-        N_outs double
+        N_ins double = []
+        N_outs double = []
     end
     
     methods
@@ -48,6 +51,20 @@ classdef paramFit < handle
             obj.N_outs = numel(outs);
         end
         
+        function set.FitTypes(obj, types)
+            if obj.N_outs
+                assert(numel(types) == obj.N_outs, "Each output must be associated with a fit")
+            end
+            obj.FitTypes = types;
+        end
+        
+        function set.FitOpts(obj, opts)
+            if obj.N_outs
+                assert(numel(opts) == obj.N_outs, "Each output must be associated with a fit")
+            end
+            obj.FitOpts = opts;
+        end
+        
         function setData(obj, input_data, output_data)
             N_points = size(input_data,1);
             assert(N_points == size(output_data,1), 'Input and Output Data must have equal number of rows');
@@ -69,11 +86,19 @@ classdef paramFit < handle
                 fit_type
                 fit_opts
             end
+            if nargin > 1
+                obj.FitTypes = fit_type;
+                obj.FitOpts = fit_opts;
+            end
             
             for i = 1:obj.N_outs
-                model = makeFit(obj, obj.Data(i).Inputs, obj.Data(i).Outputs, fit_type{i}, fit_opts{i});
+                model = makeFit(obj, obj.Data(i).Inputs, obj.Data(i).Outputs, obj.FitTypes{i}, obj.FitOpts{i});
                 obj.Models{i} = model;
                 obj.Functions{i} = makeModelWrapper(obj,model);
+            end
+            
+            if ~isempty(obj.Outputs)
+                setOutputDependency(obj);
             end
             
             function fh = makeModelWrapper(obj,model)
@@ -103,6 +128,22 @@ classdef paramFit < handle
             end
         end
         
+        function setSpan(obj, span)
+           assert(isnumeric(span) && span >= 0 && span <= 1, "Span must be between 0 and 1");
+           for i = 1:obj.N_outs
+               ft = obj.FitTypes{i};
+               if checkL(ft)
+                   obj.FitOpts{i}.Span = span;
+               end
+           end
+           setModels(obj);
+           
+            function i = checkL(ft)
+               t = string(type(ft));
+               i = (t == "lowess" | t == "loess");
+            end
+        end
+        
         function outs = calcParams(obj, varargin)
             outs = zeros(obj.N_outs,1);
             for i = 1:obj.N_outs
@@ -117,9 +158,12 @@ classdef paramFit < handle
                 opts.Outputs = 1:obj.N_outs
             end
             
-            if ~isempty(obj.Inputs)
+            if ~isempty(obj.Inputs) && ~isempty(obj.Outputs)
                 ins = {obj.Inputs.Value};
                 outs = calcParams(obj, ins{:});
+            else
+                ins = {};
+                outs = [];
             end
             
             out_plts = opts.Outputs;
