@@ -111,21 +111,28 @@ classdef paramFit < handle
             end
         end
         
-        function p = plot(obj, varargin)
-            if nargin > 1
-                ins = varargin;
-                outs = calcParams(obj, ins{:});
-            elseif ~isempty(obj.Inputs)
+        function p = plot(obj, opts)
+            arguments
+                obj
+                opts.Outputs = 1:obj.N_outs
+            end
+            
+            if ~isempty(obj.Inputs)
                 ins = {obj.Inputs.Value};
                 outs = calcParams(obj, ins{:});
             end
             
-            for i = 1:obj.N_outs
-                figure(i)
-                plot(obj.Models{i}, obj.Data(i).Inputs, obj.Data(i).Outputs);
+            out_plts = opts.Outputs;
+            f = figure();
+            t = tiledlayout(f,1,numel(out_plts));
+            
+            for i = 1:numel(out_plts)
+                nexttile(t,i)
                 
-                title('paramFit Plot')
-                [olb,oub] = bounds(obj.Data(i).Outputs);
+                out_I = out_plts(i);
+                plot(obj.Models{out_I}, obj.Data(out_I).Inputs, obj.Data(out_I).Outputs);
+
+                [olb,oub] = bounds(obj.Data(out_I).Outputs);
 
                 switch obj.N_ins
                     case 1
@@ -135,7 +142,7 @@ classdef paramFit < handle
                             xlabel(latex(obj.Inputs(1)),'Interpreter','latex');
                         end
                         if ~isempty(obj.Outputs)
-                            ylabel(latex(obj.Outputs(i)),'Interpreter','latex');
+                            ylabel(latex(obj.Outputs(out_I)),'Interpreter','latex');
                         end
                     case 2
                         pfun = @plot3;
@@ -145,13 +152,13 @@ classdef paramFit < handle
                             ylabel(latex(obj.Inputs(2)),'Interpreter','latex');
                         end
                         if ~isempty(obj.Outputs)
-                            zlabel(latex(obj.Outputs(i)),'Interpreter','latex');
+                            zlabel(latex(obj.Outputs(out_I)),'Interpreter','latex');
                         end
                 end
                 
                 if ~isempty(outs)
                     hold on
-                    pfun(ins{:}, outs(i),'.r','MarkerSize',25, 'MarkerEdgeColor', 'w')
+                    pfun(ins{:}, outs(out_I),'or', 'MarkerSize',10, 'LineWidth', 2, 'MarkerEdgeColor', 'w', 'MarkerFaceColor','r')
                     hold off
                 end
                 p = gca;
