@@ -52,6 +52,45 @@ classdef compParamValue
             end
         end
         
+        function I = isInBounds(candidate, LB, UB)
+            arguments 
+                candidate compParamValue
+                LB double = []
+                UB double = []
+            end
+            sz = size(candidate);
+            N = numel(candidate);
+            vals = vertcat(candidate.Value);
+            
+            % Parse Upper and Lower Bound Options
+            if ~isempty(LB)
+                if isscalar(LB)
+                    LB = repmat(LB, sz);
+                else
+                    assert(numel(LB) == N, "Number of vars in LB must match size of candidate");
+                end
+            else
+                LB = -Inf(sz);
+            end       
+            
+            if ~isempty(UB)
+                if isscalar(UB)
+                    UB = repmat(UB, sz);
+                else
+                    assert(numel(UB) == N, "Number of vars in UB must match size of candidate");
+                end
+            else
+                UB = Inf(sz);
+            end
+            
+            in_bounds = (vals >= LB) & (vals <= UB);
+            if all(in_bounds)
+                I = true;
+            else
+                I = false;
+            end
+        end
+        
         function d = distance(target, candidate, opts)
             % Optionally pass weights as a struct with key = sym, value =
             % weight
@@ -59,8 +98,6 @@ classdef compParamValue
                 target compParamValue
                 candidate compParamValue
                 opts.Mode string = "Norm" % Modes: Norm, WeightedNorm, TaylorSeries
-                opts.LB double = []
-                opts.UB double = []
                 opts.Weights = []
                 opts.Gradient double = [] % Must be in same order as target
                 opts.Hessian double = [] % Must be in same order as target
@@ -73,42 +110,10 @@ classdef compParamValue
             
             [pairs, I_pairs] = getPairs(target, candidate); % Nx2 compParam array
             
-            
             target_vals = vertcat(pairs(:,1).Value);
             candidate_vals = vertcat(pairs(:,2).Value);
             
             sz_pairs = size(target_vals);
-            
-            % Parse Upper and Lower Bound Options
-            if opts.LB
-                if isscalar(opts.LB)
-                    LB = repmat(opts.LB, sz_target);
-                else
-                    assert(numel(opts.LB) == N_target, "Number of vars in LB must match size of target");
-                    LB = opts.LB;
-                end
-            else
-                LB = -Inf(sz_target);
-            end       
-            lb = LB(I_pairs(:,1));
-            
-            if opts.UB
-                if isscalar(opts.UB)
-                    UB = repmat(opts.UB, sz_target);
-                else
-                    assert(numel(opts.UB) == N_target, "Number of vars in UB must match size of target");
-                    UB = opts.UB;
-                end
-            else
-                UB = Inf(sz_target);
-            end
-            ub = UB(I_pairs(:,1));
-            
-            in_bounds = (candidate_vals >= lb) & (candidate_vals <= ub);
-            if ~all(in_bounds)
-                d = NaN;
-                return
-            end
             
             switch opts.Mode
                 case "Norm"
@@ -235,15 +240,18 @@ classdef compParamValue
         end
         
         function t = table(obj_array)
-            w=warning('off','MATLAB:structOnObject');
-            t=struct2table(arrayfun(@struct, obj_array));
-            warning(w);
+%             w=warning('off','MATLAB:structOnObject');
+%             t=struct2table(arrayfun(@struct, obj_array));
+%             warning(w);
+%             
+            t = table(vertcat(obj_array.Sym), vertcat(obj_array.Value), vertcat(obj_array.Unit), vertcat(obj_array.Description), vertcat(obj_array.Component),...
+                'VariableNames', ["Sym", "Value", "Unit", "Description", "Component"]);
         end
         
-        function dispTable(obj_array)
+        function tbl = dispTable(obj_array)
             tbl = table(vertcat(obj_array.Sym), vertcat(obj_array.Value), vertcat(obj_array.Unit), vertcat(obj_array.Description), vertcat(obj_array.Component),...
                 'VariableNames', ["Sym", "Value", "Unit", "Description", "Component"]);
-            disp(tbl);
+            disp(tbl)
         end
 
     end

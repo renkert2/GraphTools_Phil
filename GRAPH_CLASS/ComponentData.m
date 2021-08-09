@@ -27,13 +27,55 @@ classdef ComponentData
             end
         end
         
+        function [CD, unique_comps, N_comps] = separateComponents(obj_array, des_vars)
+            arguments
+                obj_array
+                des_vars compParamValue = compParamValue.empty() % Optional, only includes components in des_vars
+            end
+            
+            if nargin >1
+                unique_comps = intersect(unique([des_vars.Component],'stable'), unique([obj_array.Component],'stable'), 'stable');
+            else
+                unique_comps = unique([obj_array.Component]);
+            end
+            
+            N_unique_comps = numel(unique_comps);
+            N_comps = zeros(1,N_unique_comps);
+            CD = cell.empty(0,N_unique_comps); % Cell Array containing component data filtered by component
+            for i = 1:N_unique_comps
+                comp = unique_comps(i);
+                [cd_comp, ~] = filterComponent(obj_array, comp);
+                CD{1,i} = cd_comp;
+                N_comps(i) = numel(cd_comp);
+            end
+        end
+        
+        function [filtered_cd] = filterBounds(obj_array, des_vars, LB, UB)
+            % Regect entries in the catalog that violate bounds
+            arguments
+                obj_array
+                des_vars compParamValue % Just used to find corresponding parameters, values not used
+                LB (:,1) double
+                UB (:,1) double
+            end
+            assert(numel(LB) == numel(des_vars), "LB must be same size as des_vars");
+            assert(numel(UB) == numel(des_vars), "UB must be same size as des_vars")
+            
+            I = false(size(obj_array));
+            for i = 1:numel(obj_array)
+                candidate = obj_array(i);
+                candidate_cpv = candidate.Data;
+                [cpv_pairs, I_pairs] = getPairs(des_vars, candidate_cpv);
+                I(i) = isInBounds(cpv_pairs(:,2), LB(I_pairs(:,1)), UB(I_pairs(:,1)));
+            end
+            filtered_cd = obj_array(I);
+        end
+        
         function [CD_sorted, D_sorted, unique_comps] = filterNearest(obj_array, target, N_max, opts)
             arguments 
                 obj_array
                 target compParamValue
                 N_max = inf
-                opts.LB (:,1) double
-                opts.UB (:,1) double
                 opts.DistanceMode string = "Norm"
                 opts.Gradient double = []
                 opts.Hessian double = []
@@ -60,21 +102,13 @@ classdef ComponentData
                 
                 [cd_comp, ~] = filterComponent(obj_array, comp);
                 [target_comp, target_I] = filterComponent(target, comp);
-                
-                lb = [];
-                ub = [];
+
                 weight = [];
                 grad = [];
                 hessian = [];
                 tolerance = [];
                 map = [];
                 if any(target_I)
-                    if opts.LB
-                        lb = opts.LB(target_I);
-                    end
-                    if opts.UB
-                        ub = opts.UB(target_I);
-                    end
                     switch opts.DistanceMode
                         case "Norm"
                             % do nothing
@@ -102,7 +136,7 @@ classdef ComponentData
                     end
                 end
 
-                [cd_comp_sorted, d_sorted] = processComp(target_comp, cd_comp, n_max, weight, grad, hessian, map, tolerance, lb, ub);
+                [cd_comp_sorted, d_sorted] = processComp(target_comp, cd_comp, n_max, weight, grad, hessian, map, tolerance);
                 
                 CD_sorted{1,i} = cd_comp_sorted;
                 D_sorted{1,i} = d_sorted;
@@ -113,11 +147,11 @@ classdef ComponentData
                 D_sorted = D_sorted{:};
             end
             
-            function [cd_sorted,d_sorted] = processComp(target, cd, n_max, weights, grad, hessian, map, tolerance, lb, ub)
+            function [cd_sorted,d_sorted] = processComp(target, cd, n_max, weights, grad, hessian, map, tolerance)
                 N_comp = numel(cd);
                 d = zeros(N_comp,1);
                 for j = 1:N_comp
-                    d(j) = distance(target, cd(j).Data, 'Mode', opts.DistanceMode, 'LB', lb, 'UB', ub, 'Weights', weights, 'Gradient', grad, 'Hessian', hessian, 'Map', map, 'Tolerance', tolerance);
+                    d(j) = distance(target, cd(j).Data, 'Mode', opts.DistanceMode,'Weights', weights, 'Gradient', grad, 'Hessian', hessian, 'Map', map, 'Tolerance', tolerance);
                 end
                 d = d(~isnan(d));
                 [~, i_sorted] = sort(d, 'ascend');
@@ -151,45 +185,70 @@ classdef ComponentData
         end
         
         function [tbl,param_table] = table(obj_array)
-
-            assert(all(obj_array(1).Component == [obj_array.Component]), 'Component Data Objects must have Common Component to make a table');
-            
-            pdat_all = vertcat(obj_array.Data);
-            [params, I] = unique(vertcat(pdat_all.Sym));
-            unique_pdat = pdat_all(I);
-
-            param_table = table(unique_pdat);
-            pvars = string(param_table.Properties.VariableNames);
-            pvi = pvars ~= "Value";
-            param_table = param_table(:,pvi);
-            
-            comp_fields = ["Make", "Model", "SKU"];
-            varnames = [comp_fields, params'];
-            vartypes = [repmat("string",1,numel(comp_fields)) repmat("double",1,numel(params))];
-            tbl = table('Size', [numel(obj_array), numel(varnames)], 'VariableTypes', vartypes, 'VariableNames', varnames);
-            for i = 1:numel(obj_array)
-                for f = comp_fields
-                    val = obj_array(i).(f);
-                    if isempty(val)
-                        val = "";
-                    end
-                    tbl(i,:).(f) = val;
-                end
-                dat = obj_array(i).Data;
-                for j = 1:numel(params)
-                    f = params(j);
-                    cpv = filterSym(dat, f);
-                    if isempty(cpv)
-                        val = NaN;
+            comps = unique([obj_array.Component]);
+            N = numel(comps);
+            if N == 1
+                [tbl, param_table] = makeTable(obj_array);
+            else
+                tbls = cell.empty(0,N);
+                fields = cell.empty(0,N);
+                param_table = cell.empty(0,N);
+                common_fields = string.empty();
+                for c = 1:N
+                    [tbls{c}, param_table{c}] = makeTable(filterComponent(obj_array, comps(c)));
+                    fields{c} = string(tbls{c}.Properties.VariableNames);
+                    if c == 1
+                        common_fields = fields{c};
                     else
-                        N_cpv = numel(cpv);
-                        if N_cpv ~= 1
-                            error("Multiple compParamVals of same name")
-                        else
-                            val = cpv.Value;
-                        end
+                        common_fields = intersect(common_fields, fields{c});
                     end
-                    tbl(i,:).(f) = val;
+                end
+                common_tbls = cell.empty(0,N);
+                for c = 1:N
+                    FI = arrayfun(@(f) ismember(f,common_fields), fields{c});
+                    common_tbls{c} = tbls{c}(:,FI);
+                end
+                tbl = [tbls, {vertcat(common_tbls{:})}];
+            end
+
+            function [tbl, param_table] = makeTable(obj_array)
+                pdat_all = vertcat(obj_array.Data);
+                [params, I] = unique(vertcat(pdat_all.Sym));
+                unique_pdat = pdat_all(I);
+                
+                param_table = table(unique_pdat);
+                pvars = string(param_table.Properties.VariableNames);
+                pvi = pvars ~= "Value";
+                param_table = param_table(:,pvi);
+                
+                comp_fields = ["Make", "Model", "SKU"];
+                varnames = [comp_fields, params'];
+                vartypes = [repmat("string",1,numel(comp_fields)) repmat("double",1,numel(params))];
+                tbl = table('Size', [numel(obj_array), numel(varnames)], 'VariableTypes', vartypes, 'VariableNames', varnames);
+                for i = 1:numel(obj_array)
+                    for f = comp_fields
+                        val = obj_array(i).(f);
+                        if isempty(val)
+                            val = "";
+                        end
+                        tbl(i,:).(f) = val;
+                    end
+                    dat = obj_array(i).Data;
+                    for j = 1:numel(params)
+                        f = params(j);
+                        cpv = filterSym(dat, f);
+                        if isempty(cpv)
+                            val = NaN;
+                        else
+                            N_cpv = numel(cpv);
+                            if N_cpv ~= 1
+                                error("Multiple compParamVals of same name")
+                            else
+                                val = cpv.Value;
+                            end
+                        end
+                        tbl(i,:).(f) = val;
+                    end
                 end
             end
         end
