@@ -117,8 +117,8 @@ classdef compParamValue
             
             switch opts.Mode
                 case "Norm"
-                    normalized_distance = (candidate_vals./target_vals - 1);
-                    d = norm(normalized_distance);
+                    normalized_error = (candidate_vals./target_vals - 1);
+                    d = norm(normalized_error);
                 case "WeightedNorm"
                     if isa(opts.Weights, 'struct')
                         weights_struct = opts.Weights;
@@ -135,8 +135,8 @@ classdef compParamValue
                         weights = weights(I_pairs(:,1));
                     end
 
-                    normalized_distance = abs(weights).*(candidate_vals./target_vals - 1);
-                    d = norm(normalized_distance);
+                    normalized_error = abs(weights).*(candidate_vals./target_vals - 1);
+                    d = norm(normalized_error);
                 case "TaylorSeries"
                     if isa(opts.Tolerance, 'struct')
                         tol_struct = opts.Tolerance;
@@ -162,8 +162,8 @@ classdef compParamValue
                     
                     dx = candidate_vals - target_vals;
 
-                    normalized_distance = (candidate_vals./target_vals - 1);
-                    valid = all(abs(normalized_distance) < tols);
+                    normalized_error = (candidate_vals./target_vals - 1);
+                    valid = all(abs(normalized_error) < tols);
                     
                     if valid
                         I_x = I_pairs(:,1);
