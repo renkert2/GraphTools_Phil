@@ -15,7 +15,18 @@ classdef ComponentData
     
     methods
         function obj = ComponentData(comp, make, model, data)
-            if nargin > 0
+            if nargin == 1
+                assert(isa(comp, "SystemElement"), "Single argument must be of type Component");
+                
+                obj = ComponentData.empty(numel(comp),0);
+                for i = 1:numel(comp)
+                    obj(i).Component = string(class(comp(i)));
+                    obj(i).Data = getValues(comp(i).Params);
+                    for j = 1:numel(obj(i).Data)
+                        obj(i).Data(j).Component = obj(i).Component;
+                    end
+                end
+            elseif nargin > 1
                 obj.Component = comp;
                 obj.Make = make;
                 obj.Model = model;
@@ -162,13 +173,16 @@ classdef ComponentData
             end
         end
         
-        function [cd_filtered, I] = filterComponent(obj_array, component)
-           I = vertcat(obj_array.Component) == component;
-           cd_filtered = obj_array(I); 
+        function [cd_filtered, I] = filterComponent(obj_array, components)
+            I = zeros(numel(obj_array),1);
+            for i = 1:numel(components)
+                I = I | vertcat(obj_array.Component) == components(i);
+            end
+            cd_filtered = obj_array(I);
         end
         
         function [combinations, I] = combinations(varargin)
-            % Enumerates all component combinations that can be formed by 
+            % Enumerates all component combinations that can be formed by
             % selecting one component out of each ComponentData array
             % argument.  The output is a PxN matrix, where P is the product
             % of the lengths of the arguments and N is the number of
@@ -184,7 +198,12 @@ classdef ComponentData
             combinations = allcomb(varargin{:});
         end
         
-        function [tbl,param_table] = table(obj_array)
+        function [tbl,param_table] = table(obj_array, opts)
+            arguments
+                obj_array
+                opts.Display = false;
+            end
+            
             comps = unique([obj_array.Component]);
             N = numel(comps);
             if N == 1
@@ -216,14 +235,23 @@ classdef ComponentData
                 [params, I] = unique(vertcat(pdat_all.Sym));
                 unique_pdat = pdat_all(I);
                 
-                param_table = table(unique_pdat);
-                pvars = string(param_table.Properties.VariableNames);
+                if ~opts.Display
+                    param_table_full = table(unique_pdat);
+                else
+                    param_table_full = dispTable(unique_pdat);
+                end
+                
+                pvars = string(param_table_full.Properties.VariableNames);
                 pvi = pvars ~= "Value";
-                param_table = param_table(:,pvi);
+                param_table = param_table_full(:,pvi);
                 
                 comp_fields = ["Make", "Model", "SKU"];
                 varnames = [comp_fields, params'];
-                vartypes = [repmat("string",1,numel(comp_fields)) repmat("double",1,numel(params))];
+                if ~opts.Display
+                    vartypes = [repmat("string",1,numel(comp_fields)) repmat("double",1,numel(params))];
+                else
+                    vartypes = [repmat("string",1,numel(comp_fields)) repmat("string",1,numel(params))];
+                end
                 tbl = table('Size', [numel(obj_array), numel(varnames)], 'VariableTypes', vartypes, 'VariableNames', varnames);
                 for i = 1:numel(obj_array)
                     for f = comp_fields
@@ -245,6 +273,11 @@ classdef ComponentData
                                 error("Multiple compParamVals of same name")
                             else
                                 val = cpv.Value;
+                                if ~(isnumeric(val) && isscalar(val))
+                                    sz = size(val);
+                                    type = class(val);
+                                    val = sprintf("%dx%d %s", sz(1), sz(2), type);
+                                end
                             end
                         end
                         tbl(i,:).(f) = val;
@@ -262,7 +295,7 @@ classdef ComponentData
             comps = unique([obj_array.Component]);
             for c = comps
                 fprintf("Component: %s \n", c)
-                [t,tp] = table(filterComponent(obj_array, c));
+                [t,tp] = table(filterComponent(obj_array, c), 'Display', true);
                 disp(t);
                 if opts.ParamTable
                     disp(tp);

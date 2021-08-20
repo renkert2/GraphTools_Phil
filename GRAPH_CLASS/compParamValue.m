@@ -240,18 +240,77 @@ classdef compParamValue
         end
         
         function t = table(obj_array)
-%             w=warning('off','MATLAB:structOnObject');
-%             t=struct2table(arrayfun(@struct, obj_array));
-%             warning(w);
+            I = true(size(obj_array));
+            for i = 1:numel(obj_array)
+                val = obj_array(i).Value;
+                if ~(isnumeric(val) && isscalar(val))
+                    I(i) = false;
+                end
+            end            
+            if any(~I)
+                omitted_objs = obj_array(~I);
+                omitted_syms = {omitted_objs.Sym};
+                warning("Omitting nonscalar and nonnumeric parameters")
+                fprintf("Omitting Parameters: %s", omitted_syms{1})
+                if numel(omitted_syms) == 1
+                    fprintf("\n\n");
+                else
+                    fprintf(", %s\n\n", omitted_syms{2:end});
+                end
+            end
+            
+            obj_array = obj_array(I);
+                
 %             
             t = table(vertcat(obj_array.Sym), vertcat(obj_array.Value), vertcat(obj_array.Unit), vertcat(obj_array.Description), vertcat(obj_array.Component),...
                 'VariableNames', ["Sym", "Value", "Unit", "Description", "Component"]);
         end
         
-        function tbl = dispTable(obj_array)
-            tbl = table(vertcat(obj_array.Sym), vertcat(obj_array.Value), vertcat(obj_array.Unit), vertcat(obj_array.Description), vertcat(obj_array.Component),...
-                'VariableNames', ["Sym", "Value", "Unit", "Description", "Component"]);
-            disp(tbl)
+        function tbl = dispTable(obj_array, fields, opts)
+            arguments
+                obj_array
+                fields string = ["Sym", "Value", "Unit", "Description", "Component"]
+                opts.LatexSym logical = false
+                opts.LatexOpts cell = {}
+            end
+            field_vals_cell = cell(size(fields));
+            for i = 1:numel(fields)
+                field = fields(i);
+                switch field
+                    case "Value"
+                        try
+                            vals = vertcat(obj_array.Value);
+                        catch
+                            vals = strings(numel(obj_array),1);
+                            for j = 1:numel(vals)
+                                val = obj_array(j).Value;
+                                if isnumeric(val) && isscalar(val)
+                                    vals(j,1) = num2str(val);
+                                else
+                                    sz = size(val);
+                                    type = class(val);
+                                    vals(j,1) = sprintf("%dx%d %s", sz(1), sz(2), type);
+                                end
+                            end
+                        end
+                        field_vals = vals;
+                    case "Sym"
+                        if opts.LatexSym
+                            sym = latex(obj_array, opts.LatexOpts{:});
+                        else
+                            sym = vertcat(obj_array.Sym);
+                        end
+                        field_vals = sym;
+                    otherwise
+                        field_vals = vertcat(obj_array.(field));
+                end
+                field_vals_cell{i} = field_vals;
+            end
+            
+            tbl = table(field_vals_cell{:},'VariableNames', fields);
+            if nargout == 0
+                disp(tbl);
+            end
         end
 
     end
