@@ -191,7 +191,7 @@ classdef compParam < handle & matlab.mixin.Heterogeneous
             % object
             % Returns an array of compParams whose Values were set
             if isa(data, 'ComponentData')
-                data = data.Data;
+                data = vertcat(data.Data);
             end
             
             obj_array_size = [numel(obj_array), 1];
