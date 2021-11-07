@@ -319,6 +319,8 @@ classdef Model < matlab.mixin.Copyable
             if param_flag
                 [vars{end+1}, params] = tunableSyms(obj.Params);
                 vars_desc(end+1) = "theta";
+                param_tbl = dispTable(params, ["SymID", "Value", "Unit", "Description"]);
+                Ntheta = numel(params);
             end
             
             % get jacobians
@@ -329,23 +331,41 @@ classdef Model < matlab.mixin.Copyable
                 end
             end
             
-            % save tables
             saveLoc = path+"\"+comp+"\";
-            writetable(obj.StateTable, saveLoc+"Dist.csv");
-            writetable(obj.InputTable,saveLoc+"Inp.csv")
-            writetable(obj.DisturbanceTable,saveLoc+"Dist.csv")
-            writetable(obj.OutputTable,saveLoc+"Out.csv")
+            
+            % Save Model Information
+            metadata_struct = struct();
+            metadata_struct.Name = obj.Name;
+            
+            metadata_struct.Nx = obj.Nx;
+            metadata_struct.Nu = obj.Nu;
+            metadata_struct.Nd = obj.Nd;
+            metadata_struct.Ny = obj.Ny;
             if param_flag
-                param_tbl = dispTable(params, ["SymID", "Value", "Unit", "Description"]);
-                writetable(param_tbl,saveLoc+"Params.csv");
+                metadata_struct.Ntheta = Ntheta;
             end
             
+            metadata_struct.x0 = obj.x0;
+            
+            metadata_struct.StateTable = table2struct(obj.StateTable);
+            metadata_struct.InputTable = table2struct(obj.InputTable);
+            metadata_struct.DisturbanceTable = table2struct(obj.DisturbanceTable);
+            metadata_struct.OutputTable = table2struct(obj.OutputTable);
+            if param_flag
+                param_tbl = dispTable(params, ["SymID", "Value", "Unit", "Description"]);
+                metadata_struct.ParamTable = table2struct(param_tbl);
+            end
+            metadata_json = jsonencode(metadata_struct,'PrettyPrint',true);
+            fid=fopen(saveLoc+"ModelMetadata.json",'w');
+            fprintf(fid, metadata_json);
+            fclose(fid);
+
             % save python files
             for i = 1:numel(funcs_desc)
                 fprintf('Working on %s ...\n', funcs_desc(i));
                 write_py("Model_"+funcs_desc(i),"Calc_"+funcs_desc(i),funcs{i},vars,opts.Optimize)
             end
-            
+                
             % save Jacobians
             for i = 1:numel(funcs_desc)
                 for j = 1:numel(vars_desc)
