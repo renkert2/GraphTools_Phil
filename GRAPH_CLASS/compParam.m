@@ -374,6 +374,10 @@ classdef compParam < handle & matlab.mixin.Heterogeneous
             end
         end
         
+        function tbl = table(obj_array, varargin)
+            tbl = dispTable(obj_array, varargin{:});
+        end
+        
         function tbl = dispTable(obj_array, fields, opts)
             arguments
                 obj_array

@@ -131,5 +131,34 @@ classdef LinearModel < Model
             [A,B,E,C,D,H] = mats{:};
         end
     end
+
+    methods (Static)
+        function [A_d, B_d, C_d, D_d] = Discretize(A,B,C,D,dT,opts)
+            % Discretizes a Linear State Space Model, see details on
+            % Wikipedia page
+            arguments
+                A
+                B
+                C
+                D
+                dT (1,1) double
+                opts.AbsTol double = 1e-8
+                opts.RelTol double = 1e-8
+            end
+
+            A_d = expm(A*dT);
+
+            fun = @(dt) expm(dt*A);
+            Aint  = integral(fun,0,dT,'AbsTol',1e-8,'RelTol',1e-8,'ArrayValued', true);
+            B_d = Aint*B;
+            
+            if ~isempty(C)
+                C_d = C;
+            end
+            if ~isempty(D)
+                D_d = D;
+            end
+        end
+    end
 end
 
