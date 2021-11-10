@@ -44,6 +44,9 @@ classdef GraphModel < Model
         B (:,:,:) double % input mapping matrix
         
         P_sym (:,1) sym % Symbolic Representation of Power Flows
+        
+        DynamicStateEquations sym % System of equations \dot{x} = f(x,u,d)
+        AlgebraicStateEquations sym % System of equations 0 = h(x_a, u, d)
     end
     
     properties (SetAccess = protected, GetAccess = protected)
@@ -152,7 +155,7 @@ classdef GraphModel < Model
             if ~isempty(obj.Graph.DynamicVertices)
                 Desc = vertcat(obj.Graph.DynamicVertices.Description); % state description
                 Blks = vertcat(vertcat(obj.Graph.DynamicVertices.Parent).Name); % state's parent object
-                x = join([Blks,repmat('\',length(Blks),1),Desc]); %format [component \ state desc]
+                x = join([Blks,repmat(':',length(Blks),1),Desc]); %format [component : state desc]
             else
                 x = string.empty();
             end
@@ -162,7 +165,7 @@ classdef GraphModel < Model
             if ~isempty(obj.Graph.Inputs)
                 Desc = vertcat(obj.Graph.Inputs.Description); % input description
                 Blks = vertcat(vertcat(obj.Graph.Inputs.Parent).Name); % input's parent object
-                x = join([Blks,repmat('\',length(Blks),1),Desc]); %format [component \ input desc]
+                x = join([Blks,repmat(':',length(Blks),1),Desc]); %format [component : input desc]
             else
                 x = string.empty();
             end
@@ -187,7 +190,7 @@ classdef GraphModel < Model
             end
             Desc = [ext_verts_desc; ext_edges_desc]; % concatenate descriptions into single list
             Blks = [ext_verts_parents; ext_edges_parents]; % concatenate parent objects into single list
-            x = join([Blks,repmat('\',length(Blks),1),Desc]); %format [component \ disturbance desc]
+            x = join([Blks,repmat(':',length(Blks),1),Desc]); %format [component : disturbance desc]
             obj.DisturbanceDescriptions = x;
             
             % figure out the output names for a graph model
@@ -203,7 +206,7 @@ classdef GraphModel < Model
             end
             Desc = [DescX; DescY]; % concatentate descriptions
             Blks = [BlksX; BlksY]; % concatenate parent object names
-            x = join([Blks,repmat('\',length(Blks),1),Desc]); %format [component \ output desc]
+            x = join([Blks,repmat(':',length(Blks),1),Desc]); %format [component : output desc]
             obj.OutputDescriptions = x;
         end
         
@@ -438,6 +441,7 @@ classdef GraphModel < Model
                         eqnA_temp(i,1) = eqn;
                     end
                 end
+                obj.AlgebraicStateEquations = eqnA_temp;
                 eqnA(1:sum(idx_x_a),1) = eqnA_temp == 0; % system of algebraic equations
                 try
                     [A,Bu] = equationsToMatrix(eqnA,x_a); % convert eqnA to the form Ax=B
@@ -456,6 +460,7 @@ classdef GraphModel < Model
             % Process Dynamic States second
             if any(idx_x_d)
                 eqnD(1:sum(idx_x_d),1) = diag(C(idx_x_d))^-1*(-obj.Graph.M(idx_x_d,:)*P + obj.D(idx_x_d,:)*P_e); % system of dynamic equations
+                obj.DynamicStateEquations = simplifyFraction(eqnD);
                 if any(idx_x_a)
                     x_d_solution = simplifyFraction(subs(eqnD,x_a,x_a_solution)); % plug in the algebraic system solution into the dynamic system equations
                 else

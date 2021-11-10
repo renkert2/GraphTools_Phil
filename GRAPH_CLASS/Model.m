@@ -257,7 +257,7 @@ classdef Model < matlab.mixin.Copyable
         
         function t = get.OutputTable(obj)
             out_syms = arrayfun(@(x) sprintf("y%d", x), 1:obj.Ny);
-            t = table(out_syms', obj.OutputDescriptions);
+            t = table(out_syms', obj.OutputDescriptions, 'VariableNames', ["Output Variable", "Description"]);
         end
         
         function c = parseMuxArg(obj, mux_arg)
@@ -393,11 +393,8 @@ classdef Model < matlab.mixin.Copyable
                 funcDef = ["import math"];
                 funcDef(end+1,1) = ["import numpy as np"];
                 funcDef(end+1,1) = [""];
-                funcDef(end+1,1) = ["def " + functname + "(" + strjoin(vars_desc, ",") + "):"];
+                funcDef(end+1,1) = ["def " + functname + "(" + strjoin(vars_desc, ",") + ",nn):"]; % Function arguments are x,u,d,theta,nn
                 funcDef(end+1,1) = "# auto-generated function from matlab";
-                
-                % Initialize Variables
-                init(1,1) = ["out = [0]*" + numel(out_names)];
                 
                 for p = 1:numel(CalcText)
                     CalcText_line = CalcText(p);
@@ -413,46 +410,13 @@ classdef Model < matlab.mixin.Copyable
                             for m = 1:numel(in_cases)
                                 in_case = in_cases(m);
                                 element_index = extract(extractBetween(in_case, "(", ")"), digitsPattern);
+                                element_index = string(str2double(element_index)-1); % Don't forget that Python indexes by 0
                                 assert(numel(element_index) == 1, "Pattern %s contains 0 or multiple indices", in_case);
-                                new_patt = var_desc + "[" + element_index + "]";
+                                new_patt = var_desc + "[" + element_index + "]"; 
                                 CalcText_line = replace(CalcText_line, in_case, new_patt);
                             end
                         end
                     end
-                    
-%                     % Output variable parsing
-%                     rep_patt_before = "out_";
-%                     replace_pattern = rep_patt_before + digitsPattern();
-%                     in_cases = extract(CalcText_line, replace_pattern);
-%                     if ~isempty(in_cases)
-%                         for m = 1:numel(in_cases)
-%                             in_case = in_cases(m);
-%                             element_index = extract(in_cases, digitsPattern());
-%                             new_patt = "out" + "[" + element_index + "]";
-%                             CalcText_line = replace(CalcText_line, in_case, new_patt);
-%                         end
-%                     end
-                    
-                    reshape_pattern = "reshape(" + wildcardPattern + ")";
-                    reshape_cases = extract(CalcText_line, reshape_pattern);
-                    if ~isempty(reshape_cases)
-                        for m = 1:numel(reshape_cases)
-                            reshape_case = reshape_cases(m);
-                            reshape_args = extractBetween(reshape_case, "(", ")");
-                            list = extract(reshape_args, "[" + wildcardPattern + "]");
-                            if numel(list) == 1
-                                list = list(1);
-                                sizes = "(" + extractBetween(reshape_case, "],", ")") + ")";
-                            elseif numel(list) > 1
-                                sizes = list(2);
-                                list = list(1);
-                                sizes = replace(sizes, ["[", "]"], ["(", ")"]);
-                            end
-                            new_pattern = "np.reshape(" + list + "," + sizes + ")";
-                            CalcText_line = replace(CalcText_line, reshape_case, new_pattern);
-                        end
-                    end
-                    
                     CalcText(p) = CalcText_line;
                 end
                 
@@ -467,17 +431,47 @@ classdef Model < matlab.mixin.Copyable
                 CalcText(contains(CalcText,'if nargout')) = [];
                 CalcText(contains(CalcText,'end')) = [];
                 
-                % function return string
-                returnFunc = "return out";
+                for p = 1:numel(CalcText)
+                    CalcText_line = CalcText(p);
+                    reshape_pattern = "reshape(" + wildcardPattern + ")";
+                    reshape_cases = extract(CalcText_line, reshape_pattern);
+                    if ~isempty(reshape_cases)
+                        reshape_case = reshape_cases(1);
+                        reshape_index = p;
+                        
+                        reshape_args = extractBetween(reshape_case, "(", ")");
+                        list = extract(reshape_args, "[" + wildcardPattern + "]");
+                        if numel(list) == 1
+                            list = list(1);
+                            sizes = "(" + extractBetween(reshape_case, "],", ")") + ")";
+                        elseif numel(list) > 1
+                            sizes = list(2);
+                            list = list(1);
+                            sizes = replace(sizes, ["[", "]"], ["(", ")"]);
+                        end
+                        sizes_num = str2double(extract(sizes, digitsPattern()));
+                        num_elems = prod(sizes_num);
+                        new_pattern = "np.concatenate("+list+")";
+                        CalcText_arr = strings(7,1);
+                        CalcText_arr(1) = replace(CalcText_line, reshape_case, new_pattern);
+                        CalcText_arr(2) = "out_temp = [];";
+                        CalcText_arr(3) = "for i in range(nn):";
+                        CalcText_arr(4) = sprintf("\tl = [out[j,i] for j in range(%d)]", num_elems);
+                        CalcText_arr(5) = sprintf("\tl=np.reshape(l, "+sizes+")");
+                        CalcText_arr(6) = sprintf("\tout_temp.append(l)");
+                        CalcText_arr(7) = "out = out_temp"; % Return output as nn by size array
+                        
+                        break % Exit loop after finding replace statement
+                    end
+                end
+                CalcText = [CalcText(1:reshape_index-1,:); CalcText_arr; CalcText(reshape_index+1:end,:)];
                 
                 % write to file
                 fid = fopen(filepath+".py",'w');
                 fprintf(fid,'%s\n',funcDef(:));
-                fprintf(fid,'\t%s\n',init(:));
-                fprintf(fid, '\n');
                 fprintf(fid,'\t%s\n',CalcText(:));
                 fprintf(fid, '\n');
-                fprintf(fid,'\t%s\n', returnFunc(:));
+                fprintf(fid, '\treturn out');
                 fclose(fid);
                 
             end
