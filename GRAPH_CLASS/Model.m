@@ -11,7 +11,7 @@ classdef Model < matlab.mixin.Copyable
     % Association: University of Illionis at Urbana-Champaign
     % Contact: aksland2@illinois.edu and renkert2@illinois.edu
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+    
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % potential improvements:
     % Add Constructor
@@ -101,7 +101,7 @@ classdef Model < matlab.mixin.Copyable
         
         function G = CalcG(obj,x,u,d)
             param_lengths = [obj.Nx, obj.Nu, obj.Nd];
-
+            
             vars = {x,u,d};
             
             for i = 1:numel(vars)
@@ -158,7 +158,7 @@ classdef Model < matlab.mixin.Copyable
             x = obj.SymVars.x;
             u = obj.SymVars.u;
             d = obj.SymVars.d;
-     
+            
             A = jacobian(f,x);
             B = jacobian(f,u);
             E = jacobian(f,d);
@@ -182,12 +182,12 @@ classdef Model < matlab.mixin.Copyable
         end
         
         function lm = get.LinearModel(obj)
-           if isempty(obj.LinearModel)
-               lm = getLinearModel(obj);
-               obj.LinearModel = lm;
-           else
-               lm = obj.LinearModel;
-           end
+            if isempty(obj.LinearModel)
+                lm = getLinearModel(obj);
+                obj.LinearModel = lm;
+            else
+                lm = obj.LinearModel;
+            end
         end
         
         function sys_h = makeSimulinkModel(obj, sys_name)
@@ -212,7 +212,7 @@ classdef Model < matlab.mixin.Copyable
             mdlWks = get_param(sys_name,'ModelWorkspace');
             assignin(mdlWks, obj_name, obj); % Assign object to Model Workspace so we can reference it
             
-            % Get 
+            % Get
             h = Simulink.findBlocks(sys_name, 'Name', model_name, 'BlockType', 'SubSystem');
             if numel(h) == 1
                 model_path = getfullname(h);
@@ -224,7 +224,7 @@ classdef Model < matlab.mixin.Copyable
                 % Copy model template into model
                 add_block('Model_SimulinkTemplate/Model',model_path);
             end
-
+            
             set_param(model_path, 'x_0', sprintf('%s.x0', obj_name));
             
             set_param([model_path,'/Model_CalcF'], 'MATLABFcn', sprintf('Model_SimulinkInterpretedFunction(u,''%s'',''%s'',@CalcFMux)', sys_name, obj_name));
@@ -270,13 +270,13 @@ classdef Model < matlab.mixin.Copyable
         end
         
         function v = CalcFMux(obj, mux_arg)
-           c = parseMuxArg(obj, mux_arg);
-           v = CalcF(obj, c{:});
+            c = parseMuxArg(obj, mux_arg);
+            v = CalcF(obj, c{:});
         end
-                
+        
         function v = CalcGMux(obj, mux_arg)
-           c = parseMuxArg(obj, mux_arg);
-           v = CalcG(obj, c{:});
+            c = parseMuxArg(obj, mux_arg);
+            v = CalcG(obj, c{:});
         end
         
         function exportMatlabFunctions(obj)
@@ -297,10 +297,9 @@ classdef Model < matlab.mixin.Copyable
                 obj
                 opts.Path = pwd
                 opts.Optimize = false
+                opts.Name = obj.Name
             end
-
-            Name = obj.Name; %#ok<*PROP>
-            
+            Name = opts.Name;
             disp(['Exporting model ',Name,' to python...'])
             path = opts.Path;
             comp = Name;
@@ -322,16 +321,30 @@ classdef Model < matlab.mixin.Copyable
                 param_tbl = dispTable(params, ["SymID", "Value", "Unit", "Description"]);
                 Ntheta = numel(params);
             end
+            saveLoc = path+"\"+comp+"\";
             
-            % get jacobians
-            J = cell(numel(funcs_desc), numel(vars_desc));
+            % save python files
             for i = 1:numel(funcs_desc)
-                for j = 1:numel(vars_desc)
-                    J{i,j} = jacobian(funcs{i}, vars{j});
-                end
+                fprintf('Working on %s ...\n', funcs_desc(i));
+                write_py("Model_"+funcs_desc(i),"Calc_"+funcs_desc(i),funcs{i}, vars, vars_desc)
             end
             
-            saveLoc = path+"\"+comp+"\";
+            % save Jacobians
+            J = cell(numel(funcs_desc), numel(vars_desc));
+            JacStruct = struct();
+            for i = 1:numel(funcs_desc)
+                for j = 1:numel(vars_desc)
+                    jac_name = funcs_desc(i)+"_"+vars_desc(j);
+                    fprintf("Writing Jacobian %s\n", jac_name);
+                    
+                    J{i,j} = jacobian(funcs{i}, vars{j});
+                    [J_flat, st] = flattenJac(jac_name, J{i,j});
+                    JacStruct.(funcs_desc(i)).(vars_desc(j)) = st; % Create list of structures with information about Jacobian structure.  
+                    if st.NCalc > 0
+                        write_py("ModelJ_"+jac_name,"CalcJ_"+jac_name,J_flat, vars, vars_desc);
+                    end
+                end
+            end
             
             % Save Model Information
             metadata_struct = struct();
@@ -355,136 +368,106 @@ classdef Model < matlab.mixin.Copyable
                 param_tbl = dispTable(params, ["SymID", "Value", "Unit", "Description"]);
                 metadata_struct.ParamTable = table2struct(param_tbl);
             end
+            metadata_struct.JacStruct = JacStruct;
+            
             metadata_json = jsonencode(metadata_struct,'PrettyPrint',true);
             fid=fopen(saveLoc+"ModelMetadata.json",'w');
             fprintf(fid, metadata_json);
             fclose(fid);
-
-            % save python files
-            for i = 1:numel(funcs_desc)
-                fprintf('Working on %s ...\n', funcs_desc(i));
-                write_py("Model_"+funcs_desc(i),"Calc_"+funcs_desc(i),funcs{i},vars,opts.Optimize)
-            end
+            
+            function [J_flat, st] = flattenJac(Name,J)
+                % this function accounts for a significant amount of the function call
+                % time. Maybe figure out how to simplify this
+                idx = hasSymType(J,'variable');
+                [rowsCalc, colsCalc] = find(idx);
+                idxCalc = find(idx);
+                [rowsConst, colsConst] = find(~idx);
+                [idxCon] = find(~idx);
+                valCon = double(J(idxCon)); % this line accounts for like 90% of the computation time of this function. Would be nice to find an alternative
+                idxZero = valCon==0;
+                rowsConst(idxZero) = [];
+                colsConst(idxZero) = [];
+                valConst = valCon(~idxZero);
                 
-            % save Jacobians
-            for i = 1:numel(funcs_desc)
-                for j = 1:numel(vars_desc)
-                    jac_name = funcs_desc(i)+"_"+vars_desc(j);
-                    fprintf("Writing Jacobian %s\n", jac_name);
-                    write_py("ModelJ_"+jac_name,"CalcJ_"+jac_name,J{i,j},vars,opts.Optimize)
-                end
+                st = struct();
+                st.Name = Name;
+                st.NCalc = numel(idxCalc);
+                st.NConst = numel(valConst);
+                st.iCalc = idxCalc;
+                st.rCalc = rowsCalc;
+                st.cCalc = colsCalc;
+                st.rConst = rowsConst;
+                st.cConst = colsConst;
+                st.valConst = valConst;
+                
+                J_flat = J(idx);
             end
-
-            function write_py(filename,functname,symFunc,vars,opt)
-                %% generate matlab function
+            
+            function write_py(filename,functname,symFunc, VarCell, VarDesc) % May also need nn here
                 filepath = string(saveLoc)+"\"+filename;
-                out_rng = string(0:(numel(symFunc) - 1));
-                out_names = "out_"+out_rng;
-                %symCell = reshape(sym2cell(symFunc),[],1);
-                %matlabFunction(symCell{:},'Outputs',out_names,'Vars',vars,'File',filepath,'Optimize',opt,'Comments','None');
-                out = symFunc;
-                matlabFunction(out,'Vars', vars,'File',filepath,'Optimize',opt,'Comments','None');
-                %%
-                CalcText = textscan(fopen(filepath+".m"),'%s','Delimiter','\n');
-                CalcText = string(CalcText{1});
                 
+                % this block turns the symbolic expression into text that can be used to
+                % generate the ML function
+                n = length(symFunc);
+                out = sym('out',[n,1]);
+                func = out == symFunc;
+                strFunc = sprintf('\t%s \n',func);
+                oName = "out"+string(1:n);
+                
+                %%
                 % Replace Header
-                CalcText(1:8) = [];
+                % CalcText(1:8) = [];
                 funcDef = ["import math"];
                 funcDef(end+1,1) = ["import numpy as np"];
                 funcDef(end+1,1) = [""];
-                funcDef(end+1,1) = ["def " + functname + "(" + strjoin(vars_desc, ",") + ",nn):"]; % Function arguments are x,u,d,theta,nn
+                funcDef(end+1,1) = ["def " + functname + "(" + strjoin(VarDesc, ",") + "):"]; % Function arguments are x,u,d,theta
                 funcDef(end+1,1) = "# auto-generated function from matlab";
+                funcDef(end+1,1) = [""];
                 
-                for p = 1:numel(CalcText)
-                    CalcText_line = CalcText(p);
-                    
-                    % replace input variable parsing
-                    for k = 1:numel(vars_desc)
-                        var_desc = vars_desc(k);
-                        rep_patt_before = "in" + string(k) + "(";
-                        rep_patt_after =  wildcardPattern + ")";
-                        replace_pattern = rep_patt_before + digitsPattern() + rep_patt_after;    
-                        in_cases = extract(CalcText_line, replace_pattern);
-                        if ~isempty(in_cases)
-                            for m = 1:numel(in_cases)
-                                in_case = in_cases(m);
-                                element_index = extract(extractBetween(in_case, "(", ")"), digitsPattern);
-                                element_index = string(str2double(element_index)-1); % Don't forget that Python indexes by 0
-                                assert(numel(element_index) == 1, "Pattern %s contains 0 or multiple indices", in_case);
-                                new_patt = var_desc + "[" + element_index + "]"; 
-                                CalcText_line = replace(CalcText_line, in_case, new_patt);
-                            end
+                % replace input variable parsing
+                func_vars = symvar(symFunc);
+                ParseText = string.empty();
+                for m = 1:numel(VarCell)
+                    sym_vars = VarCell{m}; 
+                    str_vars = string(sym_vars);
+                    for n = 1:numel(sym_vars)
+                        if ismember(sym_vars(n), func_vars)
+                            index_str = VarDesc(m) + "[" + string(n - 1) + "]";
+                            eq_str = sprintf("%s = %s", str_vars(n), index_str); 
+                            ParseText = [ParseText, eq_str];
                         end
                     end
-                    CalcText(p) = CalcText_line;
                 end
-                
-                CalcText(contains(CalcText,'in')) = [];
                 
                 % replace matlab syntax
-                CalcText = strrep(CalcText,'.*','*');
-                CalcText = strrep(CalcText,'./','/');
-                CalcText = strrep(CalcText,'.^','**');
-                CalcText = strrep(CalcText,'sqrt','math.sqrt');
-                CalcText = strrep(CalcText, 'pi', 'np.pi');
-                CalcText(contains(CalcText,'if nargout')) = [];
-                CalcText(contains(CalcText,'end')) = [];
+                strFunc = strrep(strFunc,'==','=');
+                strFunc = strrep(strFunc,'*','*');
+                strFunc = strrep(strFunc,'/','/');
+                strFunc = strrep(strFunc,'^','**');
+                strFunc = strrep(strFunc,'sqrt','math.sqrt');
+                strFunc = strrep(strFunc,'pi','np.pi');
                 
-                for p = 1:numel(CalcText)
-                    CalcText_line = CalcText(p);
-                    reshape_pattern = "reshape(" + wildcardPattern + ")";
-                    reshape_cases = extract(CalcText_line, reshape_pattern);
-                    if ~isempty(reshape_cases)
-                        reshape_case = reshape_cases(1);
-                        reshape_index = p;
-                        
-                        reshape_args = extractBetween(reshape_case, "(", ")");
-                        list = extract(reshape_args, "[" + wildcardPattern + "]");
-                        if numel(list) == 1
-                            list = list(1);
-                            sizes = "(" + extractBetween(reshape_case, "],", ")") + ")";
-                        elseif numel(list) > 1
-                            sizes = list(2);
-                            list = list(1);
-                            sizes = replace(sizes, ["[", "]"], ["(", ")"]);
-                        end
-                        sizes_num = str2double(extract(sizes, digitsPattern()));
-                        num_elems = prod(sizes_num);
-                        new_pattern = "np.concatenate("+list+")";
-                        CalcText_arr = strings(7,1);
-                        CalcText_arr(1) = replace(CalcText_line, reshape_case, new_pattern);
-                        CalcText_arr(2) = "out_temp = [];";
-                        CalcText_arr(3) = "for i in range(nn):";
-                        CalcText_arr(4) = sprintf("\tl = [out[j,i] for j in range(%d)]", num_elems);
-                        CalcText_arr(5) = sprintf("\tl=np.reshape(l, "+sizes+")");
-                        CalcText_arr(6) = sprintf("\tout_temp.append(l)");
-                        CalcText_arr(7) = "out = out_temp"; % Return output as nn by size array
-                        
-                        break % Exit loop after finding replace statement
-                    end
-                end
-                CalcText = [CalcText(1:reshape_index-1,:); CalcText_arr; CalcText(reshape_index+1:end,:)];
+                % function return string
+                returnFunc = ['return ', sprintf('%s, ',oName{1:end-1}),oName{end}];
                 
                 % write to file
-                fid = fopen(filepath+".py",'w');
-                fprintf(fid,'%s\n',funcDef(:));
-                fprintf(fid,'\t%s\n',CalcText(:));
-                fprintf(fid, '\n');
-                fprintf(fid, '\treturn out');
+                fid = fopen(filepath + ".py",'w');
+                fprintf(fid,'%s\n',funcDef);
+                fprintf(fid,'\t%s\n',ParseText);
+                fprintf(fid,'%s',strFunc);
+                fprintf(fid,'\t%s\n',returnFunc);
                 fclose(fid);
-                
             end
         end
     end
-   
+    
     methods (Access = protected)
         function funcs = genMatlabFunctions(obj, syms, vars)
             % Generates matlabFunctions from symbolic arrays
             % i.e. f_sym -> calcF_Func and g_sym -> calcG_Func in
             % setCalcFuncs().
             % Vars argument is optional
-            arguments 
+            arguments
                 obj
                 syms
                 vars = {}
@@ -519,10 +502,10 @@ classdef Model < matlab.mixin.Copyable
                 obj_from
                 obj_to
                 opts.Properties = ["Nx","Nu","Nd","Ny","x0",...
-                "StateDescriptions", "InputDescriptions", "DisturbanceDescriptions", "OutputDescriptions",...
-                "SymVars","Params"];
+                    "StateDescriptions", "InputDescriptions", "DisturbanceDescriptions", "OutputDescriptions",...
+                    "SymVars","Params"];
             end
-
+            
             for prop = opts.Properties
                 val = obj_from.(prop);
                 if ~isempty(val)

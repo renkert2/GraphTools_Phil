@@ -9,14 +9,19 @@ import numpy as np
 import openmdao.api as om
 import importlib as impL
 import json
+import os
+import sys
 
-def DymosPhase(mdl, tx, state_opts = {}, control_opts = {}, disturbance_opts = {}, parameter_opts = {}):
+def DymosPhase(mdl, tx, include_disturbances = False, path = '', 
+               model_opts = {}, state_opts = {}, control_opts = {}, disturbance_opts = {}, parameter_opts = {}):
+    
     # Instantiate a Dymos Trajectory
     meta = ImportMetadata(mdl)
     
     # Instantiate a Phase and add it to the Trajectory.
     # Here the transcription is necessary but not particularly relevant.
-    phase = dm.Phase(ode_class=DymosModel, ode_init_kwargs={"Model":mdl}, transcription=tx)
+    model_opts = {"Model":mdl, "Path":path, "include_disturbances":include_disturbances}
+    phase = dm.Phase(ode_class=DymosModel, ode_init_kwargs=model_opts, transcription=tx)
     
     # Tell Dymos the states to be propagated using the given ODE.
     state_vars = [x["StateVariable"] for x in meta["StateTable"]]
@@ -26,11 +31,12 @@ def DymosPhase(mdl, tx, state_opts = {}, control_opts = {}, disturbance_opts = {
     # Tell Dymos the inputs to be propagated using the given ODE.
     input_vars = [x["InputVariable"] for x in meta["InputTable"]]
     for var in input_vars:
-        phase.add_control(var, **control_opts)
+        phase.add_control(var, continuity=True, rate_continuity=True, **control_opts)
         
-    dist_vars = [x["DisturbanceVariable"] for x in meta["DisturbanceTable"]]
-    for var in dist_vars:
-        phase.add_control(var, **disturbance_opts)
+    if include_disturbances:
+        dist_vars = [x["DisturbanceVariable"] for x in meta["DisturbanceTable"]]
+        for var in dist_vars:
+            phase.add_control(var, **disturbance_opts)
 
     # Define constant parameters
     for param in meta["ParamTable"]:
@@ -42,33 +48,39 @@ class DymosModel(om.Group):
     def initialize(self):
         self.options.declare('num_nodes', types=int) # Number of nodes property, required for Dymos models
         self.options.declare('Model', types=str, default = 'None') # "Model" property used to store name of folder containing Model .py functions and variable tables
-        
+        self.options.declare('include_disturbances', types=bool, default = False) # "Model" property used to store name of folder containing Model .py functions and variable tables
+        self.options.declare('Path', types=str, default = '') # Path to directory containing model folder "Model", i.e. abs_path = Path/Model/
+    
     def setup(self):
         nn = self.options['num_nodes']
         mdl = self.options['Model']
         
-        self.ImportModel(mdl)
-        
+        self.ImportModel(mdl, self.options["Path"])
+        shared_opts = {"num_nodes":nn, "_Metadata":self.Metadata, "include_disturbances":self.options["include_disturbances"]}
         # Instantiate Dynamic Model Subsystem (f), promote x,u,d,theta
-        f_subsys = _CalcF(num_nodes = nn, _Calc = self.Calc["f"], _CalcJ = self.CalcJ["f"], _Metadata=self.Metadata)
+        f_subsys = _CalcF(_Calc = self.Calc["f"], _CalcJ = self.CalcJ["f"], **shared_opts)
         self.add_subsystem(name="CalcF", subsys=f_subsys,
                            promotes = ["*"])
         
         # Instantiate Output Model Subsystem (g), promote x,u,d,theta
-        g_subsys = _CalcG(num_nodes = nn, _Calc = self.Calc["g"], _CalcJ = self.CalcJ["g"], _Metadata=self.Metadata)
+        g_subsys = _CalcG(_Calc = self.Calc["g"], _CalcJ = self.CalcJ["g"], **shared_opts)
         self.add_subsystem(name="CalcG", subsys=g_subsys,
                            promotes = ["*"])
         
-    def ImportModel(self,mdl):
+    def ImportModel(self,mdl, mdl_path=''):
         # sys.path.insert(0, mdl)
+        if mdl_path:
+            sys.path.append(mdl_path)
+            
         meta_dict = ImportMetadata(mdl)
-
         Nx = meta_dict["Nx"]        
         Nu = meta_dict["Nu"]
         Nd = meta_dict["Nd"]
         Ny = meta_dict["Ny"]
         Ntheta = meta_dict["Ntheta"]
+        JacStruct = meta_dict["JacStruct"]
         
+        # Functions
         func_list = ['f', 'g']
         calc = {}
         for func in func_list:
@@ -76,20 +88,22 @@ class DymosModel(om.Group):
             handle = getattr(mod, "Calc_" + func)
             calc[func] = handle
             
-        var_list = ["x", "u", "d", "theta"]
-        calcJ = {}
-        for func in func_list:
-            calcJ_inner = {}
-            for var in var_list:
-                partial = func + "_" + var
-                mod = impL.import_module(mdl + ".ModelJ_" + partial)
-                handle = getattr(mod, "CalcJ_" + partial)
-                calcJ_inner[var] = handle
-            calcJ[func] = calcJ_inner
-                    
+        # Jacobian
+        # Append function handle to Jacobian metadata
+        for f in JacStruct:
+            for v in JacStruct[f]:
+                if JacStruct[f][v]["NCalc"] > 0:
+                    partial = JacStruct[f][v]["Name"]
+                    mod = impL.import_module(mdl + ".ModelJ_" + partial)
+                    handle = getattr(mod, "CalcJ_" + partial)
+                    JacStruct[f][v]["Handle"] = handle
+                
         self.Metadata = meta_dict
         self.Calc = calc
-        self.CalcJ = calcJ
+        self.CalcJ = JacStruct
+        
+        if mdl_path:
+            sys.path.remove(mdl_path)
 
 class _CalcF(om.ExplicitComponent):
     def initialize(self):
@@ -97,80 +111,107 @@ class _CalcF(om.ExplicitComponent):
         self.options.declare('_Metadata')
         self.options.declare('_Calc') # Number of nodes property, required for Dymos models
         self.options.declare('_CalcJ') # Number of nodes property, required for Dymos models
+        self.options.declare('include_disturbances', types=bool, default = False) # "Model" property used to store name of folder containing Model .py functions and variable tables
         
     def setup(self):
         nn = self.options['num_nodes']
         meta = self.options["_Metadata"]
+        calcJ = self.options["_CalcJ"]
+        
+        self.VarNames = {}
         
         ### INPUTS ###
         # x
         state_table = meta["StateTable"]
-        self.StateVars = [x["StateVariable"] for x in state_table]
+        self.VarNames["x"] = [x["StateVariable"] for x in state_table]
         for var in state_table:
             self.add_input(var["StateVariable"], desc=var["Description"], shape=(nn,))
         # u
         input_table = meta["InputTable"]
-        self.InputVars = [x["InputVariable"] for x in input_table]
+        self.VarNames["u"] = [x["InputVariable"] for x in input_table]
         for var in input_table:
             self.add_input(var["InputVariable"], desc=var["Description"], shape=(nn,))
         # d
         disturbance_table = meta["DisturbanceTable"]
-        self.DisturbanceVars = [x["DisturbanceVariable"] for x in disturbance_table]
-        for var in disturbance_table:
-            self.add_input(var["DisturbanceVariable"], desc=var["Description"], shape=(nn,))
+        self.VarNames["d"] = [x["DisturbanceVariable"] for x in disturbance_table]
+        if self.options["include_disturbances"]:
+            for var in disturbance_table:
+                self.add_input(var["DisturbanceVariable"], desc=var["Description"], shape=(nn,))
             
         # theta
         param_table = meta["ParamTable"]
-        self.ParamVars = [x["SymID"] for x in param_table]
+        self.VarNames["theta"] = [x["SymID"] for x in param_table]
         for param in param_table:
             self.add_input(param["SymID"], val=param["Value"], desc=var["Description"], tags=['dymos.static_target'])
         
         ### OUTPUTS ###
         #xdot
-        self.StateVars_dot = [x["StateVariable"]+"_dot" for x in state_table]
+        self.VarNames["x_dot"] = [x["StateVariable"]+"_dot" for x in state_table]
         for var in state_table:
-            self.add_output(var["StateVariable"]+"_dot", desc="Rate of Change: "+var["Description"], shape=(nn,))
-            
+            self.add_output(var["StateVariable"]+"_dot", desc="Rate of Change: "+var["Description"], shape=(nn,), units="1.0/s")
+ 
         ### PARTIALS ###
         # Come Back to this - just get the model working
-        self.declare_partials(["*"], ["*"], method="fd")
-       
+        arange = np.arange(nn)
+        c = np.zeros(nn)
+        var_list = ["x", "u", "d", "theta"] if self.options["include_disturbances"] else ["x", "u", "theta"]
+        self.VarList = var_list
+        for v in var_list:
+            J = calcJ[v] # Get the Jacobian information of f w.r.t v
+            
+            # Calculated Derivatives
+            if J["NCalc"]:
+                rCalc = J["rCalc"] - 1 # Convert from 1 indexing to 0 indexing
+                cCalc = J["cCalc"] - 1 # Convert from 1 indexing to 0 indexing
+                for i in range(J["NCalc"]):
+                    of = self.VarNames["x_dot"][rCalc[i]]
+                    wrt = self.VarNames[v][cCalc[i]]
+                    rows = arange
+                    cols = (c if v == "theta" else arange)
+                    self.declare_partials(of=of, wrt=wrt, rows=rows, cols=cols)
+            
+            # Constant Derivatives
+            if J["NConst"]:
+                rConst = J["rConst"] - 1 # Convert from 1 indexing to 0 indexing
+                cConst = J["cConst"] - 1 # Convert from 1 indexing to 0 indexing
+                for i in range(J["NConst"]):
+                    of = self.VarNames["x_dot"][rConst[i]]
+                    wrt = self.VarNames[v][cConst[i]]
+                    val = J["valConst"]*np.ones((nn, 1))
+                    self.declare_partials(of=of, wrt=wrt, val=val)
+
     def compute(self, inputs, outputs):
         nn = self.options['num_nodes']
-        
-        # Assemble Vectors
-        X = []
-        for i,x in enumerate(self.StateVars):
-            X.append(inputs[x])
-        
-        U = []
-        for i,u in enumerate(self.InputVars):
-            U.append(inputs[u])
-
-        D = []
-        for i,d in enumerate(self.DisturbanceVars):
-            D.append(inputs[d])
-            
-        Theta = []
-        for i,theta in enumerate(self.ParamVars):
-            Theta.append(inputs[theta])
-        
+        arg_list = AssembleVectors(self, inputs, nn)
+           
         # Call Calc function
         f = self.options["_Calc"]
-        X_dot = f(X,U,D,Theta,nn)
-        
-        # Process Outputs
-        # - Output is list of arrays.  Outer level is the number of time segments, inner index corresponds to the outputs
-        # - X_dot[i][j] corresponds to the j_th output of the i_th time segment
+        X_dot = f(*arg_list) # Tuple of outputs, X_dot[i][j] corresponds to jth time step of ith output
         
         # Assign to Outputs
+        for i,x_dot in enumerate(self.VarNames["x_dot"]): 
+            outputs[x_dot] = X_dot[i]
+    
+    def compute_partials(self, inputs, partials):
+        # Assemble Input Variables
+        nn = self.options['num_nodes']
+        calcJ = self.options["_CalcJ"]
+        
+        # Assemble Vectors
+        arg_list = AssembleVectors(self, inputs, nn)
+        
+        # Calculate and assign computed derivatives to Partials
+        for v in self.VarList:
+            J = calcJ[v]
+            if J["NCalc"]:
+                J_out = J["Handle"](*arg_list)
+                rCalc = J["rCalc"] - 1 # Convert from 1 indexing to 0 indexing
+                cCalc = J["cCalc"] - 1 # Convert from 1 indexing to 0 indexing
+                for i in range(J["NCalc"]):
+                    of = self.VarNames["x_dot"][rCalc[i]]
+                    wrt = self.VarNames[v][cCalc[i]]
+                    partials[of, wrt] = J_out[i]
 
-        for i,x_dot in enumerate(self.StateVars_dot):
-            # 
-            out_temp = np.zeros(nn)
-            for j in range(nn):
-                out_temp[j] = X_dot[j][i]
-            outputs[x_dot] = out_temp
 
 class _CalcG(om.ExplicitComponent):
     def initialize(self):
@@ -178,6 +219,7 @@ class _CalcG(om.ExplicitComponent):
         self.options.declare('_Metadata')
         self.options.declare('_Calc') # Number of nodes property, required for Dymos models
         self.options.declare('_CalcJ') # Number of nodes property, required for Dymos models
+        self.options.declare('include_disturbances', types=bool, default = False) # "Model" property used to store name of folder containing Model .py functions and variable tables
         
     def setup(self):
         nn = self.options['num_nodes']
@@ -197,8 +239,9 @@ class _CalcG(om.ExplicitComponent):
         # d
         disturbance_table = meta["DisturbanceTable"]
         self.DisturbanceVars = [x["DisturbanceVariable"] for x in disturbance_table]
-        for var in disturbance_table:
-            self.add_input(var["DisturbanceVariable"], desc=var["Description"], shape=(nn,))
+        if self.options["include_disturbances"]:
+            for var in disturbance_table:
+                self.add_input(var["DisturbanceVariable"], desc=var["Description"], shape=(nn,))
             
         # theta
         param_table = meta["ParamTable"]
@@ -215,7 +258,7 @@ class _CalcG(om.ExplicitComponent):
             
         ### PARTIALS ###
         # Come Back to this - just get the model working
-        self.declare_partials(["*"], ["*"], method="fd")
+        self.declare_partials(["*"], ["*"], method="cs")
     
     def compute(self, inputs, outputs):
         nn = self.options['num_nodes']
@@ -231,7 +274,10 @@ class _CalcG(om.ExplicitComponent):
 
         D = []
         for i,d in enumerate(self.DisturbanceVars):
-            D.append(inputs[d])
+            if self.options["include_disturbances"]:
+                D.append(inputs[d])
+            else: 
+                D.append(np.zeros(nn))
             
         Theta = []
         for i,theta in enumerate(self.ParamVars):
@@ -247,7 +293,7 @@ class _CalcG(om.ExplicitComponent):
         
         # Assign to Outputs
         for i,y in enumerate(self.OutputVars):
-            out_temp = np.zeros(nn)
+            out_temp = np.zeros(nn, dtype=np.complex_)
             for j in range(nn):
                 out_temp[j] = Y[j][i]
             outputs[y] = out_temp
@@ -259,3 +305,18 @@ def ImportMetadata(mdl):
     meta_file = open(mdl + '\ModelMetadata.json', 'r')
     meta_dict = json.load(meta_file)
     return meta_dict
+
+def AssembleVectors(obj, inputs, nn):
+    arg_list = []
+    for v in ["x", "u", "d", "theta"]:
+        arg_list_inner = []
+        for x in obj.VarNames[v]:
+            if v != "d":
+                arg_list_inner.append(inputs[x])
+            else: 
+                if obj.options["include_disturbances"]:
+                    arg_list_inner.append(inputs[x])
+                else: 
+                    arg_list_inner.append(np.zeros(nn))
+        arg_list.append(arg_list_inner)
+    return arg_list
