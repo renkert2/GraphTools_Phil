@@ -31,7 +31,7 @@ def DymosPhase(mdl, tx, include_disturbances = False, path = '',
     # Tell Dymos the inputs to be propagated using the given ODE.
     input_vars = [x["InputVariable"] for x in meta["InputTable"]]
     for var in input_vars:
-        phase.add_control(var, continuity=True, rate_continuity=True, **control_opts)
+        phase.add_control(var, **control_opts)
         
     if include_disturbances:
         dist_vars = [x["DisturbanceVariable"] for x in meta["DisturbanceTable"]]
@@ -161,8 +161,8 @@ class _CalcF(om.ExplicitComponent):
             
             # Calculated Derivatives
             if J["NCalc"]:
-                rCalc = J["rCalc"] - 1 # Convert from 1 indexing to 0 indexing
-                cCalc = J["cCalc"] - 1 # Convert from 1 indexing to 0 indexing
+                rCalc = np.array(J["rCalc"]) - 1 # Convert from 1 indexing to 0 indexing
+                cCalc = np.array(J["cCalc"]) - 1 # Convert from 1 indexing to 0 indexing
                 for i in range(J["NCalc"]):
                     of = self.VarNames["x_dot"][rCalc[i]]
                     wrt = self.VarNames[v][cCalc[i]]
@@ -172,13 +172,15 @@ class _CalcF(om.ExplicitComponent):
             
             # Constant Derivatives
             if J["NConst"]:
-                rConst = J["rConst"] - 1 # Convert from 1 indexing to 0 indexing
-                cConst = J["cConst"] - 1 # Convert from 1 indexing to 0 indexing
+                rConst = np.array(J["rConst"]) - 1 # Convert from 1 indexing to 0 indexing
+                cConst = np.array(J["cConst"]) - 1 # Convert from 1 indexing to 0 indexing
                 for i in range(J["NConst"]):
                     of = self.VarNames["x_dot"][rConst[i]]
                     wrt = self.VarNames[v][cConst[i]]
-                    val = J["valConst"]*np.ones((nn, 1))
-                    self.declare_partials(of=of, wrt=wrt, val=val)
+                    rows = arange
+                    cols = (c if v == "theta" else arange)
+                    val = J["valConst"][i]*np.ones(nn)
+                    self.declare_partials(of=of, wrt=wrt, val=val, rows=rows, cols=cols)
 
     def compute(self, inputs, outputs):
         nn = self.options['num_nodes']
@@ -205,8 +207,8 @@ class _CalcF(om.ExplicitComponent):
             J = calcJ[v]
             if J["NCalc"]:
                 J_out = J["Handle"](*arg_list)
-                rCalc = J["rCalc"] - 1 # Convert from 1 indexing to 0 indexing
-                cCalc = J["cCalc"] - 1 # Convert from 1 indexing to 0 indexing
+                rCalc = np.array(J["rCalc"]) - 1 # Convert from 1 indexing to 0 indexing
+                cCalc = np.array(J["cCalc"]) - 1 # Convert from 1 indexing to 0 indexing
                 for i in range(J["NCalc"]):
                     of = self.VarNames["x_dot"][rCalc[i]]
                     wrt = self.VarNames[v][cCalc[i]]
@@ -224,81 +226,104 @@ class _CalcG(om.ExplicitComponent):
     def setup(self):
         nn = self.options['num_nodes']
         meta = self.options["_Metadata"]
+        calcJ = self.options["_CalcJ"]
+        
+        self.VarNames = {}
         
         ### INPUTS ###
         # x
         state_table = meta["StateTable"]
-        self.StateVars = [x["StateVariable"] for x in state_table]
+        self.VarNames["x"] = [x["StateVariable"] for x in state_table]
         for var in state_table:
             self.add_input(var["StateVariable"], desc=var["Description"], shape=(nn,))
         # u
         input_table = meta["InputTable"]
-        self.InputVars = [x["InputVariable"] for x in input_table]
+        self.VarNames["u"] = [x["InputVariable"] for x in input_table]
         for var in input_table:
             self.add_input(var["InputVariable"], desc=var["Description"], shape=(nn,))
         # d
         disturbance_table = meta["DisturbanceTable"]
-        self.DisturbanceVars = [x["DisturbanceVariable"] for x in disturbance_table]
+        self.VarNames["d"] = [x["DisturbanceVariable"] for x in disturbance_table]
         if self.options["include_disturbances"]:
             for var in disturbance_table:
                 self.add_input(var["DisturbanceVariable"], desc=var["Description"], shape=(nn,))
             
         # theta
         param_table = meta["ParamTable"]
-        self.ParamVars = [x["SymID"] for x in param_table]
+        self.VarNames["theta"] = [x["SymID"] for x in param_table]
         for param in param_table:
             self.add_input(param["SymID"], val=param["Value"], desc=var["Description"], tags=['dymos.static_target'])
         
         ### OUTPUTS ###
         #y
         output_table = meta["OutputTable"]
-        self.OutputVars = [x["OutputVariable"] for x in output_table]
+        self.VarNames["y"] = [x["OutputVariable"] for x in output_table]
         for var in output_table:
             self.add_output(var["OutputVariable"], desc=var["Description"], shape=(nn,))
             
         ### PARTIALS ###
         # Come Back to this - just get the model working
-        self.declare_partials(["*"], ["*"], method="cs")
+        arange = np.arange(nn)
+        c = np.zeros(nn)
+        var_list = ["x", "u", "d", "theta"] if self.options["include_disturbances"] else ["x", "u", "theta"]
+        self.VarList = var_list
+        for v in var_list:
+            J = calcJ[v] # Get the Jacobian information of f w.r.t v
+            
+            # Calculated Derivatives
+            if J["NCalc"]:
+                rCalc = np.array(J["rCalc"]) - 1 # Convert from 1 indexing to 0 indexing
+                cCalc = np.array(J["cCalc"]) - 1 # Convert from 1 indexing to 0 indexing
+                for i in range(J["NCalc"]):
+                    of = self.VarNames["y"][rCalc[i]]
+                    wrt = self.VarNames[v][cCalc[i]]
+                    rows = arange
+                    cols = (c if v == "theta" else arange)
+                    self.declare_partials(of=of, wrt=wrt, rows=rows, cols=cols)
+            
+            # Constant Derivatives
+            if J["NConst"]:
+                rConst = np.array(J["rConst"]) - 1 # Convert from 1 indexing to 0 indexing
+                cConst = np.array(J["cConst"]) - 1 # Convert from 1 indexing to 0 indexing
+                for i in range(J["NConst"]):
+                    of = self.VarNames["y"][rConst[i]]
+                    wrt = self.VarNames[v][cConst[i]]
+                    rows = arange
+                    cols = (c if v == "theta" else arange)
+                    val = J["valConst"][i]*np.ones(nn)
+                    self.declare_partials(of=of, wrt=wrt, val=val, rows=rows, cols=cols)
     
     def compute(self, inputs, outputs):
         nn = self.options['num_nodes']
-        
-        # Assemble Vectors
-        X = []
-        for i,x in enumerate(self.StateVars):
-            X.append(inputs[x])
-        
-        U = []
-        for i,u in enumerate(self.InputVars):
-            U.append(inputs[u])
-
-        D = []
-        for i,d in enumerate(self.DisturbanceVars):
-            if self.options["include_disturbances"]:
-                D.append(inputs[d])
-            else: 
-                D.append(np.zeros(nn))
-            
-        Theta = []
-        for i,theta in enumerate(self.ParamVars):
-            Theta.append(inputs[theta])
-        
+        arg_list = AssembleVectors(self, inputs, nn)
+           
         # Call Calc function
         g = self.options["_Calc"]
-        Y = g(X,U,D,Theta,nn)
-        
-        # Process Outputs
-        # - Output is list of arrays.  Outer level is the number of time segments, inner index corresponds to the outputs
-        # - X_dot[i][j] corresponds to the j_th output of the i_th time segment
+        Y = g(*arg_list) # Tuple of outputs, X_dot[i][j] corresponds to jth time step of ith output
         
         # Assign to Outputs
-        for i,y in enumerate(self.OutputVars):
-            out_temp = np.zeros(nn, dtype=np.complex_)
-            for j in range(nn):
-                out_temp[j] = Y[j][i]
-            outputs[y] = out_temp
+        for i,y in enumerate(self.VarNames["y"]): 
+            outputs[y] = Y[i]
+            
+    def compute_partials(self, inputs, partials):
+        # Assemble Input Variables
+        nn = self.options['num_nodes']
+        calcJ = self.options["_CalcJ"]
         
-        return 
+        # Assemble Vectors
+        arg_list = AssembleVectors(self, inputs, nn)
+        
+        # Calculate and assign computed derivatives to Partials
+        for v in self.VarList:
+            J = calcJ[v]
+            if J["NCalc"]:
+                J_out = J["Handle"](*arg_list)
+                rCalc = np.array(J["rCalc"]) - 1 # Convert from 1 indexing to 0 indexing
+                cCalc = np.array(J["cCalc"]) - 1 # Convert from 1 indexing to 0 indexing
+                for i in range(J["NCalc"]):
+                    of = self.VarNames["y"][rCalc[i]]
+                    wrt = self.VarNames[v][cCalc[i]]
+                    partials[of, wrt] = J_out[i]
 
 ### HELPER FUNCTIONS ###
 def ImportMetadata(mdl):
