@@ -266,6 +266,10 @@ classdef compParam < handle & matlab.mixin.Heterogeneous
             % other symbolic variables not in the SymParams.  Elements of
             % cell array args are added as arguments after the first
             % argument for the sym param values
+            
+            % f automatically evaluates params.Value and substitutes them into the 
+            % function so that they are hidden away.  Probably a better way to do this
+            % but does work well.  
             arguments
                 obj_array
                 sym

@@ -12,8 +12,7 @@ import json
 import os
 import sys
 
-def DymosPhase(mdl, tx, include_disturbances = False, path = '', 
-               model_opts = {}, state_opts = {}, control_opts = {}, disturbance_opts = {}, parameter_opts = {}):
+def DymosPhase(mdl, tx, include_disturbances = False, path = '', **kwargs):
     
     # Instantiate a Dymos Trajectory
     meta = ImportMetadata(mdl)
@@ -23,25 +22,49 @@ def DymosPhase(mdl, tx, include_disturbances = False, path = '',
     model_opts = {"Model":mdl, "Path":path, "include_disturbances":include_disturbances}
     phase = dm.Phase(ode_class=DymosModel, ode_init_kwargs=model_opts, transcription=tx)
     
+    phase= ModifyPhase(phase, meta, include_disturbances=include_disturbances, **kwargs)
+        
+    return phase
+
+def ModifyPhase(phase, meta, openmdao_path = "", include_disturbances=False, state_opts = {}, control_opts = {}, disturbance_opts = {}, parameter_opts = {}):
+    def CreateVarPath(var):
+        # If path to OpenMDAO Variable is specified, prepend it to the variable name
+        if openmdao_path:
+            name = openmdao_path + "_" + var
+            target = openmdao_path + "." + var
+        else:
+            name = var
+            target = var
+        return name, target
+    
     # Tell Dymos the states to be propagated using the given ODE.
     state_vars = [x["StateVariable"] for x in meta["StateTable"]]
     for var in state_vars:
-        phase.add_state(var, rate_source=var+"_dot", **state_opts)
+        name, target = CreateVarPath(var)
+        phase.add_state(name, targets=target, rate_source=target+"_dot", **state_opts)
         
     # Tell Dymos the inputs to be propagated using the given ODE.
     input_vars = [x["InputVariable"] for x in meta["InputTable"]]
     for var in input_vars:
-        phase.add_control(var, **control_opts)
+        name, target = CreateVarPath(var)
+        phase.add_control(name, targets=target, **control_opts)
         
     if include_disturbances:
         dist_vars = [x["DisturbanceVariable"] for x in meta["DisturbanceTable"]]
         for var in dist_vars:
-            phase.add_control(var, **disturbance_opts)
+            name, target = CreateVarPath(var)
+            phase.add_control(name, targets=target, **disturbance_opts)
 
     # Define constant parameters
     for param in meta["ParamTable"]:
-        phase.add_parameter(param["SymID"], val=param["Value"], static_target=True, **parameter_opts)
+        name, target = CreateVarPath(param["SymID"])
+        phase.add_parameter(name, val=param["Value"], targets=target, static_target=True, **parameter_opts)
         
+    out_vars = [x["OutputVariable"] for x in meta["OutputTable"]]
+    for var in out_vars:
+        name, target = CreateVarPath(var)
+        phase.add_timeseries_output(target, output_name="outputs:"+var)
+    
     return phase
 
 class DymosModel(om.Group):
@@ -70,9 +93,12 @@ class DymosModel(om.Group):
     def ImportModel(self,mdl, mdl_path=''):
         # sys.path.insert(0, mdl)
         if mdl_path:
+            #dir_cache = os.getcwd()
+            #os.chdir(mdl_path)
             sys.path.append(mdl_path)
+            mdl_path_ = os.path.join(mdl_path, mdl)
             
-        meta_dict = ImportMetadata(mdl)
+        meta_dict = ImportMetadata(mdl_path_)
         Nx = meta_dict["Nx"]        
         Nu = meta_dict["Nu"]
         Nd = meta_dict["Nd"]
@@ -104,7 +130,8 @@ class DymosModel(om.Group):
         
         if mdl_path:
             sys.path.remove(mdl_path)
-
+            #os.chdir(dir_cache)
+    
 class _CalcF(om.ExplicitComponent):
     def initialize(self):
         self.options.declare('num_nodes', types=int) # Number of nodes property, required for Dymos models
@@ -325,9 +352,134 @@ class _CalcG(om.ExplicitComponent):
                     wrt = self.VarNames[v][cCalc[i]]
                     partials[of, wrt] = J_out[i]
 
+class SteadyStateModel(om.Group):
+    # Identical to DynamicModel, except it uses an attached solver to 
+    def initialize(self):
+        self.options.declare('Model', types=str, default = 'None') # "Model" property used to store name of folder containing Model .py functions and variable tables
+        self.options.declare('include_disturbances', types=bool, default = False) # "Model" property used to store name of folder containing Model .py functions and variable tables
+        self.options.declare('Path', types=str, default = '') # Path to directory containing model folder "Model", i.e. abs_path = Path/Model/
+        self.options.declare('Input', types=str, default='u') # Known variables when solving for steady-state
+        self.options.declare('Output', types=str, default='x') # Unknown variables when solving for steady-state
+
+class _CalcFSteadyState(om.ImplicitComponent):
+    def initialize(self):
+        self.options.declare('_Metadata')
+        self.options.declare('_Calc') # Number of nodes property, required for Dymos models
+        self.options.declare('_CalcJ') # Number of nodes property, required for Dymos models
+        self.options.declare('include_disturbances', types=bool, default = False) # "Model" property used to store name of folder containing Model .py functions and variable tables
+        self.options.declare('Output', types=str, default='x') # Unknown variables when solving for steady-state
+        
+    def setup(self):
+        nn = 1
+        meta = self.options["_Metadata"]
+        calcJ = self.options["_CalcJ"]
+        output_var = self.options["Output"]
+        
+        self.VarNames = {}
+        
+        ### INPUTS ###
+        # x
+        state_table = meta["StateTable"]
+        self.VarNames["x"] = [x["StateVariable"] for x in state_table]
+        for var in state_table:
+            if output_var == "x":
+                self.add_output(var["StateVariable"], desc=var["Description"], shape=(nn,))
+            else:
+                self.add_input(var["StateVariable"], desc=var["Description"], shape=(nn,)) 
+        # u
+        input_table = meta["InputTable"]
+        self.VarNames["u"] = [x["InputVariable"] for x in input_table]
+        for var in input_table:
+            if output_var == "u":
+                self.add_output(var["InputVariable"], desc=var["Description"], shape=(nn,))
+            else:
+                self.add_input(var["InputVariable"], desc=var["Description"], shape=(nn,))
+        # d
+        disturbance_table = meta["DisturbanceTable"]
+        self.VarNames["d"] = [x["DisturbanceVariable"] for x in disturbance_table]
+        if self.options["include_disturbances"]:
+            for var in disturbance_table:
+                self.add_input(var["DisturbanceVariable"], desc=var["Description"], shape=(nn,))
+            
+        # theta
+        param_table = meta["ParamTable"]
+        self.VarNames["theta"] = [x["SymID"] for x in param_table]
+        for param in param_table:
+            self.add_input(param["SymID"], val=param["Value"], desc=var["Description"], tags=['dymos.static_target'])
+        
+        ### OUTPUTS ###
+        #xdot
+        self.VarNames["x_dot"] = [x["StateVariable"]+"_dot" for x in state_table]
+        for var in state_table:
+            self.add_output(var["StateVariable"]+"_dot", desc="Rate of Change: "+var["Description"], shape=(nn,), units="1.0/s")
+ 
+        ### PARTIALS ###
+        # Come Back to this - just get the model working
+        arange = np.arange(nn)
+        c = np.zeros(nn)
+        var_list = ["x", "u", "d", "theta"] if self.options["include_disturbances"] else ["x", "u", "theta"]
+        self.VarList = var_list
+        for v in var_list:
+            J = calcJ[v] # Get the Jacobian information of f w.r.t v
+            
+            # Calculated Derivatives
+            if J["NCalc"]:
+                rCalc = np.array(J["rCalc"]) - 1 # Convert from 1 indexing to 0 indexing
+                cCalc = np.array(J["cCalc"]) - 1 # Convert from 1 indexing to 0 indexing
+                for i in range(J["NCalc"]):
+                    of = self.VarNames["x_dot"][rCalc[i]]
+                    wrt = self.VarNames[v][cCalc[i]]
+                    rows = arange
+                    cols = (c if v == "theta" else arange)
+                    self.declare_partials(of=of, wrt=wrt, rows=rows, cols=cols)
+            
+            # Constant Derivatives
+            if J["NConst"]:
+                rConst = np.array(J["rConst"]) - 1 # Convert from 1 indexing to 0 indexing
+                cConst = np.array(J["cConst"]) - 1 # Convert from 1 indexing to 0 indexing
+                for i in range(J["NConst"]):
+                    of = self.VarNames["x_dot"][rConst[i]]
+                    wrt = self.VarNames[v][cConst[i]]
+                    rows = arange
+                    cols = (c if v == "theta" else arange)
+                    val = J["valConst"][i]*np.ones(nn)
+                    self.declare_partials(of=of, wrt=wrt, val=val, rows=rows, cols=cols)
+
+    def compute(self, inputs, outputs):
+        nn = self.options['num_nodes']
+        arg_list = AssembleVectors(self, inputs, nn)
+           
+        # Call Calc function
+        f = self.options["_Calc"]
+        X_dot = f(*arg_list) # Tuple of outputs, X_dot[i][j] corresponds to jth time step of ith output
+        
+        # Assign to Outputs
+        for i,x_dot in enumerate(self.VarNames["x_dot"]): 
+            outputs[x_dot] = X_dot[i]
+    
+    def compute_partials(self, inputs, partials):
+        # Assemble Input Variables
+        nn = self.options['num_nodes']
+        calcJ = self.options["_CalcJ"]
+        
+        # Assemble Vectors
+        arg_list = AssembleVectors(self, inputs, nn)
+        
+        # Calculate and assign computed derivatives to Partials
+        for v in self.VarList:
+            J = calcJ[v]
+            if J["NCalc"]:
+                J_out = J["Handle"](*arg_list)
+                rCalc = np.array(J["rCalc"]) - 1 # Convert from 1 indexing to 0 indexing
+                cCalc = np.array(J["cCalc"]) - 1 # Convert from 1 indexing to 0 indexing
+                for i in range(J["NCalc"]):
+                    of = self.VarNames["x_dot"][rCalc[i]]
+                    wrt = self.VarNames[v][cCalc[i]]
+                    partials[of, wrt] = J_out[i]
+
 ### HELPER FUNCTIONS ###
 def ImportMetadata(mdl):
-    meta_file = open(mdl + '\ModelMetadata.json', 'r')
+    meta_file = open(mdl + '/ModelMetadata.json', 'r')
     meta_dict = json.load(meta_file)
     return meta_dict
 
