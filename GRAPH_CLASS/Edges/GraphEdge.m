@@ -72,6 +72,38 @@ classdef GraphEdge < matlab.mixin.Heterogeneous & matlab.mixin.Copyable
             i = ~i;
             e = obj_array(i);
         end
+        
+        function [t,S] = table(obj_array)
+            for i = 1:numel(obj_array)
+                v = obj_array(i);
+                s = struct();
+                s.Number = i;
+                s.Parent = v.Parent.Name;
+                s.Description = v.Description;
+                if isa(v, "GraphEdge_Internal")
+                    coeff = v.Coefficient;
+                    if numel(coeff) > 1
+                        coeff = coeff(1);
+                    end
+                    flow = v.PowerFlow.Val_Sym;
+                    s.PowerFlow = string(coeff*flow);
+                    if ~isempty(v.Input)
+                        s.Input = v.Input.Description;
+                    else
+                        s.Input = "---";
+                    end
+                elseif isa(v, "GraphEdge_External")
+                    s.PowerFlow = "---";
+                    s.Input = "---";
+                else
+                    error("Invalid vertex class")
+                end
+                
+                S(i) = s;
+            end
+            t = struct2table(S);
+            t.Properties.VariableNames = {'Number', 'Parent', 'Description', 'Power Flow', 'Input'};
+        end
     end
     
 end

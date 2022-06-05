@@ -104,7 +104,40 @@ classdef GraphVertex < handle & matlab.mixin.Heterogeneous & matlab.mixin.Copyab
             i = (~i_dyn) & i_int;
             v = obj_array(i);
         end
-                   
+        
+        function [t,S] = table(obj_array)
+            type_counter = struct();
+            for i = 1:numel(obj_array)
+                v = obj_array(i);
+                s = struct();
+                s.Number = i;
+                s.Parent = v.Parent.Name;
+                s.Description = v.Description;
+                type = string(v.VertexType);
+                s.VertexType = type;
+                if isfield(type_counter, type)
+                    type_counter.(type) = type_counter.(type) + 1;
+                else
+                    type_counter.(type) = 1;
+                end
+                s.TypeNumber = type_counter.(type);
+                if isa(v, "GraphVertex_Internal")
+                    s.VertexClass = "Internal";
+                    coeff = v.Coefficient;
+                    cap = v.Capacitance.Val_Sym;
+                    s.Capacitance = string(coeff*cap);
+                elseif isa(v, "GraphVertex_External")
+                    s.VertexClass = "External";
+                    s.Capacitance = "---";
+                else
+                    error("Invalid vertex class")
+                end
+                
+                S(i) = s;
+            end
+            t = struct2table(S);
+            t.Properties.VariableNames = {'Number', 'Parent', 'Description', 'Type', 'Type Number', 'Class', 'Capacitance'};
+        end
     end
 end
 
