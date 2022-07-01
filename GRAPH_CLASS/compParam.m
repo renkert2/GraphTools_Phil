@@ -336,13 +336,19 @@ classdef compParam < handle & matlab.mixin.Heterogeneous
                 obj_array
                 opts.UnitFlag = true
                 opts.InlineArg = "$$"
+                opts.Mode = "Description" % Choice between 'Sym' and 'Description'
             end
             
             N = numel(obj_array);
             s = string.empty(N,0);
             for i = 1:N
                 obj = obj_array(i);
-                s_temp = opts.InlineArg+obj.Sym+opts.InlineArg;
+                switch opts.Mode
+                    case "Sym"
+                        s_temp = opts.InlineArg+obj.Sym+opts.InlineArg;
+                    case "Description"
+                        s_temp = obj.Description;
+                end
                 if ~isempty(obj.Unit) && obj.Unit ~= "" && opts.UnitFlag
                     s_temp = s_temp + " "+"("+obj.Unit+")";
                 end

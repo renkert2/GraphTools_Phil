@@ -152,10 +152,11 @@ classdef paramFit < handle
             end
         end
         
-        function p = plot(obj, opts)
+        function F = plot(obj, opts)
             arguments
                 obj
                 opts.Outputs = 1:obj.N_outs
+                opts.PlotMarker logical = false
             end
             
             if ~isempty(obj.Inputs) && ~isempty(obj.Outputs)
@@ -167,15 +168,15 @@ classdef paramFit < handle
             end
             
             out_plts = opts.Outputs;
-            f = figure();
-            t = tiledlayout(f,1,numel(out_plts));
-            
+            F = matlab.ui.Figure.empty();            
             for i = 1:numel(out_plts)
-                nexttile(t,i)
+                f = figure(i);
+                F(i) = f;
                 
                 out_I = out_plts(i);
                 plot(obj.Models{out_I}, obj.Data(out_I).Inputs, obj.Data(out_I).Outputs);
-
+                colormap()
+                
                 [olb,oub] = bounds(obj.Data(out_I).Outputs);
 
                 switch obj.N_ins
@@ -200,12 +201,71 @@ classdef paramFit < handle
                         end
                 end
                 
-                if ~isempty(outs)
+                if ~isempty(outs) && opts.PlotMarker
                     hold on
                     pfun(ins{:}, outs(out_I),'or', 'MarkerSize',10, 'LineWidth', 2, 'MarkerEdgeColor', 'w', 'MarkerFaceColor','r')
                     hold off
                 end
-                p = gca;
+            end
+        end
+        
+        function F = plotErrors(obj, opts)
+            arguments
+                obj
+                opts.Outputs = 1:obj.N_outs
+            end
+            
+            out_plts = opts.Outputs;
+            F = matlab.ui.Figure.empty();
+            
+            x = linspace(0,1,256/2)';
+            R = [1 0 0];
+            W = [1 1 1];
+            B = [0 0 1];
+            map = [B+x.*(W - B); W+x.*(R - W)];
+            
+            for i = 1:numel(out_plts)
+                f = figure(i);
+                F(i) = f;
+                
+                out_I = out_plts(i);
+                
+                input_data = obj.Data(out_I).Inputs;
+                output_data = obj.Data(out_I).Outputs;
+                model = obj.Models{out_I};
+                model_data = model(input_data); % Evaluate the model at the design points
+                error = (model_data - output_data)./output_data;
+                
+                
+                scatter(input_data(:,1),input_data(:,2),[],error,'filled',...
+                  'MarkerEdgeColor', 0.8*[1 1 1],...
+                  'LineWidth',1)
+                
+                c = colorbar;
+                c.Label.String = 'Rel. Error';
+                c.Label.Interpreter = 'latex';
+                c.Label.FontSize = 12;
+                c.FontSize = 12;
+                colormap(map)
+                
+                padding = 0.1;
+                
+                xminmax = minmax(input_data(:,1)');
+                xrange = range(xminmax);
+                xlim(xminmax + padding.*xrange.*[-1,1])
+                
+                yminmax = minmax(input_data(:,2)');
+                yrange = range(yminmax);
+                ylim(yminmax + padding.*yrange.*[-1,1])
+              
+                me = max(abs(error));
+                caxis([-me, me]);
+                
+                if ~isempty(obj.Inputs)
+                    xlabel(latex(obj.Inputs(1)),'Interpreter','latex');
+                    ylabel(latex(obj.Inputs(2)),'Interpreter','latex');
+                end
+
             end
         end
         
